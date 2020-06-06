@@ -3,71 +3,93 @@
 // players register namecoin names
 // then use multisigs anywhere referring to namecoin names
 // as escrows for tournament prize pools
-// final results written to namecoin chain
+// final results written to namecoin chain (what were you thinking?)
+//
 
-const PUBKEY_SIZE: usize = 64;
-const SIGNATURE_SIZE: usize = 64;
-const MATCH_HASH_SIZE: usize = 64;
-const MATCH_DATA_SIZE: usize = 64;
+use std::collections::HashMap;
 
-type Pubkey = [u8; PUBKEY_SIZE];
-type MatchData = [u8; MATCH_DATA_SIZE];
-type MatchHash = [u8; MATCH_HASH_SIZE];
+const BYTE_ARRAY_SIZE: usize = 64;
 
-// namecoin name 
+type ChallengeId = u64;
+
+type Pubkey = [u8; BYTE_ARRAY_SIZE];
+type MatchAddress = [u8; BYTE_ARRAY_SIZE];
+type Transaction = [u8; BYTE_ARRAY_SIZE];
+type MatchData = [u8; BYTE_ARRAY_SIZE];
+type MatchHash = [u8; BYTE_ARRAY_SIZE];
+type Signature = [u8; BYTE_ARRAY_SIZE];
+type PayoutScript = [u8; BYTE_ARRAY_SIZE];
+type Bux = u32;
+
+// maybe a namecoin address for the pubkey for a free reputation system
 struct Player {
     pubkey: Pubkey,
-    bux: u32,
 }
 
-// TODO: trait for crypto functions e.g. signing verifying
+impl KeyHolder for Player {}
+
 struct Referee {
     pubkey: Pubkey,
 }
 
-struct Signature([u8; SIGNATURE_SIZE]);
+impl KeyHolder for Referee {}
 
-struct MatchResult {
-    players: Vec<Player>,
-    signatures: Vec<Signature>,
-    match_data: MatchData,
-    match_hash: MatchHash,
+trait KeyHolder {
+    fn sign(data_to_sign: [u8; BYTE_ARRAY_SIZE]) -> Signature {
+        [1; BYTE_ARRAY_SIZE]
+    }
+
+    fn verify(signature: Signature, pubkey: Pubkey) -> bool {
+// TODO: really do it
+        let sum: u8 = signature.iter().sum();
+        if sum == 0 {
+            return false
+        }
+        else {
+            return true
+        }
+    }
 }
 
-struct Match {
-    players: Vec<Player>,
+struct Challenge {
+    id: ChallengeId,
+    escrow: MultisigEscrow,
+    funding_tx: Transaction,
+    payout_script: PayoutScript, 
 }
 
-struct Tournament {
-    players: Vec<Player>,
+impl Challenge {
+    pub fn is_signed() -> bool {
+        false
+    }
+}
 
+struct Resolution {
+    challenge_id: ChallengeId,
+    payout_tx: Transaction,
 }
 
 struct MultisigEscrow {
     pubkey: Pubkey, 
-    player_keys: Vec<Pubkey>,
-    referee_keys: Vec<Pubkey>,
+    players: Vec<Player>,
+    referees: Vec<Referee>,
 }
 
 impl MultisigEscrow {
-    pub fn new(player_keys: Vec<Pubkey>, referee_keys: Vec<Pubkey>, bux: Vec<u32>) -> Self {
+    pub fn new(players: Vec<Player>, referees: Vec<Referee>) -> Self {
         MultisigEscrow {
-            pubkey: MultisigEscrow::make_pubkey(&player_keys, &referee_keys),
-            player_keys: player_keys,
-            referee_keys: referee_keys,
+            pubkey: MultisigEscrow::make_pubkey(&players, &referees),
+            players: players,
+            referees: referees,
         }
-
     }
 
-    fn make_pubkey(player_keys: &Vec<Pubkey>, referee_keys: &Vec<Pubkey>) -> Pubkey {
-        [0;PUBKEY_SIZE]
+    fn make_pubkey(players: &Vec<Player>, referees: &Vec<Referee>) -> Pubkey {
+        [0; BYTE_ARRAY_SIZE]
     }
 
-    fn deposit() {
-
-    }
-
-    fn withdraw() {
-
+    fn balance(&self) -> Bux {
+// get escrow balance, likely stored on blockchain
+        0
     }
 }
