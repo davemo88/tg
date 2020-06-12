@@ -5,91 +5,99 @@
 // as escrows for tournament prize pools
 // final results written to namecoin chain (what were you thinking?)
 //
+//
+use secp256k1::{
+    Secp256k1,
+    Message,
+};
+use rand::Rng;
+use bitcoin::{
+    Transaction,
+    Address,
+    PublicKey,
+    Network,
+};
 
-use std::collections::HashMap;
+pub struct PayoutScript;
+pub struct PayoutScriptSigHash;
 
-const BYTE_ARRAY_SIZE: usize = 64;
-
-type ChallengeId = u64;
-
-type Pubkey = [u8; BYTE_ARRAY_SIZE];
-type MatchAddress = [u8; BYTE_ARRAY_SIZE];
-type Transaction = [u8; BYTE_ARRAY_SIZE];
-type MatchData = [u8; BYTE_ARRAY_SIZE];
-type MatchHash = [u8; BYTE_ARRAY_SIZE];
-type Signature = [u8; BYTE_ARRAY_SIZE];
-type PayoutScript = [u8; BYTE_ARRAY_SIZE];
-type Bux = u32;
-
-// maybe a namecoin address for the pubkey for a free reputation system
-struct Player {
-    pubkey: Pubkey,
-}
-
-impl KeyHolder for Player {}
-
-struct Referee {
-    pubkey: Pubkey,
-}
-
-impl KeyHolder for Referee {}
-
-trait KeyHolder {
-    fn sign(data_to_sign: [u8; BYTE_ARRAY_SIZE]) -> Signature {
-        [1; BYTE_ARRAY_SIZE]
-    }
-
-    fn verify(signature: Signature, pubkey: Pubkey) -> bool {
-// TODO: really do it
-        let sum: u8 = signature.iter().sum();
-        if sum == 0 {
-            return false
-        }
-        else {
-            return true
-        }
-    }
-}
-
-struct Challenge {
-    id: ChallengeId,
+pub struct Challenge {
     escrow: MultisigEscrow,
     funding_tx: Transaction,
-    payout_script: PayoutScript, 
+    payout_script_sig_hash: PayoutScriptSigHash,
 }
 
-impl Challenge {
-    pub fn is_signed() -> bool {
-        false
+pub struct Referee;
+
+impl Referee { 
+    fn create_pubkey(&self) {
+
+    }
+
+    fn approve_payout(&self, payout: &mut Payout) {
+
     }
 }
 
-struct Resolution {
-    challenge_id: ChallengeId,
-    payout_tx: Transaction,
+//NOTE: could use dummy tx requiring signing by referee to embed info in tx
+impl Challenge {
+    pub fn new(id: u64, escrow: MultisigEscrow, funding_tx: Transaction, payout_script_sig_hash: PayoutScriptSigHash) -> Self {
+        Challenge {
+            escrow: escrow,
+            funding_tx: funding_tx,
+            payout_script_sig_hash: payout_script_sig_hash,
+        }
+    }
 }
 
-struct MultisigEscrow {
-    pubkey: Pubkey, 
-    players: Vec<Player>,
-    referees: Vec<Referee>,
+//NOTE: create all the possible payout txs beforehand and then branch on something for a basic payout
+//script, e.g. in 1v1 winner takes all all to A or B based on some value,
+//could require signature from the TO. 
+//if you need resolution then somebody has to look it up the value
+struct Payout {
+    payout_tx: Transaction,
+    challenge: Challenge,
+}
+
+impl Payout {
+    pub fn new(payout_tx: Transaction, challenge: Challenge) -> Self {
+        Payout {
+            payout_tx: payout_tx,
+            challenge: challenge,
+        }
+    }
+}
+
+pub struct MultisigEscrow {
+    address: Address, 
+    players: Vec<PublicKey>,
+    referees: Vec<PublicKey>,
 }
 
 impl MultisigEscrow {
-    pub fn new(players: Vec<Player>, referees: Vec<Referee>) -> Self {
+    pub fn new(address: Address, players: Vec<PublicKey>, referees: Vec<PublicKey>, signatures_required: u8,) -> Self {
         MultisigEscrow {
-            pubkey: MultisigEscrow::make_pubkey(&players, &referees),
+            address: address,
             players: players,
             referees: referees,
         }
     }
 
-    fn make_pubkey(players: &Vec<Player>, referees: &Vec<Referee>) -> Pubkey {
-        [0; BYTE_ARRAY_SIZE]
+    pub fn is_signed_by_players(&self, transaction: Transaction) -> bool {
+        false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn make_keypair() {
+
     }
 
-    fn balance(&self) -> Bux {
-// get escrow balance, likely stored on blockchain
-        0
+    #[test]
+    fn make_multisig() {
+
     }
 }
