@@ -30,14 +30,14 @@ use bitcoincore_rpc::{
 
 pub const PAYOUT_SCRIPT_MAX_SIZE: usize = 100;
 pub const TERMS_SIZE: usize = 100;
-pub const LOCALHOST: &'static str = "localhost";
+pub const LOCALHOST: &'static str = "0.0.0.0";
 pub const TESTNET_RPC_PORT: usize = 18332;
 
 pub struct HostNPort(pub &'static str, pub usize);
 
 pub struct BitcoindRpcConfig {
     pub hostnport: HostNPort,
-    pub username: &'static str,
+    pub user: &'static str,
     pub password: &'static str,
 }
 
@@ -45,7 +45,7 @@ impl Default for BitcoindRpcConfig {
     fn default() -> Self {
         BitcoindRpcConfig {
             hostnport: HostNPort(LOCALHOST, TESTNET_RPC_PORT),
-            username: "username",
+            user: "user",
             password: "password",
         }
     }
@@ -71,8 +71,6 @@ pub trait RefereeServiceApi {
 impl RefereeServiceApi for RefereeService {
 
 }
-
-pub struct RefereeKey(PublicKey);
 
 //NOTE: could use dummy tx requiring signing by referee to embed info in tx
 impl Challenge {
@@ -103,29 +101,27 @@ pub struct MultisigEscrow {
     referees: Vec<PublicKey>,
 }
 
-impl MultisigEscrow {
-    pub fn new(address: Address, redeem_script: Script, players: Vec<PublicKey>, referees: Vec<PublicKey>, signatures_required: u8,) -> Self {
-        MultisigEscrow {
-            address: address,
-            redeem_script: redeem_script,
-            players: players,
-            referees: referees,
-        }
-    }
-
-    pub fn is_signed_by_players(&self, transaction: Transaction) -> bool {
-        false
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    
+    fn init_test_wallet(rpc: &Client) -> Result<(), &'static str> {
+        println!("create new test wallet");
+        let mut rng = OsRng::new().unwrap();
+        let wallet_name = format!("tg-test-wallet-{:?}", rng.next_u64());
+        let result = rpc.create_wallet(&wallet_name, Some(false)).unwrap();
+        Ok(())
+    }
 
-    #[test]
-    fn create_challenge() {
+    fn init_test_keys(rpc: &Client) -> Result<(), &'static str> {
 
-        println!("create challenge test");
+            
+
+        Ok(())
+
+    }
+
+    fn create_2_of_3_multisig(rpc: &Client) -> MultisigEscrow {
 
         let secp = Secp256k1::new();
 
@@ -157,19 +153,6 @@ mod tests {
         let b_pubkey = &b_privkey.public_key(&secp);
         let r_pubkey = &r_privkey.public_key(&secp);
 
-        let bitcoind_rpc_config = BitcoindRpcConfig::default();
-
-        let rpc = Client::new(
-            format!("http://{:?}:{:?}",
-                bitcoind_rpc_config.hostnport.0,
-                bitcoind_rpc_config.hostnport.1,
-            ),
-            Auth::UserPass(
-                bitcoind_rpc_config.username.to_string(),
-                bitcoind_rpc_config.password.to_string(),
-            )
-        ).unwrap();
-
         let result = rpc.add_multisig_address(
             2,
             &[
@@ -181,26 +164,47 @@ mod tests {
             None,
         ).unwrap();
 
-        let escrow = MultisigEscrow {
+        MultisigEscrow {
             address: result.address,
             redeem_script: result.redeem_script,
             players: vec!(a_pubkey.clone(), b_pubkey.clone()),
             referees: vec!(r_pubkey.clone()),
-        };
+        }
+    }
 
-        let funding_tx = rpc.create_raw_transaction(
-            &[],
-            &HashMap::<String, Amount>::default(),
-            None,
-            None,
+    #[test]
+    fn create_challenge() {
+
+        println!("create challenge test");
+
+        let bitcoind_rpc_config = BitcoindRpcConfig::default();
+        let rpc = Client::new(
+            format!("http://{}:{:?}",
+                bitcoind_rpc_config.hostnport.0,
+                bitcoind_rpc_config.hostnport.1,
+            ),
+            Auth::UserPass(
+                bitcoind_rpc_config.user.to_string(),
+                bitcoind_rpc_config.password.to_string(),
+            )
         ).unwrap();
 
-        let challenge = Challenge {
-            escrow: escrow,
-            funding_tx: funding_tx,
-            terms: [1; TERMS_SIZE],
-            terms_sig: None,
-        };
+        init_test_wallet(&rpc);
 
+//        let escrow = create_2_of_3_multisig(&rpc);
+//
+//        let funding_tx = rpc.create_raw_transaction(
+//            &[],
+//            &HashMap::<String, Amount>::default(),
+//            None,
+//            None,
+//        ).unwrap();
+//
+//        let challenge = Challenge {
+//            escrow,
+//            funding_tx,
+//            terms: [1; TERMS_SIZE],
+//            terms_sig: None,
+//        };
     }
 }

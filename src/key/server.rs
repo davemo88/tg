@@ -25,7 +25,9 @@ use crate::{
 };
 
 pub trait PrivateKeyServiceApi {
+// plain old signature using secp
     fn sign_message(&self, pubkey: PublicKey, msg: Message) -> Result<Signature, &'static str>;
+// sign a transaction using bitcoind
     fn sign_transaction(&self, pubkey: PublicKey, tx: Transaction) -> Result<Transaction, &'static str>;
 }
 
@@ -66,7 +68,7 @@ impl PrivateKeyServiceApi for PrivateKeyService {
                 self.bitcoind_rpc_config.hostnport.1,
             ),
             Auth::UserPass(
-                self.bitcoind_rpc_config.username.to_string(),
+                self.bitcoind_rpc_config.user.to_string(),
                 self.bitcoind_rpc_config.password.to_string(),
             )
         ).unwrap();
