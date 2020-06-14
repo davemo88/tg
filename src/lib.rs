@@ -25,7 +25,10 @@ use bitcoincore_rpc::{
     Client,
     RpcApi,
     RawTx,
-    json::PubKeyOrAddress,
+    json::{
+        PubKeyOrAddress,
+        AddressType,
+    },
 };
 
 pub const PAYOUT_SCRIPT_MAX_SIZE: usize = 100;
@@ -104,20 +107,25 @@ pub struct MultisigEscrow {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const PLAYER_1_ADDRESS_LABEL: &'static str = "Player1";
+    const PLAYER_2_ADDRESS_LABEL: &'static str = "Player2";
+    const REFEREE_ADDRESS_LABEL: &'static str = "Referee";
     
-    fn init_test_wallet(rpc: &Client) -> Result<(), &'static str> {
-        println!("create new test wallet");
+    fn init_test_wallet(rpc: &Client) -> Result<String, &'static str> {
         let mut rng = OsRng::new().unwrap();
         let wallet_name = format!("tg-test-wallet-{:?}", rng.next_u64());
         let result = rpc.create_wallet(&wallet_name, Some(false)).unwrap();
-        Ok(())
+        Ok(result.name)
     }
 
-    fn init_test_keys(rpc: &Client) -> Result<(), &'static str> {
+        fn init_test_keys(rpc: &Client) -> Result<(), &'static str> {
 
-            
+            let address_1 = rpc.get_new_address(Some(PLAYER_1_ADDRESS_LABEL), Some(AddressType::Legacy)).unwrap();
+            let address_2 = rpc.get_new_address(Some(PLAYER_2_ADDRESS_LABEL), Some(AddressType::Legacy)).unwrap();
+            let address_ref = rpc.get_new_address(Some(REFEREE_ADDRESS_LABEL), Some(AddressType::Legacy)).unwrap();
 
-        Ok(())
+            Ok(())
 
     }
 
@@ -189,7 +197,9 @@ mod tests {
             )
         ).unwrap();
 
-        init_test_wallet(&rpc);
+//        let test_wallet_name = init_test_wallet(&rpc).unwrap();
+
+        let result = init_test_keys(&rpc).unwrap();
 
 //        let escrow = create_2_of_3_multisig(&rpc);
 //
