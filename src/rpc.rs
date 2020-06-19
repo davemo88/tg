@@ -36,6 +36,8 @@ use bitcoincore_rpc::{
         AddressType,
         CreateRawTransactionInput,
         SignRawTransactionInput,
+        GetRawTransactionResultVout,
+        GetRawTransactionResultVoutScriptPubKey,
     },
 };
 
@@ -47,6 +49,8 @@ use crate::lib::{
     ChallengeState,
     PayoutScript,
     PayoutRequest,
+    Result,
+    TgError,
 };
 
 pub const NETWORK: Network = Network::Regtest;
@@ -56,20 +60,22 @@ pub const NUM_PLAYERS: u64 = 2;
 pub struct TgClient(Client);
 
 trait TgClientApi {
-    fn create_challenge_funding_transaction(&self, escrow: &MultisigEscrow, pot: Amount) -> Transaction;
-    fn create_challenge_payout_transaction(&self, payout_request: PayoutRequest) -> Transaction;
+    fn create_challenge_funding_transaction(&self, escrow: &MultisigEscrow, pot: Amount) -> Result<Transaction>;
+    fn create_challenge_payout_transaction(&self, payout_request: PayoutRequest) -> Result<Transaction>;
+    fn verify_payout_request(&self, payout_request: PayoutRequest) -> bool;
     fn get_inputs_for_address(&self, address: &Address, amount: Amount) -> (Vec<CreateRawTransactionInput>, Amount,);
     fn sign_challenge_tx(&self, key: PrivateKey, challenge: &mut Challenge);
     fn sign_challenge_payout_script(&self, key: PrivateKey, challenge: &mut Challenge);
     fn get_challenge_state(&self, challenge: &Challenge) -> ChallengeState;
     fn verify_player_sigs(&self, player: PublicKey, challenge: &Challenge) -> bool;
+    fn verify_referee_sig(&self, referee: PublicKey, challenge: &Challenge) -> bool;
 }
 
 impl TgClientApi for TgClient {
-    fn create_challenge_funding_transaction(&self, escrow: &MultisigEscrow, pot: Amount) -> Transaction {
-        let p1_address = Address::p2pkh(&escrow.players[0], NETWORK);
-        let p2_address = Address::p2pkh(&escrow.players[1], NETWORK);
-        let ref_address = Address::p2pkh(&escrow.referees[0], NETWORK);
+    fn create_challenge_funding_transaction(&self, escrow: &MultisigEscrow, pot: Amount) -> Result<Transaction> {
+        let p1_address = Address::p2wpkh(&escrow.players[0], NETWORK);
+        let p2_address = Address::p2wpkh(&escrow.players[1], NETWORK);
+        let ref_address = Address::p2wpkh(&escrow.referees[0], NETWORK);
 
 //        let pot = Amount::ONE_SAT * 2000000;
 
@@ -128,10 +134,28 @@ impl TgClientApi for TgClient {
 //            total_in - p1_change - p2_change - ref_fee - Amount::from_sat(MINER_FEE),
 //        );
         assert!(total_in - p1_change - p2_change - ref_fee - Amount::from_sat(MINER_FEE) == pot);
-        tx
+        Ok(tx)
     }
 
-    fn create_challenge_payout_transaction(&self, payout_request: PayoutRequest) -> Transaction {
+    fn verify_payout_request(&self, payout_request: PayoutRequest) -> bool {
+//NOTE: maybe just store this and the txid on challenge instead of full challenge and the full
+//payout script
+        let payout_scripthash_address = Address::from_script(&payout_request.challenge.payout_script.script, NETWORK).unwrap();
+        let mut outs = HashMap::<String, Amount>::default();
+        outs.insert(payout_scripthash_address.to_string(),Amount::ONE_BTC);
+        let tx = self.0.create_raw_transaction(
+            &[],
+            &outs,
+            None,
+            None,
+        ).unwrap();
+
+        println!("dummy {:?}", tx);
+
+        false
+    }
+
+    fn create_challenge_payout_transaction(&self, payout_request: PayoutRequest) -> Result<Transaction> {
         let challenge = &payout_request.challenge;
         let escrow = &challenge.escrow;
 //        println!("{:?}", &challenge.funding_tx_hex);
@@ -139,31 +163,51 @@ impl TgClientApi for TgClient {
 
         let tx_info = self.0.get_raw_transaction_info(&funding_tx.txid(), None).unwrap();
 
-        let vout = tx_info.vout.iter().filter(|out| {
-            let a = out.script_pub_key.addresses;
-            true
-        });
-//        println!("{:?}", funding_tx);
+        let mut vout: Option<&GetRawTransactionResultVout> = None;
+        for (i, v,) in tx_info.vout.iter().enumerate() {
+            println!("{:?}: {:?}", i, v, );
+            if let Some(addresses) = v.script_pub_key.addresses.clone() {
+                if addresses.contains(&escrow.address) {
+                    vout = Some(v);
+                    break;
+                }
+            }
+        }
+
+        if vout.is_none() {
+            return Err(TgError("can't create payout tx. funding tx doesn't spend to escrow address"));
+        }
+        let vout = vout.unwrap();
+
+//        let vout: GetRawTransactionResultVout = tx_info.vout.iter().filter(|out| { println!("out {:?}", out); if let Some(addresses) = out.script_pub_key.addresses.clone() { return addresses.contains(&escrow.address) } false }).cloned().collect();
 //        let p1_address = Address::p2pkh(&escrow.players[0], NETWORK);
 //        let p2_address = Address::p2pkh(&escrow.players[1], NETWORK);
 //
 //        let mut tx_inputs = Vec::<CreateRawTransactionInput>::new();
 //
-        let mut outs = HashMap::<String, Amount>::default();
-//        outs.insert(p1_address.to_string(), Amount::ZERO);
+        let payout_amount = vout.value - Amount::from_sat(MINER_FEE);
 
-        self.0.create_raw_transaction(
+        let mut outs = HashMap::<String, Amount>::default();
+//        let payout_address 
+//        outs.insert(&p1_address.to_string(), payout_amount);
+
+        let payout_tx = self.0.create_raw_transaction(
             &[
                 CreateRawTransactionInput {
                    txid: funding_tx.txid(),
-                   vout: 0,
+                   vout: vout.n,
                    sequence: None,
                 }
             ],
             &outs,
             None,
             None,
-        ).unwrap()
+        ).unwrap();
+
+//        println!("{:?}", payout_tx);
+
+//        Err(TgError("oops"))
+        Ok(payout_tx)
 
     }
 
@@ -216,12 +260,26 @@ impl TgClientApi for TgClient {
     }
 
     fn verify_player_sigs(&self, player: PublicKey,  challenge: &Challenge) -> bool {
+//TODO: check funding tx sig too
         if challenge.escrow.players.contains(&player) {
             let secp = Secp256k1::new();        
             return secp.verify(
                 &Message::from_slice(&challenge.payout_script_hash()).unwrap(),
                 &challenge.payout_script_hash_sigs[&player],
                 &player.key
+            ).is_ok()
+        }
+        false
+    }
+
+    fn verify_referee_sig(&self, referee: PublicKey,  challenge: &Challenge) -> bool {
+//TODO: check funding tx sig too
+        if challenge.escrow.referees.contains(&referee) {
+            let secp = Secp256k1::new();        
+            return secp.verify(
+                &Message::from_slice(&challenge.payout_script_hash()).unwrap(),
+                &challenge.payout_script_hash_sigs[&referee],
+                &referee.key
             ).is_ok()
         }
         false
@@ -386,9 +444,9 @@ mod tests {
             )
         ).unwrap());
 
-        let p1_address = client.0.get_new_address(Some(PLAYER_1_ADDRESS_LABEL), Some(AddressType::Legacy)).unwrap();
-        let p2_address = client.0.get_new_address(Some(PLAYER_2_ADDRESS_LABEL), Some(AddressType::Legacy)).unwrap();
-        let ref_address = client.0.get_new_address(Some(REFEREE_ADDRESS_LABEL), Some(AddressType::Legacy)).unwrap();
+        let p1_address = client.0.get_new_address(Some(PLAYER_1_ADDRESS_LABEL), Some(AddressType::Bech32)).unwrap();
+        let p2_address = client.0.get_new_address(Some(PLAYER_2_ADDRESS_LABEL), Some(AddressType::Bech32)).unwrap();
+        let ref_address = client.0.get_new_address(Some(REFEREE_ADDRESS_LABEL), Some(AddressType::Bech32)).unwrap();
 //
         println!("fund players 1BTC each");
 
@@ -431,7 +489,7 @@ buyin: {:?}
 
         let escrow_address = escrow.address.clone();
 
-        let funding_tx = client.create_challenge_funding_transaction(&escrow, POT_AMOUNT);
+        let funding_tx = client.create_challenge_funding_transaction(&escrow, POT_AMOUNT).unwrap();
         println!("funding tx {:?} created", funding_tx.txid());
 
         let payout_script = PayoutScript::default();
@@ -447,22 +505,30 @@ buyin: {:?}
         println!("challenge created",);
 
         println!("challenge state: {:?}", client.get_challenge_state(&challenge));
+        println!("funding tx txid: {:?}", funding_tx.txid());
         println!("p1 signing");
         let p1_key = client.0.dump_private_key(&p1_address).unwrap();
         client.sign_challenge_tx(p1_key, &mut challenge);
         client.sign_challenge_payout_script(p1_key, &mut challenge);
+        let funding_tx: bitcoin::Transaction = encode::deserialize(&Vec::<u8>::from_hex(&challenge.funding_tx_hex).unwrap()).unwrap();
         println!("challenge state: {:?}", client.get_challenge_state(&challenge));
+        println!("funding tx txid: {:?}", funding_tx.txid());
 
         println!("p2 signing");
         let p2_key = client.0.dump_private_key(&p2_address).unwrap();
         client.sign_challenge_tx(p2_key, &mut challenge);
         client.sign_challenge_payout_script(p2_key, &mut challenge);
+        let funding_tx: bitcoin::Transaction = encode::deserialize(&Vec::<u8>::from_hex(&challenge.funding_tx_hex).unwrap()).unwrap();
         println!("challenge state: {:?}", client.get_challenge_state(&challenge));
+        println!("funding tx txid: {:?}", funding_tx.txid());
 
         println!("ref signing");
         let ref_key = client.0.dump_private_key(&ref_address).unwrap();
         client.sign_challenge_payout_script(ref_key, &mut challenge);
+        let funding_tx: bitcoin::Transaction = encode::deserialize(&Vec::<u8>::from_hex(&challenge.funding_tx_hex).unwrap()).unwrap();
         println!("challenge state: {:?}", client.get_challenge_state(&challenge));
+        println!("funding tx txid: {:?}", funding_tx.txid());
+
         println!("broadcasting signed challenge funding transaction");
 
         let _result = client.0.send_raw_transaction(challenge.funding_tx_hex.clone());
@@ -481,7 +547,7 @@ buyin: {:?}
             payout_sig: None,
         };
 
-        let payout_tx = client.create_challenge_payout_transaction(payout_request);
+//        let result = client.verify_payout_request(payout_request);
 
     }
 }
