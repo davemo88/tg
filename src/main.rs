@@ -9,6 +9,7 @@
 
 mod lib;
 mod key;
+mod rpc;
 
 fn main() {
     println!("*~,Welcome to The Tournament Grounds'~*");
