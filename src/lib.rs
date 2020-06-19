@@ -127,9 +127,9 @@ pub enum ChallengeState {
 }
 
 pub struct PayoutRequest {
-    challenge: Challenge,
-    payout_tx: Transaction,
-    payout_sig: Signature,
+    pub challenge: Challenge,
+    pub payout_tx: Option<Transaction>,
+    pub payout_sig: Option<Signature>,
 }
 
 pub struct RefereeService;

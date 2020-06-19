@@ -19,6 +19,10 @@ use bitcoin::{
     util::key::PublicKey,
     hashes::{
         Hash,
+        hex::FromHex,
+    },
+    consensus::{
+        encode,
     }
 };
 
@@ -42,6 +46,7 @@ use crate::lib::{
     ChallengeApi,
     ChallengeState,
     PayoutScript,
+    PayoutRequest,
 };
 
 pub const NETWORK: Network = Network::Regtest;
@@ -52,6 +57,7 @@ pub struct TgClient(Client);
 
 trait TgClientApi {
     fn create_challenge_funding_transaction(&self, escrow: &MultisigEscrow, pot: Amount) -> Transaction;
+    fn create_challenge_payout_transaction(&self, payout_request: PayoutRequest) -> Transaction;
     fn get_inputs_for_address(&self, address: &Address, amount: Amount) -> (Vec<CreateRawTransactionInput>, Amount,);
     fn sign_challenge_tx(&self, key: PrivateKey, challenge: &mut Challenge);
     fn sign_challenge_payout_script(&self, key: PrivateKey, challenge: &mut Challenge);
@@ -123,6 +129,42 @@ impl TgClientApi for TgClient {
 //        );
         assert!(total_in - p1_change - p2_change - ref_fee - Amount::from_sat(MINER_FEE) == pot);
         tx
+    }
+
+    fn create_challenge_payout_transaction(&self, payout_request: PayoutRequest) -> Transaction {
+        let challenge = &payout_request.challenge;
+        let escrow = &challenge.escrow;
+//        println!("{:?}", &challenge.funding_tx_hex);
+        let funding_tx: bitcoin::Transaction = encode::deserialize(&Vec::<u8>::from_hex(&challenge.funding_tx_hex).unwrap()).unwrap();
+
+        let tx_info = self.0.get_raw_transaction_info(&funding_tx.txid(), None).unwrap();
+
+        let vout = tx_info.vout.iter().filter(|out| {
+            let a = out.script_pub_key.addresses;
+            true
+        });
+//        println!("{:?}", funding_tx);
+//        let p1_address = Address::p2pkh(&escrow.players[0], NETWORK);
+//        let p2_address = Address::p2pkh(&escrow.players[1], NETWORK);
+//
+//        let mut tx_inputs = Vec::<CreateRawTransactionInput>::new();
+//
+        let mut outs = HashMap::<String, Amount>::default();
+//        outs.insert(p1_address.to_string(), Amount::ZERO);
+
+        self.0.create_raw_transaction(
+            &[
+                CreateRawTransactionInput {
+                   txid: funding_tx.txid(),
+                   vout: 0,
+                   sequence: None,
+                }
+            ],
+            &outs,
+            None,
+            None,
+        ).unwrap()
+
     }
 
     fn get_inputs_for_address(&self, address: &Address, amount: Amount) -> (Vec<CreateRawTransactionInput>, Amount,) {
@@ -240,7 +282,6 @@ mod tests {
         let _result = rpc.generate_to_address(302, &faucet).unwrap();
 
         let faucet_unspent = rpc.list_unspent(None,None,Some(&[&faucet]),None,None).unwrap();
-        let mut faucet_unspent = faucet_unspent.iter();
 
         let mut tx_inputs: Vec<CreateRawTransactionInput> = Vec::new();
         let mut total_in_amount = Amount::ZERO; 
@@ -358,19 +399,13 @@ mod tests {
         println!("{:?} balance: {:?}", p1_address.to_string(), p1_balance);
         println!("{:?} balance: {:?}", p2_address.to_string(), p2_balance);
 
-        let escrow = create_2_of_3_multisig(&client.0,
-            client.0.get_address_info(&p1_address).unwrap().pubkey.unwrap(),
-            client.0.get_address_info(&p2_address).unwrap().pubkey.unwrap(),
-            client.0.get_address_info(&ref_address).unwrap().pubkey.unwrap(),
-        );
+        println!("creating challenge:
 
-        let escrow_address = escrow.address.clone();
-
-        println!("create challenge:
 players:
 {:?} 
 {:?} 
-ref
+
+ref:
 {:?}
 
 pot: {:?}
@@ -387,17 +422,29 @@ buyin: {:?}
             (POT_AMOUNT + (POT_AMOUNT/100) + Amount::from_sat(MINER_FEE)) / 2,
             );
 
-        println!("create challenge funding tx",);
+        let escrow = create_2_of_3_multisig(&client.0,
+            client.0.get_address_info(&p1_address).unwrap().pubkey.unwrap(),
+            client.0.get_address_info(&p2_address).unwrap().pubkey.unwrap(),
+            client.0.get_address_info(&ref_address).unwrap().pubkey.unwrap(),
+        );
+        println!("escrow {:?} created", escrow.address.to_string());
+
+        let escrow_address = escrow.address.clone();
+
         let funding_tx = client.create_challenge_funding_transaction(&escrow, POT_AMOUNT);
+        println!("funding tx {:?} created", funding_tx.txid());
+
+        let payout_script = PayoutScript::default();
+        let payout_script_hash = bitcoin::hashes::sha256::Hash::from_slice(&payout_script.body).unwrap().to_vec();
+        println!("payout script {:?} created", bitcoin::consensus::encode::serialize_hex(&payout_script_hash));
 
         let mut challenge = Challenge {
             escrow,
             funding_tx_hex: funding_tx.raw_hex(),
-            payout_script: PayoutScript::default(),
+            payout_script,
             payout_script_hash_sigs: HashMap::<PublicKey, Signature>::default(),
         };
-
-        println!("challenge ready to sign",);
+        println!("challenge created",);
 
         println!("challenge state: {:?}", client.get_challenge_state(&challenge));
         println!("p1 signing");
@@ -427,5 +474,14 @@ buyin: {:?}
         println!("ref {:?} balance: {:?}", ref_address.to_string(), ref_balance);
         let ref_balance = client.0.get_received_by_address(&escrow_address, None).unwrap();
         println!("multsig {:?} balance: {:?}", &escrow_address.to_string(), ref_balance);
+
+        let payout_request = PayoutRequest {
+            challenge,
+            payout_tx: None,
+            payout_sig: None,
+        };
+
+        let payout_tx = client.create_challenge_payout_transaction(payout_request);
+
     }
 }
