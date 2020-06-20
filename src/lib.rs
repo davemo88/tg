@@ -120,20 +120,20 @@ OP_IF
 OP_PUSHDATA1 1 0x06 OP_EQUAL
 */
 
-        let request_outcome_token: Vec<u8> = vec![1];
-        let request_txid: Vec<u8> = vec![2];
+        let request_outcome_token: Vec<u8> = vec![0x4];
+        let request_txid: Vec<u8> = vec![0x4];
 
-        let script_outcome_token_1: Vec<u8> = vec![3];
-        let script_txid_1: Vec<u8> = vec![4];
+        let script_outcome_token_1: Vec<u8> = vec![0x3];
+        let script_txid_1: Vec<u8> = vec![0x3];
 
-        let script_outcome_token_2: Vec<u8> = vec![1];
-        let script_txid_2: Vec<u8> = vec![2];
+        let script_outcome_token_2: Vec<u8> = vec![0x4];
+        let script_txid_2: Vec<u8> = vec![0x4];
 
         let b = Builder::new(); 
 
         let b = b.push_slice(&request_txid);
 
-        println!("{:?}", b.clone().into_script());
+        println!("{}", b.clone().into_script().asm());
 
         let b = b.push_slice(&request_outcome_token);
 
@@ -161,11 +161,11 @@ OP_PUSHDATA1 1 0x06 OP_EQUAL
 //
         let b = b.push_opcode(all::OP_EQUAL);
 
+        println!("{}", b.clone().into_script().asm());
+
         b.into_script()
    }
 }
-
-const S: &'static str = "OP_PUSHDATA1 1 0x07 OP_PUSHDATA1 1 0x04 OP_DUP OP_PUSHDATA1 1 0x04 OP_EQUAL OP_IF OP_DROP OP_PUSHDATA1 1 0x04 OP_ELSE OP_PUSHDATA1 1 0x05 OP_EQUAL OP_IF OP_PUSHDATA1 1 0x05 OP_EQUAL";
 
 pub struct Challenge {
     pub escrow: MultisigEscrow,
