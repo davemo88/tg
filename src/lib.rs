@@ -258,13 +258,13 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn test_payout_script_builder() {
-        let script = PayoutScriptBuilder::build_sig_plus_txid_script();
-        println!("\nprinting payout script instructions");
-        for i in script.iter(false) {
-            println!("{:?}",i);
-        }
-                
-    }
+//    #[test]
+//    fn test_payout_script_builder() {
+//        let script = PayoutScriptBuilder::build_sig_plus_txid_script();
+//        println!("\nprinting payout script instructions");
+//        for i in script.iter(false) {
+//            println!("{:?}",i);
+//        }
+//                
+//    }
 }

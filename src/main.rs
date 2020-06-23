@@ -9,6 +9,7 @@
 
 mod lib;
 mod key;
+mod script;
 mod rpc;
 
 fn main() {

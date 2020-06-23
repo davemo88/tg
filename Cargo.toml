@@ -10,4 +10,7 @@ edition = "2018"
 bitcoin = "0.23.0"
 bitcoincore-rpc = { git = "https://github.com/rust-bitcoin/rust-bitcoincore-rpc" }
 secp256k1 = { version = "0.17.2", features = ["rand-std", "serde"] }
+#TODO: get rid of this
 rand = "0.7.3"
+hex = "0.4.2"
+nom = "5.1.2"
