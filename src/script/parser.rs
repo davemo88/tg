@@ -5,7 +5,7 @@ use nom::{
     Err,
     switch,
     bytes::complete::{tag, take},
-    number::complete::be_u16,
+    number::complete::{be_u8, be_u16, be_u32},
     branch::alt,
     multi::many1,
     combinator::map_parser,
@@ -27,9 +27,11 @@ fn opcode(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], TgOpcode> {
     move |input: &[u8]| {
         let (input, b) = take(1u8)(input)?;
         if TgOpcode(b[0]) == op  {
-            return Ok((input, op));
+            Ok((input, op))
         }
-        Err(nom::Err::Error((input, nom::error::ErrorKind::IsNot)))
+        else {
+            Err(nom::Err::Error((input, nom::error::ErrorKind::IsNot)))
+        }
     }
 }
 
