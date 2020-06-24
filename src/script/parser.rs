@@ -4,12 +4,14 @@ use nom::{
     IResult,
     Err,
     switch,
-    bytes::complete::{tag, take, take_while_m_n},
+    bytes::complete::{tag, take},
     number::complete::be_u16,
     branch::alt,
     multi::many1,
     combinator::map_parser,
     sequence::tuple,
+    InputIter,
+    InputTake,
 };
 use hex;
 use crate::{
@@ -22,7 +24,7 @@ use crate::{
 #[derive(Debug)]
 pub enum OpcodeOrData<'a> {
     Opcode(TgOpcode),
-    Data(TgOpcode, &'a [u8], &'a [u8]),
+    Data(TgOpcode, u64, &'a [u8]),
 }
 
 impl From<TgOpcode> for OpcodeOrData<'_> {
@@ -42,108 +44,83 @@ impl TgScriptParser {
 }
 
 fn tg_script(input: &[u8]) -> IResult<&[u8], TgScript> {
-   many1(pushdata1)(input); 
-//    let (input, v: Vec<OpcodeOrData>) = multi::opcode(input, None);
-//    while script.0.len() < 10 {
-//        println!("{:?}", hex::encode(i));
-//        let (i, op) = opcode(i, None)?; 
-//        println!("{:?}", hex::encode(i));
-//        script.0.push(OpcodeOrData::from(op.clone()));
-//        match op {
-//            OP_PUSHDATA1 => {
-//                let (i, data) = pushdata1_data(i)?;
-//                script.0.push(data);
-//            },
-//            OP_PUSHDATA2 => {
-//                let (i, data) = pushdata1_data(i)?;
-//                script.0.push(data);
-//            },
-//            OP_PUSHDATA4 => {
-//                let (i, data) = pushdata1_data(i)?;
-//                script.0.push(data);
-//            },
-//            _ => (),
-//        }
-//        println!("{:?}", hex::encode(i));
-//        println!("{:?}", script);
-//    }
-    Ok((input, TgScript(Vec::new())))
+    let (input, ops) = many1(alt((data_opcode, constant_opcode, normal_opcode)))(input)?; 
+    Ok((input, TgScript(ops)))
 }
 
-fn take1(input: &[u8]) -> IResult<&[u8], u8> {
-    let (input, b) = take(1u8)(input)?;
-    Ok((input, b[0]))
-}
-
-fn op_pushdata1(input: &[u8]) -> IResult<&[u8], TgOpcode> {
-    opcode(input, Some(OP_PUSHDATA1))
-}
-
-fn pushdata1_num_bytes(input: &[u8]) -> IResult<&[u8], u64> {
-    let (input, num_bytes) = take(1u8)(input)?;
-    let num_bytes = u8::from_be_bytes(num_bytes.try_into().unwrap());
-    Ok((input, num_bytes.into()))
-}
-
-fn pushdata1(input: &[u8]) -> IResult<&[u8], OpcodeOrData> {
-    let (input, (op, num_bytes)) = tuple((op_pushdata1, pushdata1_num_bytes))(input)?;
-    let (input, bytes) = take(num_bytes)(input)?;
-    println!("op: {:?} num bytes: {:?} bytes: {:?}", op, num_bytes, hex::encode(bytes));
-
-    Ok((input, OpcodeOrData::Opcode(TgOpcode(0x00))))
-}
-
-//fn pushdata2_data(input: &[u8]) -> IResult<&[u8], OpcodeOrData> {
-//    let (i, num_bytes) = take(2u8)(input)?;
-//    let num_bytes = u16::from_be_bytes(num_bytes.try_into().unwrap());
-//    let (i, bytes) = take(num_bytes)(i)?;
-//    Ok((i, OpcodeOrData::Data(bytes)))
-//}
-//
-//fn pushdata4_data(input: &[u8]) -> IResult<&[u8], OpcodeOrData> {
-//    let (i, num_bytes) = take(4u8)(input)?;
-//    let num_bytes = u64::from_be_bytes(num_bytes.try_into().unwrap());
-//    let (i, bytes) = take(num_bytes)(i)?;
-//    Ok((i, OpcodeOrData::Data(bytes)))
-//}
-
-fn opcode(input: &[u8], opcode: Option<TgOpcode>) -> IResult<&[u8], TgOpcode> {
-    let (input, b) = take1(input)?;
-    if let Some(opcode) = opcode {
-        if opcode.is_valid() && opcode.0 == b {
-            return Ok((input,opcode));
+fn opcode(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], TgOpcode> {
+    move |input: &[u8]| {
+        let (input, b) = take(1u8)(input)?;
+        if TgOpcode(b[0]) == op  {
+            return Ok((input, op));
         }
-    } 
-    else {
-        let opcode = TgOpcode(b);
-        if opcode.is_valid() {
-            return Ok((input, opcode));
-        }
+        Err(nom::Err::Error((input, nom::error::ErrorKind::IsNot)))
     }
-    Err(nom::Err::Error((input, nom::error::ErrorKind::IsNot)))
 }
 
-//fn pushdata_num_bytes_2(input: &[u8]) -> IResult<&[u8], u64> {
-//    take(2u8)(input)
-//}
-
-//fn pushdata_num_bytes_4(input: &[u8]) -> IResult<&[u8], u64> {
-//    take(4u8)(input)
-//}
-
-fn pushdata_opcode(input: &[u8], opcode: TgOpcode) -> IResult<&[u8], &[u8]> {
-    match opcode {
-        OP_PUSHDATA1 => {
-            Ok((input, input))
-        },
-        OP_PUSHDATA1 => {
-            Ok((input, input))
-        },
-        OP_PUSHDATA1 => {
-            Ok((input, input))
-        },
-        _ => Err(nom::Err::Error((input, nom::error::ErrorKind::IsNot)))
+fn wrapped_op(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], OpcodeOrData> {
+    move |input: &[u8]| {
+        let (input, op) = opcode(op)(input)?;
+        Ok((input, OpcodeOrData::from(op)))
     }
+}
+
+fn pushdata(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], OpcodeOrData> {
+    move |input: &[u8]| {
+        let n = match op {
+            OP_PUSHDATA1 => 1,
+            OP_PUSHDATA2 => 2,
+            OP_PUSHDATA4 => 4,
+            _ => return Err(nom::Err::Error((input, nom::error::ErrorKind::IsNot))),
+        };
+        let (input, (op, num_bytes)) = tuple((opcode(op), pushdata_num_bytes(n)))(input)?;
+        let (input, bytes) = take(num_bytes)(input)?;
+        Ok((input, OpcodeOrData::Data(op, num_bytes, bytes)))
+    }
+}
+
+fn pushdata_num_bytes(bytes: u8) -> impl Fn(&[u8]) -> IResult<&[u8], u64> {
+    move |input: &[u8]| {
+        let (input, num_bytes) = take(bytes)(input)?;
+        let num_bytes: u64 = match bytes {
+            1 => u8::from_be_bytes(num_bytes.try_into().unwrap()).into(),
+            2 => u16::from_be_bytes(num_bytes.try_into().unwrap()).into(),
+            4 => u32::from_be_bytes(num_bytes.try_into().unwrap()).into(),
+            _ => return Err(nom::Err::Error((input, nom::error::ErrorKind::IsNot))),
+        };
+        Ok((input, num_bytes))
+    }
+}
+
+fn data_opcode(input: &[u8]) -> IResult<&[u8], OpcodeOrData> {
+    alt(
+        (
+            pushdata(OP_PUSHDATA1),
+            pushdata(OP_PUSHDATA2),
+            pushdata(OP_PUSHDATA4),
+        )
+    )(input)
+}
+
+fn constant_opcode(input: &[u8]) -> IResult<&[u8], OpcodeOrData> {
+    alt(
+        (
+            wrapped_op(OP_0),
+            wrapped_op(OP_1),
+        )
+    )(input)
+}
+
+fn normal_opcode(input: &[u8]) -> IResult<&[u8], OpcodeOrData> {
+    alt(
+        (
+            wrapped_op(OP_DROP),
+            wrapped_op(OP_DUP),
+            wrapped_op(OP_IF),
+            wrapped_op(OP_ELSE),
+            wrapped_op(OP_ENDIF),
+        )
+    )(input)
 }
 
 #[cfg(test)]
@@ -152,10 +129,17 @@ mod tests {
     use super::*;
 
     const PUSHDATA_SCRIPT: &'static[u8] = &[0xD1,0x01,0xFF,0xD1,0x02,0x01,0x01];
+    const CONDITIONAL_SCRIPT: &'static[u8] = &[0xD1,0x01,0x01,0xF1,0x01,0xF2,0x00,0xF3];
+    const ERROR_SCRIPT: &'static[u8] = &[0xA1];
 
     #[test]
     fn pushdata() {
-        tg_script(&PUSHDATA_SCRIPT).unwrap(); 
+        let script = tg_script(&PUSHDATA_SCRIPT).unwrap(); 
+        println!("{:?}", script);
+        let script = tg_script(&CONDITIONAL_SCRIPT).unwrap(); 
+        println!("{:?}", script);
+//      let script = tg_script(&ERROR_SCRIPT).unwrap(); 
+//        println!("{:?}", script);
     }
     
 

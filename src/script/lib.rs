@@ -11,31 +11,8 @@ use crate::lib::{
     TgError,
 };
 
-#[derive(PartialEq, Eq, PartialOrd, Clone)]
+#[derive(PartialEq, Eq, PartialOrd, Clone, Copy)]
 pub struct TgOpcode(pub u8);
-
-impl TgOpcode {
-    pub fn is_valid(&self) -> bool {
-        use opcodes::*;
-        match  *self {
-           OP_0 => true, 
-           OP_1 => true,
-           OP_PUSHDATA1 => true,
-           OP_PUSHDATA2 => true,
-           OP_PUSHDATA4 => true,
-           OP_IF => true,
-           OP_ELSE => true,
-           OP_ENDIF => true,
-           OP_DROP => true,
-           OP_DUP => true,
-           OP_EQUAL => true,
-           OP_NEQUAL => true,
-           OP_VERIFYSIG => true,
-           OP_SHA256 => true,
-           _ => false,
-        }
-    }
-}
 
 impl fmt::Debug for TgOpcode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -58,6 +35,12 @@ impl fmt::Debug for TgOpcode {
            OP_SHA256 => write!(f, "SHA256"),
            _ => write!(f, "INVALID"),
         }
+    }
+}
+
+impl Into<u8> for TgOpcode {
+    fn into(self) -> u8 {
+        self.0
     }
 }
 
