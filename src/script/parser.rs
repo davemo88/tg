@@ -17,36 +17,11 @@ use hex;
 use crate::{
     script::lib::{
         TgOpcode,
+        OpcodeOrData,
+        TgScript,
         opcodes::*,
     },
 };
-
-#[derive(Debug)]
-pub enum OpcodeOrData<'a> {
-    Opcode(TgOpcode),
-    Data(TgOpcode, u64, &'a [u8]),
-}
-
-impl From<TgOpcode> for OpcodeOrData<'_> {
-    fn from(opcode: TgOpcode) -> Self {
-        OpcodeOrData::Opcode(opcode)
-    }
-}
-
-#[derive(Debug)]
-struct TgScript<'a>(pub Vec<OpcodeOrData<'a>>);
-
-struct TgScriptParser; 
-
-impl TgScriptParser {
-
-
-}
-
-fn tg_script(input: &[u8]) -> IResult<&[u8], TgScript> {
-    let (input, ops) = many1(alt((data_opcode, constant_opcode, normal_opcode)))(input)?; 
-    Ok((input, TgScript(ops)))
-}
 
 fn opcode(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], TgOpcode> {
     move |input: &[u8]| {
@@ -79,10 +54,10 @@ fn pushdata(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], OpcodeOrData> {
     }
 }
 
-fn pushdata_num_bytes(bytes: u8) -> impl Fn(&[u8]) -> IResult<&[u8], u64> {
+fn pushdata_num_bytes(n: u8) -> impl Fn(&[u8]) -> IResult<&[u8], u64> {
     move |input: &[u8]| {
-        let (input, num_bytes) = take(bytes)(input)?;
-        let num_bytes: u64 = match bytes {
+        let (input, num_bytes) = take(n)(input)?;
+        let num_bytes: u64 = match n {
             1 => u8::from_be_bytes(num_bytes.try_into().unwrap()).into(),
             2 => u16::from_be_bytes(num_bytes.try_into().unwrap()).into(),
             4 => u32::from_be_bytes(num_bytes.try_into().unwrap()).into(),
@@ -121,6 +96,11 @@ fn normal_opcode(input: &[u8]) -> IResult<&[u8], OpcodeOrData> {
             wrapped_op(OP_ENDIF),
         )
     )(input)
+}
+
+fn tg_script(input: &[u8]) -> IResult<&[u8], TgScript> {
+    let (input, ops) = many1(alt((data_opcode, constant_opcode, normal_opcode)))(input)?; 
+    Ok((input, TgScript(ops)))
 }
 
 #[cfg(test)]

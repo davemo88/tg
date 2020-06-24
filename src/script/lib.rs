@@ -79,6 +79,21 @@ pub mod opcodes {
 
 }
 
+#[derive(Debug)]
+pub enum OpcodeOrData<'a> {
+    Opcode(TgOpcode),
+    Data(TgOpcode, u64, &'a [u8]),
+}
+
+impl From<TgOpcode> for OpcodeOrData<'_> {
+    fn from(opcode: TgOpcode) -> Self {
+        OpcodeOrData::Opcode(opcode)
+    }
+}
+
+#[derive(Debug)]
+pub struct TgScript<'a>(pub Vec<OpcodeOrData<'a>>);
+
 #[cfg(test)]
 mod tests {
 
