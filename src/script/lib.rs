@@ -29,12 +29,11 @@ impl fmt::Debug for TgOpcode {
            OP_ENDIF => write!(f, "ENDIF"),
            OP_DROP => write!(f, "DROP"),
            OP_DUP => write!(f, "DUP"),
-           OP_2DUP => write!(f, "2DUP"),
            OP_EQUAL => write!(f, "EQUAL"),
            OP_NEQUAL => write!(f, "NEQUAL"),
            OP_VERIFYSIG => write!(f, "VERIFYSIG"),
            OP_SHA256 => write!(f, "SHA256"),
-           _ => write!(f, "INVALID"),
+           _ => write!(f, "{}", format!("{:?}_INVALID", self.0)),
         }
     }
 }
@@ -80,22 +79,39 @@ pub mod opcodes {
     pub const OP_VERIFYSIG: TgOpcode = TgOpcode(0xC1);
     pub const OP_SHA256: TgOpcode = TgOpcode(0xC2);
 
+    pub const VALID_OPCODES: &[TgOpcode] = &[
+        OP_PUSHDATA1,
+        OP_PUSHDATA2,
+        OP_PUSHDATA4,
+        OP_IF,
+        OP_ELSE,
+        OP_ENDIF,
+        OP_DROP,
+        OP_DUP,
+        OP_EQUAL,
+        OP_NEQUAL,
+        OP_VERIFYSIG,
+        OP_SHA256,
+    ];
+
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum OpcodeOrData {
+pub enum TgStatement {
     Opcode(TgOpcode),
     Data(TgOpcode, u64, Vec<u8>),
+// true branch required, false branch (else) optional
+    IfStatement(TgScript, Option<TgScript>),
 }
 
-impl From<TgOpcode> for OpcodeOrData {
+impl From<TgOpcode> for  TgStatement {
     fn from(opcode: TgOpcode) -> Self {
-        OpcodeOrData::Opcode(opcode)
+        TgStatement::Opcode(opcode)
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct TgScript(pub Vec<OpcodeOrData>);
+#[derive(Clone, PartialEq, Debug)]
+pub struct TgScript(pub Vec<TgStatement>);
 
 impl Default for TgScript {
     fn default() -> Self {
@@ -105,7 +121,6 @@ impl Default for TgScript {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
 }

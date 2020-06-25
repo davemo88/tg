@@ -3,7 +3,7 @@ use crate::{
     script::{
         lib::{
             TgOpcode,
-            OpcodeOrData,
+            TgStatement,
             TgScript,
             opcodes::*,
         },
@@ -22,26 +22,23 @@ use crate::{
 struct TgScriptEnv {
 //    payout_request: Option<PayoutRequest>,
     stack: Vec<Vec<u8>>,
-// one level of recursion 
-    in_if: bool,
-    script: TgScript,
+    eval_depth: u8,
 }
 
-impl From<TgScript> for TgScriptEnv {
-    fn from(script: TgScript) -> Self {
-        TgScriptEnv {
-//            payout_request: None,
-            script,
-            stack: Vec::new(),
-            in_if: false,
+const EVAL_DEPTH_LIMIT : u8 = 1;
 
+impl Default for TgScriptEnv {
+    fn default() -> Self {
+        TgScriptEnv {
+            stack: Vec::new(),
+            eval_depth: 0,
         }
     }
 }
 
 trait TgScriptInterpreter {
-    fn eval(&mut self) ->Result<()> { Err(TgError("")) }
-//NOTE: opcode functions - in own trait?
+    fn eval(&mut self, script: TgScript) ->Result<()> { Err(TgError("")) }
+// NOTE: opcode functions - in own trait?
     fn op_pushdata1(&mut self, n:u8, bytes: Vec<u8>) {}
     fn op_pushdata2(&mut self, n:u16, bytes: Vec<u8>) {}
     fn op_pushdata4(&mut self, n:u32, bytes: Vec<u8>) {}
@@ -49,7 +46,7 @@ trait TgScriptInterpreter {
     fn op_1(&mut self) {}
     fn op_dup(&mut self) {}
     fn op_drop(&mut self) {}
-    fn op_if(&mut self) {}
+    fn op_if(&mut self, true_branch: TgScript, false_branch: Option<TgScript>) {}
     fn op_else(&mut self) {}
     fn op_endif(&mut self) {}
     fn op_equal(&mut self) {}
@@ -59,40 +56,41 @@ trait TgScriptInterpreter {
 }
 
 impl TgScriptInterpreter for TgScriptEnv {
-    fn eval(&mut self) -> Result<()> {
-        self.script.0.reverse();
-        let mut next: OpcodeOrData; 
-        while self.script.0.len() > 0 {
-            next = self.script.0.pop().unwrap();    
+    fn eval(&mut self, mut script: TgScript) -> Result<()> {
+        if self.eval_depth == EVAL_DEPTH_LIMIT {
+            panic!("eval depth limit reached");
+        }
+        else
+        {
+            self.eval_depth += 1;
+        }
+        let mut next: TgStatement; 
+        while script.0.len() > 0 {
+            next = script.0.remove(0);    
             println!("{:?}", next);
             match next {
-                OpcodeOrData::Opcode(op) => match op {
+                TgStatement::Opcode(op) => match op {
                     OP_0 => self.op_0(),
                     OP_1 => self.op_1(),
                     OP_DUP => self.op_dup(),
                     OP_DROP => self.op_drop(),
-                    OP_IF => self.op_if(),
-                    OP_ELSE => self.op_else(),
-                    OP_ENDIF => self.op_endif(),
                     OP_EQUAL => self.op_equal(),
                     OP_NEQUAL => self.op_nequal(),
                     OP_VERIFYSIG => self.op_verifysig(),
                     OP_SHA256 => self.op_sha256(),
                     _ => return Err(TgError("Bad Opcode")),
                 },
-                OpcodeOrData::Data(op, n, bytes) => match op {
+                TgStatement::Data(op, n, bytes) => match op {
                     OP_PUSHDATA1 => self.op_pushdata1(n.try_into().unwrap(), bytes),
                     OP_PUSHDATA2 => self.op_pushdata2(n.try_into().unwrap(), bytes),
                     OP_PUSHDATA4 => self.op_pushdata4(n.try_into().unwrap(), bytes),
                     _ => return Err(TgError("Bad Data")),
-                }
+                },
+                TgStatement::IfStatement(true_branch_script, false_branch_script) => self.op_if(true_branch_script, false_branch_script),
             }
             println!("{:?}", self.stack);
         }
-// should the stack be empty at the end of evaluation as well?
-        if (self.in_if) {
-            return Err(TgError("missing OP_ENDIF"))
-        }
+        self.eval_depth -= 1;
         Ok(())
     }
 
@@ -124,64 +122,26 @@ impl TgScriptInterpreter for TgScriptEnv {
         self.stack.pop().unwrap();
     }
 
-    fn op_if(&mut self) {
-// true branch, continue executing
-// everything except [0x00] is true
+    fn op_if(&mut self, true_branch: TgScript, false_branch: Option<TgScript>) {
         if self.stack.pop().unwrap() != vec![0u8] {
-            if !self.in_if {
-                self.in_if = true;
-            }
-            else {
-                panic!("op_if: tried to enter in_if state twice");
-            }
+            self.eval(true_branch);
         }
-// false branch, ignore opcodes until OP_ELSE or OP_ENDIF
-        else {
-            loop {
-                let next = self.script.0.last().unwrap();
-                match next {
-                    OpcodeOrData::Opcode(OP_ELSE) => break,
-// set in_if to allow for check in op_endif()
-// we set in_if at beginning of conditional code execution i.e. if / else
-// however when if condition is false and there is no else,
-// we jump to endif and in_if is never set 
-                    OpcodeOrData::Opcode(OP_ENDIF) => { self.in_if = true; break; },
-                    _ => { self.script.0.pop(); },
-                }
-            } 
+        else if let (Some(false_branch)) = false_branch {
+            self.eval(false_branch);
         }
+
     }
 
     fn op_else(&mut self) {
-// on the true branch, already executed conditional code, ignore everything until OP_ENDIF
-        if self.in_if {
-            loop {
-                let next = self.script.0.last().unwrap();
-                match next {
-                  OpcodeOrData::Opcode(OP_ENDIF) => break,
-                    _ => { self.script.0.pop(); },
-                }
-            }
-        }
-        else {
-// on the false branch, execute the else code
-            self.in_if = true;
-        }
+
     }
 
     fn op_endif(&mut self) {
-// want this check to disallow OP_ENDIF without a preceding OP_IF
-        if self.in_if {
-            self.in_if = false;
-        }
-        else {
-            panic!("op_endif: tried leave in_if state but not in it");
-        }
+
     }
 
     fn op_equal(&mut self) {
         if self.stack.pop().unwrap() == self.stack.pop().unwrap() {
-            self.op_1();
         }
         else {
             self.op_0();
@@ -223,24 +183,24 @@ mod tests {
     const CONDITIONAL_SCRIPT_FALSE: &'static[u8] = &[0x00,0xF1,0x01,0xF2,0x00,0xF3];
     const ERROR_SCRIPT: &'static[u8] = &[0xA1];
 
-//    #[test]
+    #[test]
     fn pushdata() {
         let (input, script) = tg_script(&PUSHDATA_SCRIPT).unwrap(); 
-        let mut env = TgScriptEnv::from(script);
-        env.eval();
+        let mut env = TgScriptEnv::default();
+        env.eval(script);
     }
 
     #[test]
     fn conditional_true() {
         let (input, script) = tg_script(&CONDITIONAL_SCRIPT_TRUE).unwrap(); 
-        let mut env = TgScriptEnv::from(script);
-        env.eval();
+        let mut env = TgScriptEnv::default();
+        env.eval(script);
     }
 
- //   #[test]
+    #[test]
     fn conditional_false() {
         let (input, script) = tg_script(&CONDITIONAL_SCRIPT_FALSE).unwrap(); 
-        let mut env = TgScriptEnv::from(script);
-        env.eval();
+        let mut env = TgScriptEnv::default();
+        env.eval(script);
     }
 }

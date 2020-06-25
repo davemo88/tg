@@ -17,7 +17,7 @@ use hex;
 use crate::{
     script::lib::{
         TgOpcode,
-        OpcodeOrData,
+        TgStatement,
         TgScript,
         opcodes::*,
     },
@@ -26,7 +26,13 @@ use crate::{
 fn opcode(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], TgOpcode> {
     move |input: &[u8]| {
         let (input, b) = take(1u8)(input)?;
-        if TgOpcode(b[0]) == op  {
+        let potential_op = TgOpcode(b[0]);
+        if !VALID_OPCODES.contains(&potential_op) {
+//TODO: how to add error message to nom error?
+            println!("script contains invalid opcode: {:?}", potential_op);
+            return Err(nom::Err::Failure((input, nom::error::ErrorKind::IsNot)))
+        }
+        if potential_op == op  {
             Ok((input, op))
         }
         else {
@@ -35,14 +41,14 @@ fn opcode(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], TgOpcode> {
     }
 }
 
-fn wrapped_op(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], OpcodeOrData> {
+fn wrapped_op(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], TgStatement> {
     move |input: &[u8]| {
         let (input, op) = opcode(op)(input)?;
-        Ok((input, OpcodeOrData::from(op)))
+        Ok((input, TgStatement::from(op)))
     }
 }
 
-fn pushdata(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], OpcodeOrData> {
+fn pushdata(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], TgStatement> {
     move |input: &[u8]| {
         let n = match op {
             OP_PUSHDATA1 => 1,
@@ -52,7 +58,7 @@ fn pushdata(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], OpcodeOrData> {
         };
         let (input, (op, num_bytes)) = tuple((opcode(op), pushdata_num_bytes(n)))(input)?;
         let (input, bytes) = take(num_bytes)(input)?;
-        Ok((input, OpcodeOrData::Data(op, num_bytes, bytes.to_vec())))
+        Ok((input, TgStatement::Data(op, num_bytes, bytes.to_vec())))
     }
 }
 
@@ -71,7 +77,34 @@ fn pushdata_num_bytes(n: u8) -> impl Fn(&[u8]) -> IResult<&[u8], u64> {
     }
 }
 
-fn data_opcode(input: &[u8]) -> IResult<&[u8], OpcodeOrData> {
+fn if_statement(input: &[u8]) -> IResult<&[u8], TgStatement> {
+    let (input, (_, true_branch_script, op)) = tuple((
+            opcode(OP_IF),
+            tg_script,
+            alt((
+                opcode(OP_ELSE),
+                opcode(OP_ENDIF)
+            )),
+    ))(input)?;
+    match op {
+        OP_ELSE => {
+            let (input, (false_branch_script)) = if_statement_false_branch(input)?;
+            Ok((input, TgStatement::IfStatement(true_branch_script, Some(false_branch_script))))
+        }, 
+        OP_ENDIF => Ok((input, TgStatement::IfStatement(true_branch_script, None))),
+        _ => return Err(nom::Err::Error((input, nom::error::ErrorKind::IsNot))),
+    }
+}
+
+fn if_statement_false_branch(input: &[u8]) -> IResult<&[u8], TgScript> {
+    let (input, (false_branch_script, _)) = tuple((
+            tg_script,
+            opcode(OP_ENDIF)
+    ))(input)?;
+    Ok((input, false_branch_script))
+}
+
+fn data_opcode(input: &[u8]) -> IResult<&[u8], TgStatement> {
     alt(
         (
             pushdata(OP_PUSHDATA1),
@@ -81,7 +114,7 @@ fn data_opcode(input: &[u8]) -> IResult<&[u8], OpcodeOrData> {
     )(input)
 }
 
-fn constant_opcode(input: &[u8]) -> IResult<&[u8], OpcodeOrData> {
+fn constant_opcode(input: &[u8]) -> IResult<&[u8], TgStatement> {
     alt(
         (
             wrapped_op(OP_0),
@@ -90,14 +123,11 @@ fn constant_opcode(input: &[u8]) -> IResult<&[u8], OpcodeOrData> {
     )(input)
 }
 
-fn normal_opcode(input: &[u8]) -> IResult<&[u8], OpcodeOrData> {
+fn normal_opcode(input: &[u8]) -> IResult<&[u8], TgStatement> {
     alt(
         (
             wrapped_op(OP_DROP),
             wrapped_op(OP_DUP),
-            wrapped_op(OP_IF),
-            wrapped_op(OP_ELSE),
-            wrapped_op(OP_ENDIF),
         )
     )(input)
 }
@@ -124,7 +154,7 @@ mod tests {
 
         let script = tg_script(&CONDITIONAL_SCRIPT); 
         assert!(script.is_ok());
-//        println!("{:?}", script);
+        println!("{:?}", script);
 
         let script = tg_script(&ERROR_SCRIPT); 
         assert!(script.is_err());
