@@ -3,7 +3,6 @@ use secp256k1::{
     Secp256k1,
     Message,
     Signature,
-    SecretKey,
     rand::{
         rngs::OsRng,
         RngCore,

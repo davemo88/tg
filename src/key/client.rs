@@ -1,28 +1,10 @@
-use secp256k1::{
-    Secp256k1,
-    Message,
-    Signature,
-    PublicKey,
-};
-
-use bitcoin::{
-    Transaction,
-};
-
-use bitcoincore_rpc::{
-    Auth,
-    Client,
-    RpcApi,
-};
-
 use crate::{
     lib::{
         LOCALHOST,
         HostNPort,
-        BitcoindRpcConfig,
     },
     key::{
-        PrivateKeyServiceApi,
+//        PrivateKeyServiceApi,
         PRIVATE_KEY_SERVICE_PORT,
     },
 };

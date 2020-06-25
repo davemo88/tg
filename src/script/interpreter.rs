@@ -2,17 +2,12 @@ use std::convert::TryInto;
 use crate::{
     script::{
         lib::{
-            TgOpcode,
             TgStatement,
             TgScript,
             opcodes::*,
         },
-        parser::{
-            tg_script,
-        }
     },
     lib::{
-        PayoutScript,
         PayoutRequest,
         Result,
         TgError,
@@ -37,16 +32,16 @@ impl Default for TgScriptEnv {
 }
 
 trait TgScriptInterpreter {
-    fn eval(&mut self, script: TgScript) ->Result<()> { Err(TgError("")) }
+    fn eval(&mut self, _script: TgScript) ->Result<()> { Err(TgError("")) }
 // NOTE: opcode functions - in own trait?
-    fn op_pushdata1(&mut self, n:u8, bytes: Vec<u8>) {}
-    fn op_pushdata2(&mut self, n:u16, bytes: Vec<u8>) {}
-    fn op_pushdata4(&mut self, n:u32, bytes: Vec<u8>) {}
+    fn op_pushdata1(&mut self, _n:u8, _bytes: Vec<u8>) {}
+    fn op_pushdata2(&mut self, _n:u16, _bytes: Vec<u8>) {}
+    fn op_pushdata4(&mut self, _n:u32, _bytes: Vec<u8>) {}
     fn op_0(&mut self) {}
     fn op_1(&mut self) {}
     fn op_dup(&mut self) {}
     fn op_drop(&mut self) {}
-    fn op_if(&mut self, true_branch: TgScript, false_branch: Option<TgScript>) {}
+    fn op_if(&mut self, _true_branch: TgScript, _false_branch: Option<TgScript>) {}
     fn op_else(&mut self) {}
     fn op_endif(&mut self) {}
     fn op_equal(&mut self) {}
@@ -176,30 +171,30 @@ impl TgScriptEnv {
 mod tests {
 
     use super::*;
+    use crate::script::parser::tg_script;
 
     const PUSHDATA_SCRIPT: &'static[u8] = &[0xD1,0x01,0xFF,0xD1,0x02,0x01,0x01];
     const CONDITIONAL_SCRIPT_TRUE: &'static[u8] = &[0x01,0xF1,0x01,0xF2,0x00,0xF3,0xF1,0x00,0xF3];
     const CONDITIONAL_SCRIPT_FALSE: &'static[u8] = &[0x00,0xF1,0x01,0xF2,0x00,0xF3];
-    const ERROR_SCRIPT: &'static[u8] = &[0xA1];
 
     #[test]
     fn pushdata() {
-        let (input, script) = tg_script(&PUSHDATA_SCRIPT).unwrap(); 
+        let (_, script) = tg_script(&PUSHDATA_SCRIPT).unwrap(); 
         let mut env = TgScriptEnv::default();
-        env.eval(script);
+        env.eval(script).unwrap();
     }
 
     #[test]
     fn conditional_true() {
-        let (input, script) = tg_script(&CONDITIONAL_SCRIPT_TRUE).unwrap(); 
+        let (_, script) = tg_script(&CONDITIONAL_SCRIPT_TRUE).unwrap(); 
         let mut env = TgScriptEnv::default();
-        env.eval(script);
+        env.eval(script).unwrap();
     }
 
     #[test]
     fn conditional_false() {
-        let (input, script) = tg_script(&CONDITIONAL_SCRIPT_FALSE).unwrap(); 
+        let (_, script) = tg_script(&CONDITIONAL_SCRIPT_FALSE).unwrap(); 
         let mut env = TgScriptEnv::default();
-        env.eval(script);
+        env.eval(script).unwrap();
     }
 }

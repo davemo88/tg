@@ -3,14 +3,7 @@ use std::{
     fmt,
 };
 use secp256k1::{
-    Secp256k1,
-    Message,
     Signature,
-    SecretKey,
-    rand::{
-        rngs::OsRng,
-        RngCore,
-    },
 };
 
 use rand::Rng;
@@ -20,35 +13,12 @@ use bitcoin::{
     Address,
     blockdata::{
         script::{
-            Builder,
             Script,
         },
-        opcodes::{
-            all,
-        }
     },
-    Network,
-    Amount,
-    util::key::PrivateKey,
     util::key::PublicKey,
     hashes::{
         Hash,
-    },
-    consensus::{
-        encode,
-    }
-};
-
-use bitcoincore_rpc::{
-    Auth,
-    Client,
-    RpcApi,
-    RawTx,
-    json::{
-        PubKeyOrAddress,
-        AddressType,
-        CreateRawTransactionInput,
-        SignRawTransactionInput,
     },
 };
 
@@ -97,74 +67,6 @@ impl Default for PayoutScript {
             script: Script::default(),
         }
     }
-}
-
-pub struct PayoutScriptBuilder;
-
-impl PayoutScriptBuilderApi for PayoutScriptBuilder {}
-
-pub trait PayoutScriptBuilderApi {
-    fn build_sig_plus_txid_script() -> Script {
-// https://bitcoin-script-debugger.visvirial.com/?input=OP_PUSHDATA1%201%200x07%20OP_PUSHDATA1%201%200x04%20OP_DUP%20OP_PUSHDATA1%201%200x04%20OP_EQUAL%20OP_IF%20OP_DROP%20OP_PUSHDATA1%201%200x07%20OP_EQUAL%20OP_ELSE%20OP_PUSHDATA1%201%200x05%20OP_EQUAL%20OP_IF%20OP_PUSHDATA1%201%200x06%20OP_EQUAL
-/*
-OP_PUSHDATA1 1 0x07
-OP_PUSHDATA1 1 0x04
-OP_DUP
-OP_PUSHDATA1 1 0x04
-OP_EQUAL
-OP_IF 
-OP_DROP OP_PUSHDATA1 1 0x07 OP_EQUAL
-OP_ELSE
-OP_PUSHDATA1 1 0x05 OP_EQUAL
-OP_IF 
-OP_PUSHDATA1 1 0x06 OP_EQUAL
-*/
-
-        let request_outcome_token: Vec<u8> = vec![0x4];
-        let request_txid: Vec<u8> = vec![0x4];
-
-        let script_outcome_token_1: Vec<u8> = vec![0x3];
-        let script_txid_1: Vec<u8> = vec![0x3];
-
-        let script_outcome_token_2: Vec<u8> = vec![0x4];
-        let script_txid_2: Vec<u8> = vec![0x4];
-
-        let b = Builder::new(); 
-
-        let b = b.push_slice(&request_txid);
-
-        println!("{}", b.clone().into_script().asm());
-
-        let b = b.push_slice(&request_outcome_token);
-
-        let b = b.push_opcode(all::OP_DUP);
-
-        let b = b.push_slice(&script_outcome_token_1);
-//
-        let b = b.push_opcode(all::OP_EQUAL);
-//
-        let b = b.push_opcode(all::OP_IF);
-//
-        let b = b.push_opcode(all::OP_DROP);
-
-        let b = b.push_slice(&script_txid_1);
-//
-        let b = b.push_opcode(all::OP_ELSE);
-//
-        let b = b.push_slice(&script_txid_2);
-//
-        let b = b.push_opcode(all::OP_EQUAL);
-//
-        let b = b.push_opcode(all::OP_IF);
-//
-        let b = b.push_slice(&script_txid_2);
-//
-        let b = b.push_opcode(all::OP_EQUAL);
-
-        println!("{}", b.clone().into_script().asm());
-
-        b.into_script()
-   }
 }
 
 pub struct Challenge {
@@ -253,18 +155,7 @@ pub struct MultisigEscrow {
     pub referees: Vec<PublicKey>,
 }
 
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-
-//    #[test]
-//    fn test_payout_script_builder() {
-//        let script = PayoutScriptBuilder::build_sig_plus_txid_script();
-//        println!("\nprinting payout script instructions");
-//        for i in script.iter(false) {
-//            println!("{:?}",i);
-//        }
-//                
-//    }
-}
+//#[cfg(test)]
+//mod tests {
+//    use super::*;
+//}

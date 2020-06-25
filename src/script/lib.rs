@@ -1,14 +1,6 @@
 
 use std::{
-    str::FromStr,
     fmt,
-};
-use hex::{
-    self,
-};
-
-use crate::lib::{
-    TgError,
 };
 
 #[derive(PartialEq, Eq, PartialOrd, Clone, Copy)]
@@ -65,7 +57,7 @@ pub mod opcodes {
     pub const OP_ENDIF: TgOpcode = TgOpcode(0xF3);
 
 // marks payout request as invalid if the top stack value is not true
-    pub const OP_VALIDATE: TgOpcode = TgOpcode(0xFF);
+//    pub const OP_VALIDATE: TgOpcode = TgOpcode(0xFF);
 
 // stack manipulation
     pub const OP_DROP: TgOpcode = TgOpcode(0x50);
@@ -119,8 +111,7 @@ impl Default for TgScript {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-}
+//#[cfg(test)]
+//mod tests {
+//    use super::*;
+//}

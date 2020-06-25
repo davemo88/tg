@@ -2,18 +2,14 @@ use std::convert::TryInto;
 use nom::{
     self,
     IResult,
-    Err,
-    switch,
-    bytes::complete::{tag, take},
-    number::complete::{be_u8, be_u16, be_u32},
+    bytes::complete::{take},
+//    number::complete::{be_u8, be_u16, be_u32},
     branch::alt,
     multi::many1,
-    combinator::map_parser,
     sequence::tuple,
     InputIter,
     InputTake,
 };
-use hex;
 use crate::{
     script::lib::{
         TgOpcode,
