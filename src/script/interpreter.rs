@@ -124,12 +124,11 @@ impl TgScriptInterpreter for TgScriptEnv {
 
     fn op_if(&mut self, true_branch: TgScript, false_branch: Option<TgScript>) {
         if self.stack.pop().unwrap() != vec![0u8] {
-            self.eval(true_branch);
+            self.eval(true_branch).unwrap();
         }
-        else if let (Some(false_branch)) = false_branch {
-            self.eval(false_branch);
+        else if let Some(false_branch) = false_branch {
+            self.eval(false_branch).unwrap();
         }
-
     }
 
     fn op_else(&mut self) {
