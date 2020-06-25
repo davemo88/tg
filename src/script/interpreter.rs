@@ -20,7 +20,7 @@ struct TgScriptEnv {
     eval_depth: u8,
 }
 
-const EVAL_DEPTH_LIMIT : u8 = 1;
+const EVAL_DEPTH_LIMIT : u8 = 2;
 
 impl Default for TgScriptEnv {
     fn default() -> Self {
@@ -60,6 +60,7 @@ impl TgScriptInterpreter for TgScriptEnv {
             self.eval_depth += 1;
         }
         let mut next: TgStatement; 
+        println!("{:?}", script);
         while script.0.len() > 0 {
             next = script.0.remove(0);    
             println!("{:?}", next);
@@ -83,7 +84,7 @@ impl TgScriptInterpreter for TgScriptEnv {
                 },
                 TgStatement::IfStatement(true_branch_script, false_branch_script) => self.op_if(true_branch_script, false_branch_script),
             }
-            println!("{:?}", self.stack);
+            println!("stack{:?}", self.stack);
         }
         self.eval_depth -= 1;
         Ok(())
@@ -175,7 +176,7 @@ mod tests {
 
     const PUSHDATA_SCRIPT: &'static[u8] = &[0xD1,0x01,0xFF,0xD1,0x02,0x01,0x01];
     const CONDITIONAL_SCRIPT_TRUE: &'static[u8] = &[0x01,0xF1,0x01,0xF2,0x00,0xF3,0xF1,0x00,0xF3];
-    const CONDITIONAL_SCRIPT_FALSE: &'static[u8] = &[0x00,0xF1,0x01,0xF2,0x00,0xF3];
+    const CONDITIONAL_SCRIPT_FALSE: &'static[u8] = &[0x00,0xF1,0x01,0xF2,0x00,0xF3,0xF1,0x00,0xF3];
 
     #[test]
     fn pushdata() {

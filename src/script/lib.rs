@@ -72,6 +72,8 @@ pub mod opcodes {
     pub const OP_SHA256: TgOpcode = TgOpcode(0xC2);
 
     pub const VALID_OPCODES: &[TgOpcode] = &[
+        OP_0,
+        OP_1,
         OP_PUSHDATA1,
         OP_PUSHDATA2,
         OP_PUSHDATA4,
