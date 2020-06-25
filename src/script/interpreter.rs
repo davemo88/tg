@@ -34,6 +34,7 @@ impl From<TgScript> for TgScriptEnv {
             script,
             stack: Vec::new(),
             in_if: false,
+
         }
     }
 }
@@ -53,9 +54,8 @@ trait TgScriptInterpreter {
     fn op_endif(&mut self) {}
     fn op_equal(&mut self) {}
     fn op_nequal(&mut self) {}
-    fn op_and(&mut self) {}
-    fn op_or(&mut self) {}
-    fn op_xor(&mut self) {}
+    fn op_verifysig(&mut self) {}
+    fn op_sha256(&mut self) {}
 }
 
 impl TgScriptInterpreter for TgScriptEnv {
@@ -70,11 +70,14 @@ impl TgScriptInterpreter for TgScriptEnv {
                     OP_0 => self.op_0(),
                     OP_1 => self.op_1(),
                     OP_DUP => self.op_dup(),
-                    OP_2DUP => self.op_dup(),
                     OP_DROP => self.op_drop(),
                     OP_IF => self.op_if(),
                     OP_ELSE => self.op_else(),
                     OP_ENDIF => self.op_endif(),
+                    OP_EQUAL => self.op_equal(),
+                    OP_NEQUAL => self.op_nequal(),
+                    OP_VERIFYSIG => self.op_verifysig(),
+                    OP_SHA256 => self.op_sha256(),
                     _ => return Err(TgError("Bad Opcode")),
                 },
                 OpcodeOrData::Data(op, n, bytes) => match op {
@@ -86,7 +89,23 @@ impl TgScriptInterpreter for TgScriptEnv {
             }
             println!("{:?}", self.stack);
         }
+// should the stack be empty at the end of evaluation as well?
+        if (self.in_if) {
+            return Err(TgError("missing OP_ENDIF"))
+        }
         Ok(())
+    }
+
+    fn op_pushdata1(&mut self, n: u8, bytes: Vec<u8>) {
+        self.pushdata(n as usize, bytes);
+    }
+
+    fn op_pushdata2(&mut self, n: u16, bytes: Vec<u8>) {
+        self.pushdata(n as usize, bytes);
+    }
+
+    fn op_pushdata4(&mut self, n: u32, bytes: Vec<u8>) {
+        self.pushdata(n as usize, bytes);
     }
 
     fn op_0(&mut self) {
@@ -95,6 +114,14 @@ impl TgScriptInterpreter for TgScriptEnv {
 
     fn op_1(&mut self) {
         self.stack.push(vec![1u8])
+    }
+
+    fn op_dup(&mut self) {
+        self.stack.push(self.stack[0].clone());
+    }
+
+    fn op_drop(&mut self) {
+        self.stack.pop().unwrap();
     }
 
     fn op_if(&mut self) {
@@ -114,10 +141,10 @@ impl TgScriptInterpreter for TgScriptEnv {
                 let next = self.script.0.last().unwrap();
                 match next {
                     OpcodeOrData::Opcode(OP_ELSE) => break,
-// set in_if = true to allow for check in op_endif()
-// we set in_if at beginning of conditional code execution, i.e.
-// if / else. however if condition is false and there is no else,
-// we jump to endif without executing conditional code
+// set in_if to allow for check in op_endif()
+// we set in_if at beginning of conditional code execution i.e. if / else
+// however when if condition is false and there is no else,
+// we jump to endif and in_if is never set 
                     OpcodeOrData::Opcode(OP_ENDIF) => { self.in_if = true; break; },
                     _ => { self.script.0.pop(); },
                 }
@@ -152,16 +179,30 @@ impl TgScriptInterpreter for TgScriptEnv {
         }
     }
 
-    fn op_pushdata1(&mut self, n: u8, bytes: Vec<u8>) {
-        self.pushdata(n as usize, bytes);
+    fn op_equal(&mut self) {
+        if self.stack.pop().unwrap() == self.stack.pop().unwrap() {
+            self.op_1();
+        }
+        else {
+            self.op_0();
+        }
     }
 
-    fn op_pushdata2(&mut self, n: u16, bytes: Vec<u8>) {
-        self.pushdata(n as usize, bytes);
+    fn op_nequal(&mut self) {
+        if self.stack.pop().unwrap() == self.stack.pop().unwrap() {
+            self.op_0();
+        }
+        else {
+            self.op_1();
+        }
     }
 
-    fn op_pushdata4(&mut self, n: u32, bytes: Vec<u8>) {
-        self.pushdata(n as usize, bytes);
+    fn op_verifysig(&mut self) {
+
+    }
+
+    fn op_sha256(&mut self) {
+
     }
 }
 

@@ -71,7 +71,6 @@ pub mod opcodes {
 // stack manipulation
     pub const OP_DROP: TgOpcode = TgOpcode(0x50);
     pub const OP_DUP: TgOpcode = TgOpcode(0x52);
-    pub const OP_2DUP: TgOpcode = TgOpcode(0x52);
 
 // comparison
     pub const OP_EQUAL: TgOpcode = TgOpcode(0xE1);
