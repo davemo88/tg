@@ -11,7 +11,6 @@ use secp256k1::{
 use bitcoin::{
     Transaction,
     Address,
-    Script,
     Network,
     Amount,
     util::key::PrivateKey,
@@ -109,7 +108,7 @@ impl TgClientApi for TgClient {
         ).unwrap();
 
         let total_in = p1_total_in + p2_total_in;
-        let total_out: Amount = Amount::ONE_SAT * tx.output.iter().map(|txout| txout.value).sum();
+        let _total_out: Amount = Amount::ONE_SAT * tx.output.iter().map(|txout| txout.value).sum();
 
 //        println!("
 //challenge funding tx:
@@ -186,9 +185,9 @@ impl TgClientApi for TgClient {
 //
 //        let mut tx_inputs = Vec::<CreateRawTransactionInput>::new();
 //
-        let payout_amount = vout.value - Amount::from_sat(MINER_FEE);
+        let _payout_amount = vout.value - Amount::from_sat(MINER_FEE);
 
-        let mut outs = HashMap::<String, Amount>::default();
+        let outs = HashMap::<String, Amount>::default();
 //        let payout_address 
 //        outs.insert(&p1_address.to_string(), payout_amount);
 
@@ -402,9 +401,9 @@ mod tests {
 
         let _result = rpc.generate_to_address(110, &faucet).unwrap();
 
-        let tx_info = rpc.get_raw_transaction_info(&send_result,None);
+        let _tx_info = rpc.get_raw_transaction_info(&send_result,None);
 
-//        println!("{:?}", tx_info);
+//        println!("{:?}", _tx_info);
 
     }
 

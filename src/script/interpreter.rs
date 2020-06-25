@@ -8,7 +8,7 @@ use crate::{
         },
     },
     lib::{
-        PayoutRequest,
+//        PayoutRequest,
         Result,
         TgError,
     }
@@ -32,7 +32,7 @@ impl Default for TgScriptEnv {
 }
 
 trait TgScriptInterpreter {
-    fn eval(&mut self, _script: TgScript) ->Result<()> { Err(TgError("")) }
+    fn eval(&mut self, _script: TgScript) -> Result<()> { Err(TgError("")) }
 // NOTE: opcode functions - in own trait?
     fn op_pushdata1(&mut self, _n:u8, _bytes: Vec<u8>) {}
     fn op_pushdata2(&mut self, _n:u16, _bytes: Vec<u8>) {}

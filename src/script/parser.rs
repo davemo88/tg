@@ -84,7 +84,7 @@ fn if_statement(input: &[u8]) -> IResult<&[u8], TgStatement> {
     ))(input)?;
     match op {
         OP_ELSE => {
-            let (input, (false_branch_script)) = if_statement_false_branch(input)?;
+            let (input, false_branch_script) = if_statement_false_branch(input)?;
             Ok((input, TgStatement::IfStatement(true_branch_script, Some(false_branch_script))))
         }, 
         OP_ENDIF => Ok((input, TgStatement::IfStatement(true_branch_script, None))),
