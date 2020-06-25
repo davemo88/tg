@@ -53,6 +53,8 @@ use crate::lib::{
     TgError,
 };
 
+use crate::script::TgScript;
+
 pub const NETWORK: Network = Network::Regtest;
 pub const MINER_FEE: u64 = 10000;
 pub const NUM_PLAYERS: u64 = 2;

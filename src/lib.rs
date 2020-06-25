@@ -94,7 +94,7 @@ impl Default for PayoutScript {
     fn default() -> Self {
         PayoutScript {
             body: rand::thread_rng().gen::<[u8;32]>(),
-            script: Script::new(),
+            script: Script::default(),
         }
     }
 }

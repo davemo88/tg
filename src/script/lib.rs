@@ -29,6 +29,7 @@ impl fmt::Debug for TgOpcode {
            OP_ENDIF => write!(f, "ENDIF"),
            OP_DROP => write!(f, "DROP"),
            OP_DUP => write!(f, "DUP"),
+           OP_2DUP => write!(f, "2DUP"),
            OP_EQUAL => write!(f, "EQUAL"),
            OP_NEQUAL => write!(f, "NEQUAL"),
            OP_VERIFYSIG => write!(f, "VERIFYSIG"),
@@ -49,6 +50,8 @@ pub mod opcodes {
     use super::TgOpcode;
 
 // constants
+// NOTE: these are becoming problemtic because they are actually data
+// bitcoin uses them as shorthand for pushdata type ops, maybe that's fine
     pub const OP_0: TgOpcode = TgOpcode(0x00);
     pub const OP_1: TgOpcode = TgOpcode(0x01);
 
@@ -68,6 +71,7 @@ pub mod opcodes {
 // stack manipulation
     pub const OP_DROP: TgOpcode = TgOpcode(0x50);
     pub const OP_DUP: TgOpcode = TgOpcode(0x52);
+    pub const OP_2DUP: TgOpcode = TgOpcode(0x52);
 
 // comparison
     pub const OP_EQUAL: TgOpcode = TgOpcode(0xE1);
@@ -79,20 +83,26 @@ pub mod opcodes {
 
 }
 
-#[derive(Debug)]
-pub enum OpcodeOrData<'a> {
+#[derive(Clone, Debug, PartialEq)]
+pub enum OpcodeOrData {
     Opcode(TgOpcode),
-    Data(TgOpcode, u64, &'a [u8]),
+    Data(TgOpcode, u64, Vec<u8>),
 }
 
-impl From<TgOpcode> for OpcodeOrData<'_> {
+impl From<TgOpcode> for OpcodeOrData {
     fn from(opcode: TgOpcode) -> Self {
         OpcodeOrData::Opcode(opcode)
     }
 }
 
-#[derive(Debug)]
-pub struct TgScript<'a>(pub Vec<OpcodeOrData<'a>>);
+#[derive(Clone, Debug)]
+pub struct TgScript(pub Vec<OpcodeOrData>);
+
+impl Default for TgScript {
+    fn default() -> Self {
+        TgScript(Vec::new())
+    }
+}
 
 #[cfg(test)]
 mod tests {

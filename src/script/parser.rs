@@ -52,12 +52,14 @@ fn pushdata(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], OpcodeOrData> {
         };
         let (input, (op, num_bytes)) = tuple((opcode(op), pushdata_num_bytes(n)))(input)?;
         let (input, bytes) = take(num_bytes)(input)?;
-        Ok((input, OpcodeOrData::Data(op, num_bytes, bytes)))
+        Ok((input, OpcodeOrData::Data(op, num_bytes, bytes.to_vec())))
     }
 }
 
 fn pushdata_num_bytes(n: u8) -> impl Fn(&[u8]) -> IResult<&[u8], u64> {
     move |input: &[u8]| {
+// could be replaced with nom::number::be_uX combinators
+// but that also creates type woes similar to those below
         let (input, num_bytes) = take(n)(input)?;
         let num_bytes: u64 = match n {
             1 => u8::from_be_bytes(num_bytes.try_into().unwrap()).into(),
@@ -100,7 +102,7 @@ fn normal_opcode(input: &[u8]) -> IResult<&[u8], OpcodeOrData> {
     )(input)
 }
 
-fn tg_script(input: &[u8]) -> IResult<&[u8], TgScript> {
+pub fn tg_script(input: &[u8]) -> IResult<&[u8], TgScript> {
     let (input, ops) = many1(alt((data_opcode, constant_opcode, normal_opcode)))(input)?; 
     Ok((input, TgScript(ops)))
 }
@@ -115,16 +117,17 @@ mod tests {
     const ERROR_SCRIPT: &'static[u8] = &[0xA1];
 
     #[test]
-    fn pushdata() {
-        let script = tg_script(&PUSHDATA_SCRIPT).unwrap(); 
-        println!("{:?}", script);
-        let script = tg_script(&CONDITIONAL_SCRIPT).unwrap(); 
-        println!("{:?}", script);
-//      let script = tg_script(&ERROR_SCRIPT).unwrap(); 
+    fn parser () {
+        let script = tg_script(&PUSHDATA_SCRIPT); 
+        assert!(script.is_ok());
+//        println!("{:?}", script);
+
+        let script = tg_script(&CONDITIONAL_SCRIPT); 
+        assert!(script.is_ok());
+//        println!("{:?}", script);
+
+        let script = tg_script(&ERROR_SCRIPT); 
+        assert!(script.is_err());
 //        println!("{:?}", script);
     }
-    
-
 }
-
-
