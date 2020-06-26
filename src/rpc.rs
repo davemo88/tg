@@ -39,7 +39,7 @@ use bitcoincore_rpc::{
     },
 };
 
-use crate::lib::{
+use crate::{
     MultisigEscrow,
     BitcoindRpcConfig,
     Challenge,

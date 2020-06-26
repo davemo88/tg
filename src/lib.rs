@@ -22,6 +22,10 @@ use bitcoin::{
     },
 };
 
+mod key;
+mod script;
+mod rpc;
+
 pub const PAYOUT_SCRIPT_MAX_SIZE: usize = 32;
 pub const LOCALHOST: &'static str = "0.0.0.0";
 pub const TESTNET_RPC_PORT: usize = 18332;

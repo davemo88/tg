@@ -7,11 +7,8 @@ use crate::{
             TgOpcode::*,
         },
     },
-    lib::{
-//        PayoutRequest,
-        Result,
-        TgError,
-    }
+    Result,
+    TgError,
 };
 
 struct TgScriptEnv {

@@ -16,11 +16,9 @@ use bitcoincore_rpc::{
 };
 
 use crate::{
-    lib::{
-        LOCALHOST,
-        HostNPort,
-        BitcoindRpcConfig,
-    },
+    LOCALHOST,
+    HostNPort,
+    BitcoindRpcConfig,
     key::PRIVATE_KEY_SERVICE_PORT,
 };
 
