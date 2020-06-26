@@ -78,9 +78,13 @@ impl TgScriptInterpreter for TgScriptEnv {
                 OP_PUSHDATA2(n, bytes) => self.op_pushdata2(n.try_into().unwrap(), bytes),
                 OP_PUSHDATA4(n, bytes) => self.op_pushdata4(n.try_into().unwrap(), bytes),
                 OP_IF(true_branch, false_branch) => self.op_if(true_branch, false_branch),
-// hmmmm
-                OP_ELSE(_) => (),
-                OP_ENDIF => (),
+// we shouldn't directly encounter these so I guess they should cause panic
+// OP_ELSE and OP_ENDIF get consumed while parsing OP_IF to avoid keeping track of conditional
+// state during evaluation
+// e.g. when the next op is OP_ELSE but shouldn't be executed, need to remember conditional state
+// instead, an else block is stored as an optional second field for OP_IF to evaluate directly
+                OP_ELSE(_) => self.op_else(),
+                OP_ENDIF => self.op_endif(),
             }
             println!("postop stack: {:?}", self.stack);
         }
@@ -129,11 +133,11 @@ impl TgScriptInterpreter for TgScriptEnv {
     }
 
     fn op_else(&mut self) {
-
+        panic!("unexpected OP_ELSE")
     }
 
     fn op_endif(&mut self) {
-
+        panic!("unexpected OP_ENDIF")
     }
 
     fn op_equal(&mut self) {
