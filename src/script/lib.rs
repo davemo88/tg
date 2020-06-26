@@ -31,7 +31,7 @@ impl fmt::Debug for TgOpcode {
            OP_PUSHDATA2(num_bytes, data) => write!(f, "{}", format!("PUSHDATA2({:?}, {:?})", num_bytes, data)),
            OP_PUSHDATA4(num_bytes, data) => write!(f, "{}", format!("PUSHDATA4({:?}, {:?})", num_bytes, data)),
            OP_IF(true_branch, false_branch) => write!(f, "{}", format!("IF({:?}, {:?})", true_branch, false_branch)),
-           OP_ELSE(_) => write!(f, "ELSE"),
+           OP_ELSE(false_branch) => write!(f, "{}", format!("ELSE({:?})", false_branch)),
            OP_ENDIF => write!(f, "ENDIF"),
            OP_DROP => write!(f, "DROP"),
            OP_DUP => write!(f, "DUP"),
