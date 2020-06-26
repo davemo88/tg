@@ -58,13 +58,14 @@ impl TgScriptInterpreter for TgScriptEnv {
         }
         else
         {
+            println!("eval: {:?}", script);
             self.eval_depth += 1;
         }
 
-        println!("script: {:?}", script);
         while script.0.len() > 0 {
             let next = script.0.remove(0);    
             println!("next op: {:?}", next);
+            println!("preop stack: {:?}", self.stack);
             match next {
                 OP_0 => self.op_0(),
                 OP_1 => self.op_1(),
@@ -81,9 +82,12 @@ impl TgScriptInterpreter for TgScriptEnv {
                 OP_ELSE(_) => (),
                 OP_ENDIF => (),
             }
-            println!("stack{:?}", self.stack);
+            println!("postop stack: {:?}", self.stack);
         }
         self.eval_depth -= 1;
+
+        println!("eval returning");
+
         Ok(())
     }
 
@@ -100,15 +104,15 @@ impl TgScriptInterpreter for TgScriptEnv {
     }
 
     fn op_0(&mut self) {
-        self.stack.push(vec![0u8])
+        self.stack.push(vec![OP_0.bytecode()])
     }
 
     fn op_1(&mut self) {
-        self.stack.push(vec![1u8])
+        self.stack.push(vec![OP_1.bytecode()])
     }
 
     fn op_dup(&mut self) {
-        self.stack.push(self.stack[0].clone());
+        self.stack.push(self.stack.last().unwrap().clone());
     }
 
     fn op_drop(&mut self) {
@@ -116,7 +120,7 @@ impl TgScriptInterpreter for TgScriptEnv {
     }
 
     fn op_if(&mut self, true_branch: TgScript, false_branch: Option<TgScript>) {
-        if self.stack.pop().unwrap() != vec![0u8] {
+        if self.stack.pop().unwrap() != vec![OP_0.bytecode()] {
             self.eval(true_branch).unwrap();
         }
         else if let Some(false_branch) = false_branch {
