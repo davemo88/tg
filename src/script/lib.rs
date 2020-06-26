@@ -24,13 +24,13 @@ impl fmt::Debug for TgOpcode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str("OP_")?;
         use TgOpcode::*;
-        match *self {
+        match self {
            OP_0 => write!(f, "0"), 
            OP_1 => write!(f, "1"),
-           OP_PUSHDATA1(_,_) => write!(f, "PUSHDATA1"),
-           OP_PUSHDATA2(_,_) => write!(f, "PUSHDATA2"),
-           OP_PUSHDATA4(_,_) => write!(f, "PUSHDATA4"),
-           OP_IF(_,_) => write!(f, "IF"),
+           OP_PUSHDATA1(num_bytes, data) => write!(f, "{}", format!("PUSHDATA1({:?}, {:?})", num_bytes, data)),
+           OP_PUSHDATA2(num_bytes, data) => write!(f, "{}", format!("PUSHDATA2({:?}, {:?})", num_bytes, data)),
+           OP_PUSHDATA4(num_bytes, data) => write!(f, "{}", format!("PUSHDATA4({:?}, {:?})", num_bytes, data)),
+           OP_IF(true_branch, false_branch) => write!(f, "{}", format!("IF({:?}, {:?})", true_branch, false_branch)),
            OP_ELSE(_) => write!(f, "ELSE"),
            OP_ENDIF => write!(f, "ENDIF"),
            OP_DROP => write!(f, "DROP"),

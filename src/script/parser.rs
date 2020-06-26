@@ -60,12 +60,23 @@ fn op_if(input: &[u8]) -> IResult<&[u8], TgOpcode> {
             opt(op_else),
             op_bytecode(TgOpcode::OP_ENDIF),
             ))(input)?;
-    let mut false_branch = None;
-    if let Some(else_op) = else_block {
+//    let mut false_branch = None;
+//    if let Some(else_op) = else_block {
+//        if let TgOpcode::OP_ELSE(script) = else_op {
+//           false_branch = Some(script); 
+//        }
+//    }
+    let false_branch = if let Some(else_op) = else_block {
         if let TgOpcode::OP_ELSE(script) = else_op {
-           false_branch = Some(script); 
+           Some(script) 
+        }
+        else {
+            None
         }
     }
+    else {
+        None
+    };
     Ok((input, TgOpcode::OP_IF(true_branch,false_branch)))
 }
 
@@ -128,12 +139,12 @@ pub fn tg_script(input: &[u8]) -> IResult<&[u8], TgScript> {
             op_0,
             op_1,
             op_if,
-//            op_drop,
-//            op_dup,
-//            op_equal,
+            op_drop,
+            op_dup,
+            op_equal,
             op_pushdata1,
-//            op_pushdata2,
-//            op_pushdata4,
+            op_pushdata2,
+            op_pushdata4,
         ))
     )(input)?; 
 
