@@ -116,7 +116,9 @@ fn op_pushdata4(input: &[u8]) -> IResult<&[u8], TgOpcode> {
     Ok((input, TgOpcode::OP_PUSHDATA4(data.len().try_into().unwrap(),Vec::from(data))))
 }
 
-//fn pushdata_curry<'a, I, N, E, F>(f: F) -> impl Fn(I) -> IResult<I, I, E> 
+// make a pushdata function that can be curried with a number parser to get the right size data
+// e.g. be_u8 to grab a slice with length given by a big endian u8, be_u16 for u16, be_u32, etc
+// fn pushdata_curry<'a, I, N, E, F>(f: F) -> impl Fn(I) -> IResult<I, I, E> 
 //where
 //I: Clone + InputLength + InputTake,
 //N: Copy + ToUsize,
