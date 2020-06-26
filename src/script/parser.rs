@@ -3,7 +3,7 @@ use nom::{
     self,
     IResult,
     bytes::complete::{take, take_until, tag},
-    number::complete::{be_u8, be_u16, be_u32},
+    number::complete::{le_u8, be_u8, be_u16, be_u32},
     branch::alt,
     multi::{many1, length_data},
     combinator::opt,
@@ -82,27 +82,27 @@ fn op_endif(input: &[u8]) -> IResult<&[u8], TgOpcode> {
 }
 
 fn op_pushdata1(input: &[u8]) -> IResult<&[u8], TgOpcode> {
-    let (input, (op, data)) = tuple((
+    let (input, data) = preceded(
         op_bytecode(TgOpcode::OP_PUSHDATA1(0,Vec::new())),
         length_data(be_u8),
-    ))(input)?;
-    op_bytecode(TgOpcode::OP_PUSHDATA1(0,Vec::from(data)))(input)
+    )(input)?;
+    Ok((input, TgOpcode::OP_PUSHDATA1(data.len().try_into().unwrap(),Vec::from(data))))
 }
 
 fn op_pushdata2(input: &[u8]) -> IResult<&[u8], TgOpcode> {
-    let (input, (op, data)) = tuple((
+    let (input, data) = preceded(
         op_bytecode(TgOpcode::OP_PUSHDATA2(0,Vec::new())),
         length_data(be_u16),
-    ))(input)?;
-    op_bytecode(TgOpcode::OP_PUSHDATA2(0,Vec::from(data)))(input)
+    )(input)?;
+    Ok((input, TgOpcode::OP_PUSHDATA2(data.len().try_into().unwrap(),Vec::from(data))))
 }
 
 fn op_pushdata4(input: &[u8]) -> IResult<&[u8], TgOpcode> {
-    let (input, (op, data)) = tuple((
+    let (input, data) = preceded(
         op_bytecode(TgOpcode::OP_PUSHDATA4(0,Vec::new())),
         length_data(be_u32),
-    ))(input)?;
-    op_bytecode(TgOpcode::OP_PUSHDATA4(0,Vec::from(data)))(input)
+    )(input)?;
+    Ok((input, TgOpcode::OP_PUSHDATA4(data.len().try_into().unwrap(),Vec::from(data))))
 }
 
 //fn pushdata_curry<'a, I, N, E, F>(f: F) -> impl Fn(I) -> IResult<I, I, E> 
@@ -151,12 +151,11 @@ mod tests {
 
     #[test]
     fn parser () {
-        let script = tg_script(&PUSHDATA_SCRIPT); 
+        let (input, script) = op_pushdata1(&PUSHDATA_SCRIPT).unwrap(); 
         println!("{:?}", script);
-        assert!(script.is_ok());
 
-        let script = tg_script(&CONDITIONAL_SCRIPT_TRUE); 
-        println!("{:?}", script);
-        assert!(script.is_ok());
+//        let script = tg_script(&CONDITIONAL_SCRIPT_TRUE); 
+//        println!("{:?}", script);
+//        assert!(script.is_ok());
     }
 }

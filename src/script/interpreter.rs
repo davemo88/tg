@@ -61,23 +61,25 @@ impl TgScriptInterpreter for TgScriptEnv {
             self.eval_depth += 1;
         }
 
-        println!("{:?}", script);
+        println!("script: {:?}", script);
         while script.0.len() > 0 {
             let next = script.0.remove(0);    
-            println!("{:?}", next);
+            println!("next op: {:?}", next);
             match next {
                 OP_0 => self.op_0(),
                 OP_1 => self.op_1(),
                 OP_DUP => self.op_dup(),
                 OP_DROP => self.op_drop(),
                 OP_EQUAL => self.op_equal(),
-                OP_NEQUAL => self.op_nequal(),
                 OP_VERIFYSIG => self.op_verifysig(),
                 OP_SHA256 => self.op_sha256(),
                 OP_PUSHDATA1(n, bytes) => self.op_pushdata1(n.try_into().unwrap(), bytes),
                 OP_PUSHDATA2(n, bytes) => self.op_pushdata2(n.try_into().unwrap(), bytes),
                 OP_PUSHDATA4(n, bytes) => self.op_pushdata4(n.try_into().unwrap(), bytes),
                 OP_IF(true_branch, false_branch) => self.op_if(true_branch, false_branch),
+// hmmmm
+                OP_ELSE(_) => (),
+                OP_ENDIF => (),
             }
             println!("stack{:?}", self.stack);
         }
