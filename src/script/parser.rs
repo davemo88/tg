@@ -2,134 +2,141 @@ use std::convert::TryInto;
 use nom::{
     self,
     IResult,
-    bytes::complete::{take},
-//    number::complete::{be_u8, be_u16, be_u32},
+    bytes::complete::{take, take_until, tag},
+    number::complete::{be_u8, be_u16, be_u32},
     branch::alt,
-    multi::many1,
-    sequence::tuple,
+    multi::{many1, length_data},
+    combinator::opt,
+    sequence::{tuple, preceded},
     InputIter,
     InputTake,
+    InputLength,
+    ToUsize,
+    error::ParseError,
 };
 use crate::{
     script::lib::{
         TgOpcode,
-        TgStatement,
         TgScript,
-        opcodes::*,
     },
 };
 
-fn opcode(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], TgOpcode> {
+fn op_bytecode(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], TgOpcode> {
     move |input: &[u8]| {
         let (input, b) = take(1u8)(input)?;
-        let potential_op = TgOpcode(b[0]);
-        if !VALID_OPCODES.contains(&potential_op) {
-//TODO: how to add error message to nom error?
-            println!("script contains invalid opcode: {:?}", potential_op);
-            return Err(nom::Err::Failure((input, nom::error::ErrorKind::IsNot)))
+        if b[0] == op.bytecode() {
+            Ok((input, op.clone()))
         }
-        if potential_op == op  {
-            Ok((input, op))
-        }
-        else {
+        else{
             Err(nom::Err::Error((input, nom::error::ErrorKind::IsNot)))
         }
     }
 }
 
-fn wrapped_op(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], TgStatement> {
-    move |input: &[u8]| {
-        let (input, op) = opcode(op)(input)?;
-        Ok((input, TgStatement::from(op)))
-    }
+fn op_0(input: &[u8]) -> IResult<&[u8], TgOpcode> {
+    op_bytecode(TgOpcode::OP_0)(input)
 }
 
-fn pushdata(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], TgStatement> {
-    move |input: &[u8]| {
-        let n = match op {
-            OP_PUSHDATA1 => 1,
-            OP_PUSHDATA2 => 2,
-            OP_PUSHDATA4 => 4,
-            _ => return Err(nom::Err::Error((input, nom::error::ErrorKind::IsNot))),
-        };
-        let (input, (op, num_bytes)) = tuple((opcode(op), pushdata_num_bytes(n)))(input)?;
-        let (input, bytes) = take(num_bytes)(input)?;
-        Ok((input, TgStatement::Data(op, num_bytes, bytes.to_vec())))
-    }
+fn op_1(input: &[u8]) -> IResult<&[u8], TgOpcode> {
+    op_bytecode(TgOpcode::OP_1)(input)
 }
 
-fn pushdata_num_bytes(n: u8) -> impl Fn(&[u8]) -> IResult<&[u8], u64> {
-    move |input: &[u8]| {
-// could be replaced with nom::number::be_uX combinators
-// but that also creates type woes similar to those below
-        let (input, num_bytes) = take(n)(input)?;
-        let num_bytes: u64 = match n {
-            1 => u8::from_be_bytes(num_bytes.try_into().unwrap()).into(),
-            2 => u16::from_be_bytes(num_bytes.try_into().unwrap()).into(),
-            4 => u32::from_be_bytes(num_bytes.try_into().unwrap()).into(),
-            _ => return Err(nom::Err::Error((input, nom::error::ErrorKind::IsNot))),
-        };
-        Ok((input, num_bytes))
-    }
+fn op_drop(input: &[u8]) -> IResult<&[u8], TgOpcode> {
+    op_bytecode(TgOpcode::OP_DROP)(input)
 }
 
-fn if_statement(input: &[u8]) -> IResult<&[u8], TgStatement> {
-    let (input, (_, true_branch_script, op)) = tuple((
-            opcode(OP_IF),
+fn op_dup(input: &[u8]) -> IResult<&[u8], TgOpcode> {
+    op_bytecode(TgOpcode::OP_DUP)(input)
+}
+
+fn op_equal(input: &[u8]) -> IResult<&[u8], TgOpcode> {
+    op_bytecode(TgOpcode::OP_EQUAL)(input)
+}
+
+fn op_if(input: &[u8]) -> IResult<&[u8], TgOpcode> {
+    let (input, (op_if, true_branch, else_block, op_endif)) = tuple((
+            op_bytecode(TgOpcode::OP_IF(TgScript::default(),None)),
             tg_script,
-            alt((
-                opcode(OP_ELSE),
-                opcode(OP_ENDIF)
-            )),
-    ))(input)?;
-    match op {
-        OP_ELSE => {
-            let (input, false_branch_script) = if_statement_false_branch(input)?;
-            Ok((input, TgStatement::IfStatement(true_branch_script, Some(false_branch_script))))
-        }, 
-        OP_ENDIF => Ok((input, TgStatement::IfStatement(true_branch_script, None))),
-        _ => return Err(nom::Err::Error((input, nom::error::ErrorKind::IsNot))),
+            opt(op_else),
+            op_bytecode(TgOpcode::OP_ENDIF),
+            ))(input)?;
+    let mut false_branch = None;
+    if let Some(else_op) = else_block {
+        if let TgOpcode::OP_ELSE(script) = else_op {
+           false_branch = Some(script); 
+        }
     }
+    Ok((input, TgOpcode::OP_IF(true_branch,false_branch)))
 }
 
-fn if_statement_false_branch(input: &[u8]) -> IResult<&[u8], TgScript> {
-    let (input, (false_branch_script, _)) = tuple((
-            tg_script,
-            opcode(OP_ENDIF)
+fn op_else(input: &[u8]) -> IResult<&[u8], TgOpcode> {
+    let (input, else_script) = preceded(
+        op_bytecode(TgOpcode::OP_ELSE(TgScript::default())),
+        tg_script,
+    )(input)?;
+    Ok((input, TgOpcode::OP_ELSE(else_script)))
+}
+
+fn op_endif(input: &[u8]) -> IResult<&[u8], TgOpcode> {
+    op_bytecode(TgOpcode::OP_ENDIF)(input)
+}
+
+fn op_pushdata1(input: &[u8]) -> IResult<&[u8], TgOpcode> {
+    let (input, (op, data)) = tuple((
+        op_bytecode(TgOpcode::OP_PUSHDATA1(0,Vec::new())),
+        length_data(be_u8),
     ))(input)?;
-    Ok((input, false_branch_script))
+    op_bytecode(TgOpcode::OP_PUSHDATA1(0,Vec::from(data)))(input)
 }
 
-fn data_opcode(input: &[u8]) -> IResult<&[u8], TgStatement> {
-    alt(
-        (
-            pushdata(OP_PUSHDATA1),
-            pushdata(OP_PUSHDATA2),
-            pushdata(OP_PUSHDATA4),
-        )
-    )(input)
+fn op_pushdata2(input: &[u8]) -> IResult<&[u8], TgOpcode> {
+    let (input, (op, data)) = tuple((
+        op_bytecode(TgOpcode::OP_PUSHDATA2(0,Vec::new())),
+        length_data(be_u16),
+    ))(input)?;
+    op_bytecode(TgOpcode::OP_PUSHDATA2(0,Vec::from(data)))(input)
 }
 
-fn constant_opcode(input: &[u8]) -> IResult<&[u8], TgStatement> {
-    alt(
-        (
-            wrapped_op(OP_0),
-            wrapped_op(OP_1),
-        )
-    )(input)
+fn op_pushdata4(input: &[u8]) -> IResult<&[u8], TgOpcode> {
+    let (input, (op, data)) = tuple((
+        op_bytecode(TgOpcode::OP_PUSHDATA4(0,Vec::new())),
+        length_data(be_u32),
+    ))(input)?;
+    op_bytecode(TgOpcode::OP_PUSHDATA4(0,Vec::from(data)))(input)
 }
 
-fn normal_opcode(input: &[u8]) -> IResult<&[u8], TgStatement> {
-    alt(
-        (
-            wrapped_op(OP_DROP),
-            wrapped_op(OP_DUP),
-        )
-    )(input)
-}
+//fn pushdata_curry<'a, I, N, E, F>(f: F) -> impl Fn(I) -> IResult<I, I, E> 
+//where
+//I: Clone + InputLength + InputTake,
+//N: Copy + ToUsize,
+//F: Fn(I) -> IResult<I, N, E>,
+//E: ParseError<I>,
+//{
+//    move|input: I| {
+//        let (input, num_bytes) = f(input)?;
+//        let (input, (op, data)) = tuple((
+//            op_bytecode(TgOpcode::OP_PUSHDATA4(0,Vec::new())),
+//            length_data(f),
+//        ))(input)?;
+//        op_bytecode(TgOpcode::OP_PUSHDATA4(0,Vec::from(data)))(input)
+//    }
+//}
 
 pub fn tg_script(input: &[u8]) -> IResult<&[u8], TgScript> {
-    let (input, ops) = many1(alt((data_opcode, constant_opcode, normal_opcode, if_statement)))(input)?; 
+    let (input, ops) = many1(
+        alt((
+            op_0,
+            op_1,
+            op_if,
+//            op_drop,
+//            op_dup,
+//            op_equal,
+            op_pushdata1,
+//            op_pushdata2,
+//            op_pushdata4,
+        ))
+    )(input)?; 
+
     Ok((input, TgScript(ops)))
 }
 
@@ -138,22 +145,18 @@ mod tests {
 
     use super::*;
 
-    const PUSHDATA_SCRIPT: &'static[u8] = &[0xD1,0x01,0xFF,0xD1,0x02,0x01,0x01];
+    const PUSHDATA_SCRIPT: &'static[u8] = &[0xD1,0x01,0xFF];//,0xD1,0x02,0x01,0x01];
     const CONDITIONAL_SCRIPT_TRUE: &'static[u8] = &[0x01,0xF1,0x01,0xF2,0x00,0xF3,0xF1,0x00,0xF3];
     const ERROR_SCRIPT: &'static[u8] = &[0xA1];
 
     #[test]
     fn parser () {
-//        let script = tg_script(&PUSHDATA_SCRIPT); 
-//        assert!(script.is_ok());
-//        println!("{:?}", script);
+        let script = tg_script(&PUSHDATA_SCRIPT); 
+        println!("{:?}", script);
+        assert!(script.is_ok());
 
         let script = tg_script(&CONDITIONAL_SCRIPT_TRUE); 
+        println!("{:?}", script);
         assert!(script.is_ok());
-//        println!("{:?}", script);
-
-//        let script = tg_script(&ERROR_SCRIPT); 
-//        assert!(script.is_err());
-//        println!("{:?}", script);
     }
 }

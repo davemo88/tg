@@ -2,9 +2,9 @@ use std::convert::TryInto;
 use crate::{
     script::{
         lib::{
-            TgStatement,
+//            TgOpcode,
             TgScript,
-            opcodes::*,
+            TgOpcode::*,
         },
     },
     lib::{
@@ -52,6 +52,7 @@ trait TgScriptInterpreter {
 
 impl TgScriptInterpreter for TgScriptEnv {
     fn eval(&mut self, mut script: TgScript) -> Result<()> {
+
         if self.eval_depth == EVAL_DEPTH_LIMIT {
             panic!("eval depth limit reached");
         }
@@ -59,30 +60,24 @@ impl TgScriptInterpreter for TgScriptEnv {
         {
             self.eval_depth += 1;
         }
-        let mut next: TgStatement; 
+
         println!("{:?}", script);
         while script.0.len() > 0 {
-            next = script.0.remove(0);    
+            let next = script.0.remove(0);    
             println!("{:?}", next);
             match next {
-                TgStatement::Opcode(op) => match op {
-                    OP_0 => self.op_0(),
-                    OP_1 => self.op_1(),
-                    OP_DUP => self.op_dup(),
-                    OP_DROP => self.op_drop(),
-                    OP_EQUAL => self.op_equal(),
-                    OP_NEQUAL => self.op_nequal(),
-                    OP_VERIFYSIG => self.op_verifysig(),
-                    OP_SHA256 => self.op_sha256(),
-                    _ => return Err(TgError("Bad Opcode")),
-                },
-                TgStatement::Data(op, n, bytes) => match op {
-                    OP_PUSHDATA1 => self.op_pushdata1(n.try_into().unwrap(), bytes),
-                    OP_PUSHDATA2 => self.op_pushdata2(n.try_into().unwrap(), bytes),
-                    OP_PUSHDATA4 => self.op_pushdata4(n.try_into().unwrap(), bytes),
-                    _ => return Err(TgError("Bad Data")),
-                },
-                TgStatement::IfStatement(true_branch_script, false_branch_script) => self.op_if(true_branch_script, false_branch_script),
+                OP_0 => self.op_0(),
+                OP_1 => self.op_1(),
+                OP_DUP => self.op_dup(),
+                OP_DROP => self.op_drop(),
+                OP_EQUAL => self.op_equal(),
+                OP_NEQUAL => self.op_nequal(),
+                OP_VERIFYSIG => self.op_verifysig(),
+                OP_SHA256 => self.op_sha256(),
+                OP_PUSHDATA1(n, bytes) => self.op_pushdata1(n.try_into().unwrap(), bytes),
+                OP_PUSHDATA2(n, bytes) => self.op_pushdata2(n.try_into().unwrap(), bytes),
+                OP_PUSHDATA4(n, bytes) => self.op_pushdata4(n.try_into().unwrap(), bytes),
+                OP_IF(true_branch, false_branch) => self.op_if(true_branch, false_branch),
             }
             println!("stack{:?}", self.stack);
         }
