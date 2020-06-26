@@ -64,17 +64,17 @@ impl TgScriptInterpreter for TgScriptEnv {
             println!("next op: {:?}", next);
             println!("preop stack: {:?}", self.stack);
             match next {
-                OP_0 => self.op_0(),
-                OP_1 => self.op_1(),
-                OP_DUP => self.op_dup(),
-                OP_DROP => self.op_drop(),
-                OP_EQUAL => self.op_equal(),
-                OP_VERIFYSIG => self.op_verifysig(),
-                OP_SHA256 => self.op_sha256(),
-                OP_PUSHDATA1(n, bytes) => self.op_pushdata1(n.try_into().unwrap(), bytes),
-                OP_PUSHDATA2(n, bytes) => self.op_pushdata2(n.try_into().unwrap(), bytes),
-                OP_PUSHDATA4(n, bytes) => self.op_pushdata4(n.try_into().unwrap(), bytes),
-                OP_IF(true_branch, false_branch) => self.op_if(true_branch, false_branch),
+                OP_0                                =>  self.op_0(),
+                OP_1                                =>  self.op_1(),
+                OP_DUP                              =>  self.op_dup(),
+                OP_DROP                             =>  self.op_drop(),
+                OP_EQUAL                            =>  self.op_equal(),
+                OP_VERIFYSIG                        =>  self.op_verifysig(),
+                OP_SHA256                           =>  self.op_sha256(),
+                OP_PUSHDATA1(n, bytes)              =>  self.op_pushdata1(n.try_into().unwrap(), bytes),
+                OP_PUSHDATA2(n, bytes)              =>  self.op_pushdata2(n.try_into().unwrap(), bytes),
+                OP_PUSHDATA4(n, bytes)              =>  self.op_pushdata4(n.try_into().unwrap(), bytes),
+                OP_IF(true_branch, false_branch)    =>  self.op_if(true_branch, false_branch),
 // we shouldn't directly encounter these so I guess they should cause panic
 // OP_ELSE and OP_ENDIF get consumed while parsing OP_IF to avoid keeping track of conditional
 // state during evaluation
@@ -199,5 +199,10 @@ mod tests {
         let (_, script) = tg_script(&CONDITIONAL_SCRIPT_FALSE).unwrap(); 
         let mut env = TgScriptEnv::default();
         env.eval(script).unwrap();
+    }
+
+    #[test]
+    fn ref_token_sig() {
+        let script = TgScript::default();
     }
 }
