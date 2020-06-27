@@ -75,7 +75,7 @@ impl TgScriptInterpreter for TgScriptEnv {
                 OP_PUSHDATA2(n, bytes)              =>  self.op_pushdata2(n.try_into().unwrap(), bytes),
                 OP_PUSHDATA4(n, bytes)              =>  self.op_pushdata4(n.try_into().unwrap(), bytes),
                 OP_IF(true_branch, false_branch)    =>  self.op_if(true_branch, false_branch),
-// we shouldn't directly encounter these so I guess they should cause panic
+// we shouldn't directly encounter these so I guess they should panic
 // OP_ELSE and OP_ENDIF get consumed while parsing OP_IF to avoid keeping track of conditional
 // state during evaluation
 // e.g. when the next op is OP_ELSE but shouldn't be executed, need to remember conditional state
@@ -139,6 +139,7 @@ impl TgScriptInterpreter for TgScriptEnv {
 
     fn op_equal(&mut self) {
         if self.stack.pop().unwrap() == self.stack.pop().unwrap() {
+            self.op_1();
         }
         else {
             self.op_0();
@@ -202,7 +203,34 @@ mod tests {
     }
 
     #[test]
-    fn ref_token_sig() {
-        let script = TgScript::default();
+    fn round_trip() {
+        use crate::script::TgOpcode::*;
+        let script = TgScript(vec![
+            OP_1,
+            OP_DUP,
+            OP_DROP,
+        ]);
+        let mut env = TgScriptEnv::default();
+        env.eval(script.clone()).unwrap(); 
+        let bytes = Vec::<u8>::from(script.clone());
+        let (_, script2) = tg_script(&bytes).unwrap();
+        let mut env = TgScriptEnv::default();
+        env.eval(script2.clone()).unwrap(); 
+        assert_eq!(script, script2);
+
+        let script = TgScript(vec![
+            OP_PUSHDATA1(4,vec![0xff,0xff,0xff,0xff]),
+            OP_DUP,
+            OP_DROP,
+            OP_IF(TgScript(vec![OP_1]), None),
+        ]);
+        let mut env = TgScriptEnv::default();
+        env.eval(script.clone()).unwrap(); 
+        let bytes = Vec::<u8>::from(script.clone());
+        println!("{:?}", bytes);
+        let (_, script2) = tg_script(&bytes).unwrap();
+        let mut env = TgScriptEnv::default();
+        env.eval(script2.clone()).unwrap(); 
+        assert_eq!(script, script2);
     }
 }

@@ -47,12 +47,15 @@ impl From<TgOpcode> for Vec<u8> {
     fn from(op: TgOpcode) -> Vec<u8> {
         use TgOpcode::*;
         let mut v = vec![op.bytecode()];
+        println!("{:?}", op);
         match op {
-            OP_PUSHDATA1(num_bytes, data)       =>  { v.write_u8(num_bytes).unwrap(); v.extend(Vec::from(data.clone())); v } ,
-            OP_PUSHDATA2(num_bytes, data)       =>  { v.write_u16::<BigEndian>(num_bytes).unwrap(); v.extend(Vec::from(data)); v } ,
-            OP_PUSHDATA4(num_bytes, data)       =>  { v.write_u32::<BigEndian>(num_bytes).unwrap(); v.extend(Vec::from(data)); v } ,
-            OP_IF(true_branch, false_branch)    =>  { v.extend(Vec::from(true_branch)); v},
-            OP_ELSE(false_branch)               =>  { v.extend(Vec::from(false_branch)); v},
+            OP_PUSHDATA1(num_bytes, data)           =>  { v.write_u8(num_bytes).unwrap(); v.extend(Vec::from(data.clone())); v } ,
+            OP_PUSHDATA2(num_bytes, data)           =>  { v.write_u16::<BigEndian>(num_bytes).unwrap(); v.extend(Vec::from(data)); v } ,
+            OP_PUSHDATA4(num_bytes, data)           =>  { v.write_u32::<BigEndian>(num_bytes).unwrap(); v.extend(Vec::from(data)); v } ,
+            OP_IF(true_branch, None)                =>  { v.extend(Vec::from(true_branch)); v.push(OP_ENDIF.bytecode()); v },
+            OP_IF(true_branch, Some(false_branch))  =>  { v.extend(Vec::from(true_branch)); v.extend(Vec::from(false_branch)); v.push(OP_ENDIF.bytecode()); v },
+//NOTE: don't think should ever happen either ... hmmm
+            OP_ELSE(false_branch)                   =>  { v.extend(Vec::from(false_branch)); v },
            _ => v,
         }
 
