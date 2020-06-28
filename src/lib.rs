@@ -120,7 +120,7 @@ pub enum ChallengeState {
     Issued,
 // signed by both players
     Accepted,
-// signed by both players and ref in that order
+// signed by both players and ref
     Certified,
 // fucked up somehow
     Invalid,

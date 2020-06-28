@@ -9,10 +9,11 @@ use crate::{
     },
     Result,
     TgError,
+    PayoutRequest,
 };
 
 struct TgScriptEnv {
-//    payout_request: Option<PayoutRequest>,
+    payout_request: Option<PayoutRequest>,
     stack: Vec<Vec<u8>>,
     eval_depth: u8,
 }
@@ -22,6 +23,7 @@ const EVAL_DEPTH_LIMIT : u8 = 2;
 impl Default for TgScriptEnv {
     fn default() -> Self {
         TgScriptEnv {
+            payout_request: None,
             stack: Vec::new(),
             eval_depth: 0,
         }
@@ -31,9 +33,9 @@ impl Default for TgScriptEnv {
 trait TgScriptInterpreter {
     fn eval(&mut self, _script: TgScript) -> Result<()> { Err(TgError("")) }
 // NOTE: opcode functions - in own trait?
-    fn op_pushdata1(&mut self, _n:u8, _bytes: Vec<u8>) {}
-    fn op_pushdata2(&mut self, _n:u16, _bytes: Vec<u8>) {}
-    fn op_pushdata4(&mut self, _n:u32, _bytes: Vec<u8>) {}
+    fn op_pushdata1(&mut self, _n: u8, _bytes: Vec<u8>) {}
+    fn op_pushdata2(&mut self, _n: u16, _bytes: Vec<u8>) {}
+    fn op_pushdata4(&mut self, _n: u32, _bytes: Vec<u8>) {}
     fn op_0(&mut self) {}
     fn op_1(&mut self) {}
     fn op_dup(&mut self) {}
@@ -175,6 +177,7 @@ impl TgScriptEnv {
 mod tests {
 
     use super::*;
+    use crate::script::TgOpcode::*;
     use crate::script::parser::tg_script;
 
     const PUSHDATA_SCRIPT: &'static[u8] = &[0xD1,0x01,0xFF,0xD1,0x02,0x01,0x01];
@@ -204,14 +207,17 @@ mod tests {
 
     #[test]
     fn round_trip() {
-        use crate::script::TgOpcode::*;
+
         let script = TgScript(vec![
             OP_1,
             OP_DUP,
             OP_DROP,
         ]);
+
         let mut env = TgScriptEnv::default();
+
         env.eval(script.clone()).unwrap(); 
+
         let bytes = Vec::<u8>::from(script.clone());
         let (_, script2) = tg_script(&bytes).unwrap();
         let mut env = TgScriptEnv::default();
@@ -219,18 +225,24 @@ mod tests {
         assert_eq!(script, script2);
 
         let script = TgScript(vec![
-            OP_PUSHDATA1(4,vec![0xff,0xff,0xff,0xff]),
+            OP_PUSHDATA1(4,vec![0xff,0xfe,0xdf,0x1f]),
             OP_DUP,
             OP_DROP,
             OP_IF(TgScript(vec![OP_1]), None),
         ]);
+
         let mut env = TgScriptEnv::default();
         env.eval(script.clone()).unwrap(); 
         let bytes = Vec::<u8>::from(script.clone());
-        println!("{:?}", bytes);
+//        println!("{:?}", bytes);
         let (_, script2) = tg_script(&bytes).unwrap();
         let mut env = TgScriptEnv::default();
         env.eval(script2.clone()).unwrap(); 
         assert_eq!(script, script2);
+    }
+
+    #[test]
+    fn ref_token_sig() {
+
     }
 }

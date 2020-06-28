@@ -7,7 +7,7 @@ use nom::{
     branch::alt,
     multi::{many1, length_data},
     combinator::opt,
-    sequence::{tuple, preceded},
+    sequence::{tuple, preceded, terminated},
     InputIter,
     InputTake,
     InputLength,
@@ -54,24 +54,20 @@ fn op_equal(input: &[u8]) -> IResult<&[u8], TgOpcode> {
 }
 
 fn op_if(input: &[u8]) -> IResult<&[u8], TgOpcode> {
-    let (input, (op_if, true_branch, else_block, op_endif)) = tuple((
+    let (input, (true_branch, else_block)) = tuple((
+        preceded(
             op_bytecode(TgOpcode::OP_IF(TgScript::default(),None)),
             tg_script,
+        ),
+        terminated(
             opt(op_else),
             op_bytecode(TgOpcode::OP_ENDIF),
-            ))(input)?;
-//    let mut false_branch = None;
-//    if let Some(else_op) = else_block {
-//        if let TgOpcode::OP_ELSE(script) = else_op {
-//           false_branch = Some(script); 
-//        }
-//    }
+        ),
+    ))(input)?;
     let false_branch = if let Some(else_op) = else_block {
-        if let TgOpcode::OP_ELSE(script) = else_op {
-           Some(script) 
-        }
-        else {
-            None
+        match else_op {
+            TgOpcode::OP_ELSE(script) => Some(script),
+            _ => None,
         }
     }
     else {
@@ -167,8 +163,8 @@ mod tests {
         let (input, script) = op_pushdata1(&PUSHDATA_SCRIPT).unwrap(); 
         println!("{:?}", script);
 
-//        let script = tg_script(&CONDITIONAL_SCRIPT_TRUE); 
-//        println!("{:?}", script);
-//        assert!(script.is_ok());
+        let script = tg_script(&CONDITIONAL_SCRIPT_TRUE); 
+        println!("{:?}", script);
+        assert!(script.is_ok());
     }
 }
