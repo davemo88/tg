@@ -1,4 +1,25 @@
 use std::convert::TryInto;
+use secp256k1::{
+    Secp256k1,
+    Message,
+    Signature,
+    All,
+};
+use bitcoin::{
+    Transaction,
+    Address,
+    Network,
+    Amount,
+    util::key::PrivateKey,
+    util::key::PublicKey,
+    hashes::{
+        Hash,
+        hex::FromHex,
+    },
+    consensus::{
+        encode,
+    }
+};
 use crate::{
     script::{
         lib::{
@@ -12,10 +33,11 @@ use crate::{
     PayoutRequest,
 };
 
-struct TgScriptEnv {
+pub struct TgScriptEnv {
     payout_request: Option<PayoutRequest>,
     stack: Vec<Vec<u8>>,
     eval_depth: u8,
+    secp: Secp256k1<All>,
 }
 
 const EVAL_DEPTH_LIMIT : u8 = 2;
@@ -26,6 +48,7 @@ impl Default for TgScriptEnv {
             payout_request: None,
             stack: Vec::new(),
             eval_depth: 0,
+            secp: Secp256k1::new(),
         }
     }
 }
@@ -140,7 +163,8 @@ impl TgScriptInterpreter for TgScriptEnv {
     }
 
     fn op_equal(&mut self) {
-        if self.stack.pop().unwrap() == self.stack.pop().unwrap() {
+        let len = self.stack.len();
+        if self.stack[len - 1] == self.stack[len - 2] {
             self.op_1();
         }
         else {
@@ -149,16 +173,38 @@ impl TgScriptInterpreter for TgScriptEnv {
     }
 
     fn op_nequal(&mut self) {
-        if self.stack.pop().unwrap() == self.stack.pop().unwrap() {
-            self.op_0();
+        let len = self.stack.len();
+        if self.stack[len - 1] != self.stack[len - 2] {
+            self.op_1();
         }
         else {
-            self.op_1();
+            self.op_0();
         }
     }
 
     fn op_verifysig(&mut self) {
 
+        assert!(self.payout_request.is_some());
+
+        let payout_request = self.payout_request.as_ref().unwrap();
+        let payout_txid: &[u8] = &payout_request.payout_tx.as_ref().unwrap().txid();
+
+        let len = self.stack.len();
+        let pubkey: PublicKey = PublicKey::from_slice(&self.stack.pop().unwrap()).unwrap();
+        let script_txid = self.stack.pop().unwrap();
+        let sig: Signature = Signature::from_der(&self.stack.pop().unwrap()).unwrap();
+
+        assert_eq!(script_txid, payout_txid);
+
+        let msg: Message = Message::from_slice(&script_txid).unwrap();
+
+        if self.secp.verify(&msg, &sig, &pubkey.key).is_ok() {
+            self.op_1();
+        }
+        else
+        {
+            self.op_0();
+        }
     }
 
     fn op_sha256(&mut self) {
@@ -170,6 +216,10 @@ impl TgScriptEnv {
     fn pushdata(&mut self, n: usize, bytes: Vec<u8>) {
         assert!(bytes.len() == n as usize);
         self.stack.push(bytes)
+    }
+
+    pub fn push_input(&mut self, bytes: Vec<u8>) {
+        self.pushdata(bytes.len(), bytes);
     }
 }
 
@@ -241,8 +291,8 @@ mod tests {
         assert_eq!(script, script2);
     }
 
-    #[test]
-    fn ref_token_sig() {
-
-    }
+//    #[test]
+//    fn ref_token_sig() {
+//
+//    }
 }

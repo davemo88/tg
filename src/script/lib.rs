@@ -11,7 +11,6 @@ pub enum TgOpcode {
     OP_PUSHDATA2(u16,Vec<u8>),
     OP_PUSHDATA4(u32,Vec<u8>),
     OP_IF(TgScript, Option<TgScript>),
-//    OP_IF(TgScript, Box<Option<TgOpcode>>),
     OP_ELSE(TgScript),
     OP_ENDIF,
     OP_DROP,
@@ -28,11 +27,11 @@ impl fmt::Debug for TgOpcode {
         match self {
            OP_0                                 =>  write!(f, "0"), 
            OP_1                                 =>  write!(f, "1"),
-           OP_PUSHDATA1(num_bytes, data)        =>  write!(f, "{}", format!("PUSHDATA1({:?}, {:?})", num_bytes, data)),
-           OP_PUSHDATA2(num_bytes, data)        =>  write!(f, "{}", format!("PUSHDATA2({:?}, {:?})", num_bytes, data)),
-           OP_PUSHDATA4(num_bytes, data)        =>  write!(f, "{}", format!("PUSHDATA4({:?}, {:?})", num_bytes, data)),
-           OP_IF(true_branch, false_branch)     =>  write!(f, "{}", format!("IF({:?}, {:?})", true_branch, false_branch)),
-           OP_ELSE(false_branch)                =>  write!(f, "{}", format!("ELSE({:?})", false_branch)),
+           OP_PUSHDATA1(num_bytes, data)        =>  write!(f, "PUSHDATA1({})", format!("{:?}, {:?}", num_bytes, data)),
+           OP_PUSHDATA2(num_bytes, data)        =>  write!(f, "PUSHDATA2({})", format!("{:?}, {:?}", num_bytes, data)),
+           OP_PUSHDATA4(num_bytes, data)        =>  write!(f, "PUSHDATA4({})", format!("{:?}, {:?}", num_bytes, data)),
+           OP_IF(true_branch, false_branch)     =>  write!(f, "IF({})", format!("{:?}, {:?}", true_branch, false_branch)),
+           OP_ELSE(false_branch)                =>  write!(f, "ELSE({})", format!("{:?}", false_branch)),
            OP_ENDIF                             =>  write!(f, "ENDIF"),
            OP_DROP                              =>  write!(f, "DROP"),
            OP_DUP                               =>  write!(f, "DUP"),
@@ -53,8 +52,8 @@ impl From<TgOpcode> for Vec<u8> {
             OP_PUSHDATA4(num_bytes, data)           =>  { v.write_u32::<BigEndian>(num_bytes).unwrap(); v.extend(Vec::from(data)); v } ,
             OP_IF(true_branch, None)                =>  { v.extend(Vec::from(true_branch)); v.push(OP_ENDIF.bytecode()); v },
             OP_IF(true_branch, Some(false_branch))  =>  { v.extend(Vec::from(true_branch)); v.extend(Vec::from(false_branch)); v.push(OP_ENDIF.bytecode()); v },
-//NOTE: don't think should ever happen either ... hmmm
-            OP_ELSE(false_branch)                   =>  { v.extend(Vec::from(false_branch)); v },
+//NOTE: don't think this should ever happen either ... hmmm
+            OP_ELSE(false_branch)                   =>  { v.extend(Vec::from(false_branch)); panic!("encountered naked OP_ELSE"); v },
            _ => v,
         }
 

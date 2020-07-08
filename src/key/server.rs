@@ -76,3 +76,8 @@ impl PrivateKeyServiceApi for PrivateKeyService {
         Ok(sign_result.transaction().unwrap())
     }
 }
+
+//#[cfg(test)]
+//mod tests {
+//    use super::*;
+//}
