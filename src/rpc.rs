@@ -14,7 +14,6 @@ use secp256k1::{
 use bitcoin::{
     Transaction,
     Address,
-    Network,
     Amount,
     util::key::PrivateKey,
     util::key::PublicKey,
@@ -51,13 +50,12 @@ use crate::{
     PayoutRequest,
     Result,
     TgError,
+    NETWORK,
+    MINER_FEE,
+    NUM_PLAYERS,
 };
 
 use crate::script::TgScript;
-
-pub const NETWORK: Network = Network::Regtest;
-pub const MINER_FEE: u64 = 10000;
-pub const NUM_PLAYERS: u64 = 2;
 
 pub struct TgRpcClient(pub Client);
 

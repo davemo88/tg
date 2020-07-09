@@ -16,6 +16,7 @@ use bitcoin::{
     Transaction,
     Address,
     Amount,
+    Network,
     blockdata::{
         script::{
             Script as BitcoinScript,
@@ -43,6 +44,7 @@ use script::TgScript;
 pub const PAYOUT_SCRIPT_MAX_SIZE: usize = 32;
 pub const LOCALHOST: &'static str = "0.0.0.0";
 pub const TESTNET_RPC_PORT: usize = 18332;
+pub const NETWORK: Network = Network::Regtest;
 pub const MINER_FEE: u64 = 10000;
 pub const NUM_PLAYERS: u64 = 2;
 
@@ -136,7 +138,18 @@ pub enum ChallengeState {
 #[derive(Clone)]
 pub struct PayoutRequest {
     pub challenge: Challenge,
+// in bitcoin, a script is always invaluated in the context of a transaction
+// therefore the tx data, e.g. txid doesn't need to be pushed to the stack
+// explicitly by the script since it is guaranteed to be available in the context
+// that is similar in our case (there will always be a tx) but the tx is only part
+// of the PayoutRequest context. 
     pub payout_tx: Option<Transaction>,
+// in bitcoin, signatures are not necessarily required for scripts to be satisfied
+// that is why signatures are given as explicit input to scripts while transactions 
+// are not, even though both are used commonly together e.g. in OP_CHECKSIG
+// if the way we use sigs is standardized, we could puts sigs in the context too
+// e.g. if a signature is required by all payout requests, then it can be reasonably
+// stored in the context instead of being pushed onto the stack as arbitrary input
     pub payout_sig: Option<Signature>,
 }
 
@@ -284,6 +297,7 @@ mod tests {
     use crate::rpc::{
         self,
         TgRpcClientApi,
+        TgRpcClient,
     };
     use bitcoincore_rpc::{
         Auth,
@@ -401,21 +415,7 @@ mod tests {
         }
     }
 
-    #[test]
-    fn create_challenge() {
-
-        let bitcoind_rpc_config = BitcoindRpcConfig::default();
-
-        let client = rpc::TgRpcClient(Client::new(
-            format!("http://{}:{:?}",
-                bitcoind_rpc_config.hostnport.0,
-                bitcoind_rpc_config.hostnport.1,
-            ),
-            Auth::UserPass(
-            bitcoind_rpc_config.user.to_string(),
-                bitcoind_rpc_config.password.to_string(),
-            )
-        ).unwrap());
+    fn create_challenge(client: &TgRpcClient) -> Challenge {
 
         let p1_address = client.0.get_new_address(Some(PLAYER_1_ADDRESS_LABEL), Some(AddressType::Bech32)).unwrap();
         let p2_address = client.0.get_new_address(Some(PLAYER_2_ADDRESS_LABEL), Some(AddressType::Bech32)).unwrap();
@@ -480,41 +480,43 @@ buyin: {:?}
         let payout_script_hash: &[u8] = &Sha2Hash::from_engine(hash_engine);
         println!("payout script {:?} created", payout_script_hash.to_hex());
 
-        let mut challenge = Challenge {
+        Challenge {
             escrow,
             funding_tx_hex: funding_tx.raw_hex(),
             payout_script,
             payout_script_hash_sigs: HashMap::<PublicKey, Signature>::default(),
-        };
-        println!("challenge created",);
+        }
+    }
 
-// 
+    fn sign_challenge(client: &TgRpcClient, mut challenge: &mut Challenge) {
+
+        let p1_address = Address::p2wpkh(&challenge.escrow.players[0], NETWORK);   
+        let p2_address = Address::p2wpkh(&challenge.escrow.players[1], NETWORK);   
+        let ref_address = Address::p2wpkh(&challenge.escrow.referees[0], NETWORK);   
+
         println!("challenge state: {:?}", challenge.state());
-        println!("funding tx txid: {:?}", funding_tx.txid());
         println!("p1 signing");
         let p1_key = client.0.dump_private_key(&p1_address).unwrap();
         client.sign_challenge_tx(p1_key, &mut challenge);
         client.sign_challenge_payout_script(p1_key, &mut challenge);
-        let funding_tx: bitcoin::Transaction = encode::deserialize(&Vec::<u8>::from_hex(&challenge.funding_tx_hex).unwrap()).unwrap();
         println!("challenge state: {:?}", challenge.state());
-        println!("funding tx txid: {:?}", funding_tx.txid());
 
         println!("p2 signing");
         let p2_key = client.0.dump_private_key(&p2_address).unwrap();
         client.sign_challenge_tx(p2_key, &mut challenge);
         client.sign_challenge_payout_script(p2_key, &mut challenge);
-        let funding_tx: bitcoin::Transaction = encode::deserialize(&Vec::<u8>::from_hex(&challenge.funding_tx_hex).unwrap()).unwrap();
         println!("challenge state: {:?}", challenge.state());
-        println!("funding tx txid: {:?}", funding_tx.txid());
 
         println!("ref signing");
         let ref_key = client.0.dump_private_key(&ref_address).unwrap();
         client.sign_challenge_payout_script(ref_key, &mut challenge);
-        let funding_tx: bitcoin::Transaction = encode::deserialize(&Vec::<u8>::from_hex(&challenge.funding_tx_hex).unwrap()).unwrap();
         println!("challenge state: {:?}", challenge.state());
-        println!("funding tx txid: {:?}", funding_tx.txid());
+    }
+
+    fn broadcast_challenge_tx(client: &TgRpcClient, challenge: &Challenge) {
 
         println!("broadcasting signed challenge funding transaction");
+        let ref_address = Address::p2wpkh(&challenge.escrow.referees[0], NETWORK);   
 
         let _result = client.0.send_raw_transaction(challenge.funding_tx_hex.clone());
 
@@ -523,20 +525,62 @@ buyin: {:?}
 
         let ref_balance = client.0.get_received_by_address(&ref_address, None).unwrap();
         println!("ref {:?} balance: {:?}", ref_address.to_string(), ref_balance);
-        let ref_balance = client.0.get_received_by_address(&escrow_address, None).unwrap();
-        println!("multsig {:?} balance: {:?}", &escrow_address.to_string(), ref_balance);
+        let ref_balance = client.0.get_received_by_address(&challenge.escrow.address, None).unwrap();
+        println!("multsig {:?} balance: {:?}", &challenge.escrow.address.to_string(), ref_balance);
 
-//        let payout_request_p1 = PayoutRequest {
-//            challenge: challenge.clone(),
-//            payout_tx: Some(payout_tx_p1),
-//            payout_sig: None,
-//        };
-//
-//        let payout_request_p2 = PayoutRequest {
-//            challenge: challenge.clone(),
-//            payout_tx: Some(payout_tx_p2),
-//            payout_sig: None,
-//        };
+    }
+    
+    fn create_signed_payout_request(client: &TgRpcClient, challenge: &Challenge, player: &PublicKey) -> PayoutRequest {
+        let funding_tx: bitcoin::Transaction = encode::deserialize(&Vec::<u8>::from_hex(&challenge.funding_tx_hex).unwrap()).unwrap();
+        let payout_tx = client.create_challenge_payout_transaction(&challenge.escrow, &funding_tx, &player).unwrap();
+        let key = client.0.dump_private_key(&Address::p2wpkh(&player, NETWORK)).unwrap();
+        let payout_tx = client.0.sign_raw_transaction_with_key(
+            payout_tx.raw_hex(),
+            &[key],
+            None,
+            None,
+        ).unwrap().hex.raw_hex();
+        let payout_tx: bitcoin::Transaction = encode::deserialize(&Vec::<u8>::from_hex(&payout_tx).unwrap()).unwrap();
+// h
+        PayoutRequest {
+            challenge: challenge.clone(),
+            payout_tx: Some(payout_tx),
+            payout_sig: None,
+        }
+    }
+
+    fn validate_payout_request(client: &TgRpcClient, payout_request: &PayoutRequest) -> Result<()> {
+
+
+        Err(TgError("invalid payout request"))
+    }
+
+    #[test]
+    fn challenge_with_tx_fork_script() {
+
+        let bitcoind_rpc_config = BitcoindRpcConfig::default();
+
+        let client = rpc::TgRpcClient(Client::new(
+            format!("http://{}:{:?}",
+                bitcoind_rpc_config.hostnport.0,
+                bitcoind_rpc_config.hostnport.1,
+            ),
+            Auth::UserPass(
+            bitcoind_rpc_config.user.to_string(),
+                bitcoind_rpc_config.password.to_string(),
+            )
+        ).unwrap());
+        
+        let mut challenge = create_challenge(&client);
+        sign_challenge(&client, &mut challenge);
+        broadcast_challenge_tx(&client, &challenge);
+
+        let payout_request_p1 = create_signed_payout_request(&client, &challenge, &challenge.escrow.players[0]);
+
+        let validation_result = validate_payout_request(&client, &payout_request_p1);
+
+        assert!(validation_result.is_err());
 
     }
 }
+
