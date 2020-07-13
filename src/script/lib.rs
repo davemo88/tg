@@ -18,6 +18,7 @@ pub enum TgOpcode {
     OP_EQUAL,
     OP_VERIFYSIG,
     OP_SHA256,
+    OP_VALIDATE,
 }
 
 impl fmt::Debug for TgOpcode {
@@ -32,6 +33,7 @@ impl fmt::Debug for TgOpcode {
            OP_PUSHDATA4(num_bytes, data)        =>  write!(f, "PUSHDATA4({})", format!("{:?}, {:?}", num_bytes, data)),
            OP_IF(true_branch, false_branch)     =>  write!(f, "IF({})", format!("{:?}, {:?}", true_branch, false_branch)),
            OP_ELSE(false_branch)                =>  write!(f, "ELSE({})", format!("{:?}", false_branch)),
+           OP_VALIDATE                          =>  write!(f, "VALIDATE"),
            OP_ENDIF                             =>  write!(f, "ENDIF"),
            OP_DROP                              =>  write!(f, "DROP"),
            OP_DUP                               =>  write!(f, "DUP"),
@@ -53,7 +55,7 @@ impl From<TgOpcode> for Vec<u8> {
             OP_IF(true_branch, None)                =>  { v.extend(Vec::from(true_branch)); v.push(OP_ENDIF.bytecode()); v },
             OP_IF(true_branch, Some(false_branch))  =>  { v.extend(Vec::from(true_branch)); v.extend(Vec::from(false_branch)); v.push(OP_ENDIF.bytecode()); v },
 //NOTE: don't think this should ever happen either ... hmmm
-            OP_ELSE(false_branch)                   =>  { v.extend(Vec::from(false_branch)); panic!("encountered naked OP_ELSE"); v },
+            OP_ELSE(false_branch)                   =>  { panic!("encountered naked OP_ELSE"); },
            _ => v,
         }
 
@@ -72,6 +74,7 @@ pub fn bytecode(&self) -> u8 {
         OP_PUSHDATA4(_,_)   =>  0xD4,
         OP_IF(_,_)          =>  0xF1,
         OP_ELSE(_)          =>  0xF2,
+        OP_VALIDATE         =>  0xF3,
         OP_ENDIF            =>  0xF3,
         OP_DROP             =>  0x50,
         OP_DUP              =>  0x52,

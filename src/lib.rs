@@ -39,7 +39,11 @@ mod key;
 mod script;
 mod rpc;
 
-use script::TgScript;
+use script::{
+    TgScript,
+    TgScriptEnv,
+    interpreter::TgScriptInterpreter,
+};
 
 pub const PAYOUT_SCRIPT_MAX_SIZE: usize = 32;
 pub const LOCALHOST: &'static str = "0.0.0.0";
@@ -86,6 +90,9 @@ pub struct Challenge {
 // 1. the ref doesn't need to sign the funding tx since they don't contribute coins
 // 2. in a 2/3 multisig, the players can recover their funds at any time, e.g.
 // if the challenge doesn't proceed for some reason
+// above is only the case if don't use segwit, but no reason not to
+// segwit makes it possible to create transaction that spend from unmined txs
+// because the txid will not change
 //    pub funding_tx_hex: Vec<u8>,
     pub funding_tx_hex: String,
 // must include data unique to this challenge e.g. funding tx id, so old signatures for similar
@@ -102,8 +109,9 @@ pub struct Challenge {
 // because this contains the funding tx id, it will be unique
 //
 // signed hash of the payout script 
-// this value is unique to this challenge because it includes the funding_tx id
+// this value is unique to this challenge because it includes the funding txid
 //    pub payout_script_hash_sig: Option<Signature>,
+// TODO: probably better for serialization to make this a list
     pub payout_script_hash_sigs: HashMap<PublicKey, Signature>,
 }
 
@@ -120,7 +128,7 @@ impl ChallengeApi for Challenge {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ChallengeState {
 // unsigned
     Unsigned,
@@ -130,7 +138,7 @@ pub enum ChallengeState {
     Accepted,
 // signed by both players and ref
     Certified,
-// fucked up somehow
+// signed by the ref but not both players
     Invalid,
 }
 
@@ -143,14 +151,14 @@ pub struct PayoutRequest {
 // explicitly by the script since it is guaranteed to be available in the context
 // that is similar in our case (there will always be a tx) but the tx is only part
 // of the PayoutRequest context. 
-    pub payout_tx: Option<Transaction>,
+    pub payout_tx: Transaction,
 // in bitcoin, signatures are not necessarily required for scripts to be satisfied
 // that is why signatures are given as explicit input to scripts while transactions 
 // are not, even though both are used commonly together e.g. in OP_CHECKSIG
 // if the way we use sigs is standardized, we could puts sigs in the context too
 // e.g. if a signature is required by all payout requests, then it can be reasonably
 // stored in the context instead of being pushed onto the stack as arbitrary input
-    pub payout_sig: Option<Signature>,
+    pub payout_script_sig: Vec<Vec<u8>>,
 }
 
 pub struct RefereeService;
@@ -288,6 +296,7 @@ pub fn create_tx_fork_script(pubkey: &PublicKey, tx1: &Transaction, tx2: &Transa
         OP_PUSHDATA1(txid1.len().try_into().unwrap(), Vec::from(txid1)),
         OP_PUSHDATA1(pubkey_bytes.len().try_into().unwrap(), pubkey_bytes),
         OP_VERIFYSIG,
+        OP_VALIDATE,
     ])
 }
 
@@ -530,7 +539,7 @@ buyin: {:?}
 
     }
     
-    fn create_signed_payout_request(client: &TgRpcClient, challenge: &Challenge, player: &PublicKey) -> PayoutRequest {
+    fn create_signed_payout_request(client: &TgRpcClient, challenge: &Challenge, player: &PublicKey, referee: &PublicKey) -> PayoutRequest {
         let funding_tx: bitcoin::Transaction = encode::deserialize(&Vec::<u8>::from_hex(&challenge.funding_tx_hex).unwrap()).unwrap();
         let payout_tx = client.create_challenge_payout_transaction(&challenge.escrow, &funding_tx, &player).unwrap();
         let key = client.0.dump_private_key(&Address::p2wpkh(&player, NETWORK)).unwrap();
@@ -541,18 +550,26 @@ buyin: {:?}
             None,
         ).unwrap().hex.raw_hex();
         let payout_tx: bitcoin::Transaction = encode::deserialize(&Vec::<u8>::from_hex(&payout_tx).unwrap()).unwrap();
-// h
+
+        let referee_key = client.0.dump_private_key(&Address::p2wpkh(&referee, NETWORK)).unwrap();
+        let msg = Message::from_slice(&payout_tx.txid()).unwrap();
+        let secp = Secp256k1::new();
+        let sig = secp.sign(&msg, &referee_key.key);
+        let sig: Vec<u8> = sig.serialize_der().to_vec();
+        let payout_script_sig: Vec<Vec<u8>> = vec!(sig); 
+
         PayoutRequest {
             challenge: challenge.clone(),
-            payout_tx: Some(payout_tx),
-            payout_sig: None,
+            payout_tx,
+            payout_script_sig,
         }
     }
 
-    fn validate_payout_request(client: &TgRpcClient, payout_request: &PayoutRequest) -> Result<()> {
+    fn validate_payout_request(payout_request: PayoutRequest) -> Result<()> {
 
+        let mut env = TgScriptEnv::new(payout_request);
 
-        Err(TgError("invalid payout request"))
+        env.validate_payout_request()
     }
 
     #[test]
@@ -575,11 +592,11 @@ buyin: {:?}
         sign_challenge(&client, &mut challenge);
         broadcast_challenge_tx(&client, &challenge);
 
-        let payout_request_p1 = create_signed_payout_request(&client, &challenge, &challenge.escrow.players[0]);
+        let payout_request_p1 = create_signed_payout_request(&client, &challenge, &challenge.escrow.players[0], &challenge.escrow.referees[0]);
 
-        let validation_result = validate_payout_request(&client, &payout_request_p1);
+        let validation_result = validate_payout_request(payout_request_p1);
 
-        assert!(validation_result.is_err());
+        assert!(validation_result.is_ok());
 
     }
 }

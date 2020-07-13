@@ -29,18 +29,67 @@ use crate::{
         },
     },
     Result,
+    ChallengeState,
     TgError,
     PayoutRequest,
 };
 
+const EVAL_DEPTH_LIMIT : u8 = 2;
+
 pub struct TgScriptEnv {
-    payout_request: Option<PayoutRequest>,
+    pub payout_request: Option<PayoutRequest>,
     stack: Vec<Vec<u8>>,
     eval_depth: u8,
+    validity: Option<bool>,
     secp: Secp256k1<All>,
 }
 
-const EVAL_DEPTH_LIMIT : u8 = 2;
+impl TgScriptEnv {
+    pub fn new(payout_request: PayoutRequest) -> Self {
+        TgScriptEnv {
+            payout_request: Some(payout_request),
+            stack: Vec::new(),
+            eval_depth: 0,
+            validity: None,
+            secp: Secp256k1::new(),
+        }
+    }
+
+//todo: probably move this out of the interpreter
+    pub fn validate_payout_request(&mut self) -> Result<()> {
+
+        if self.payout_request.is_none() {
+            return Err(TgError("cannot validate payout request - payout request is None"));
+        }
+
+// TODO: ensure payout_tx is signed by the same player making the request
+
+        let payout_request = self.payout_request.as_ref().unwrap().clone();
+//confirm payout script hash sigs on challenge
+// TODO: check funding_tx is signed by the correct parties and in the blockchain
+        assert_eq!(payout_request.challenge.state(), ChallengeState::Certified);
+//push script sig to stack then evaluate the payout script
+        for script_sig_item in payout_request.payout_script_sig {
+            self.stack.push(script_sig_item);    
+        }
+
+        let _result = self.eval(payout_request.challenge.payout_script);
+
+        match self.validity {
+            None | Some(false)  => Err(TgError("invalid payout request")),
+            Some(true) => Ok(())
+        }
+    }
+
+    pub fn push_input(&mut self, bytes: Vec<u8>) {
+        self.pushdata(bytes.len(), bytes);
+    }
+
+    fn pushdata(&mut self, n: usize, bytes: Vec<u8>) {
+        assert!(bytes.len() == n as usize);
+        self.stack.push(bytes)
+    }
+}
 
 impl Default for TgScriptEnv {
     fn default() -> Self {
@@ -48,12 +97,14 @@ impl Default for TgScriptEnv {
             payout_request: None,
             stack: Vec::new(),
             eval_depth: 0,
+            validity: None,
             secp: Secp256k1::new(),
         }
     }
 }
 
-trait TgScriptInterpreter {
+// TODO: refactor ops to return results? could be easier to handle invalid scripts
+pub trait TgScriptInterpreter {
     fn eval(&mut self, _script: TgScript) -> Result<()> { Err(TgError("")) }
 // NOTE: opcode functions - in own trait?
     fn op_pushdata1(&mut self, _n: u8, _bytes: Vec<u8>) {}
@@ -64,6 +115,7 @@ trait TgScriptInterpreter {
     fn op_dup(&mut self) {}
     fn op_drop(&mut self) {}
     fn op_if(&mut self, _true_branch: TgScript, _false_branch: Option<TgScript>) {}
+    fn op_validate(&mut self) {}
     fn op_else(&mut self) {}
     fn op_endif(&mut self) {}
     fn op_equal(&mut self) {}
@@ -107,6 +159,7 @@ impl TgScriptInterpreter for TgScriptEnv {
 // instead, an else block is stored as an optional second field for OP_IF to evaluate directly
                 OP_ELSE(_) => self.op_else(),
                 OP_ENDIF => self.op_endif(),
+                OP_VALIDATE => self.op_validate(),
             }
             println!("postop stack: {:?}", self.stack);
         }
@@ -162,6 +215,15 @@ impl TgScriptInterpreter for TgScriptEnv {
         panic!("unexpected OP_ENDIF")
     }
 
+    fn op_validate(&mut self) {
+        if self.stack.pop().unwrap() != vec![OP_0.bytecode()] {
+            self.validity = Some(true);
+        }
+        else {
+            self.validity = Some(false);
+        }
+    }
+
     fn op_equal(&mut self) {
         let len = self.stack.len();
         if self.stack[len - 1] == self.stack[len - 2] {
@@ -187,7 +249,7 @@ impl TgScriptInterpreter for TgScriptEnv {
         assert!(self.payout_request.is_some());
 
         let payout_request = self.payout_request.as_ref().unwrap();
-        let payout_txid: &[u8] = &payout_request.payout_tx.as_ref().unwrap().txid();
+        let payout_txid: &[u8] = &payout_request.payout_tx.txid();
 
         let len = self.stack.len();
         let pubkey: PublicKey = PublicKey::from_slice(&self.stack.pop().unwrap()).unwrap();
@@ -209,17 +271,6 @@ impl TgScriptInterpreter for TgScriptEnv {
 
     fn op_sha256(&mut self) {
 
-    }
-}
-
-impl TgScriptEnv {
-    fn pushdata(&mut self, n: usize, bytes: Vec<u8>) {
-        assert!(bytes.len() == n as usize);
-        self.stack.push(bytes)
-    }
-
-    pub fn push_input(&mut self, bytes: Vec<u8>) {
-        self.pushdata(bytes.len(), bytes);
     }
 }
 
