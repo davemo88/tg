@@ -139,7 +139,7 @@ impl TgScriptInterpreter for TgScriptEnv {
         while script.0.len() > 0 {
             let next = script.0.remove(0);    
             println!("next op: {:?}", next);
-            println!("preop stack: {:?}", self.stack);
+//            println!("preop stack: {:?}", self.stack);
             match next {
                 OP_0                                =>  self.op_0(),
                 OP_1                                =>  self.op_1(),
@@ -161,7 +161,7 @@ impl TgScriptInterpreter for TgScriptEnv {
                 OP_ENDIF => self.op_endif(),
                 OP_VALIDATE => self.op_validate(),
             }
-            println!("postop stack: {:?}", self.stack);
+//            println!("postop stack: {:?}", self.stack);
         }
         self.eval_depth -= 1;
 
@@ -256,7 +256,7 @@ impl TgScriptInterpreter for TgScriptEnv {
         let script_txid = self.stack.pop().unwrap();
         let sig: Signature = Signature::from_der(&self.stack.pop().unwrap()).unwrap();
 
-        assert_eq!(script_txid, payout_txid);
+//        assert_eq!(script_txid, payout_txid);
 
         let msg: Message = Message::from_slice(&script_txid).unwrap();
 
