@@ -49,6 +49,10 @@ fn op_dup(input: &[u8]) -> IResult<&[u8], TgOpcode> {
     op_bytecode(TgOpcode::OP_DUP)(input)
 }
 
+fn op_2dup(input: &[u8]) -> IResult<&[u8], TgOpcode> {
+    op_bytecode(TgOpcode::OP_2DUP)(input)
+}
+
 fn op_equal(input: &[u8]) -> IResult<&[u8], TgOpcode> {
     op_bytecode(TgOpcode::OP_EQUAL)(input)
 }

@@ -113,6 +113,7 @@ pub trait TgScriptInterpreter {
     fn op_0(&mut self) {}
     fn op_1(&mut self) {}
     fn op_dup(&mut self) {}
+    fn op_2dup(&mut self) {}
     fn op_drop(&mut self) {}
     fn op_if(&mut self, _true_branch: TgScript, _false_branch: Option<TgScript>) {}
     fn op_validate(&mut self) {}
@@ -144,6 +145,7 @@ impl TgScriptInterpreter for TgScriptEnv {
                 OP_0                                =>  self.op_0(),
                 OP_1                                =>  self.op_1(),
                 OP_DUP                              =>  self.op_dup(),
+                OP_2DUP                             =>  self.op_2dup(),
                 OP_DROP                             =>  self.op_drop(),
                 OP_EQUAL                            =>  self.op_equal(),
                 OP_VERIFYSIG                        =>  self.op_verifysig(),
@@ -192,6 +194,13 @@ impl TgScriptInterpreter for TgScriptEnv {
 
     fn op_dup(&mut self) {
         self.stack.push(self.stack.last().unwrap().clone());
+    }
+
+    fn op_2dup(&mut self) {
+        let len = self.stack.len();
+        self.stack.push(self.stack[len - 2].clone());
+// stack.len() increased by one but we want the last element of the stack before
+        self.stack.push(self.stack[len - 1].clone());
     }
 
     fn op_drop(&mut self) {
@@ -251,16 +260,13 @@ impl TgScriptInterpreter for TgScriptEnv {
         let payout_request = self.payout_request.as_ref().unwrap();
         let payout_txid: &[u8] = &payout_request.payout_tx.txid();
 
-        let len = self.stack.len();
-        let pubkey: PublicKey = PublicKey::from_slice(&self.stack.pop().unwrap()).unwrap();
         let script_txid = self.stack.pop().unwrap();
+        let pubkey: PublicKey = PublicKey::from_slice(&self.stack.pop().unwrap()).unwrap();
         let sig: Signature = Signature::from_der(&self.stack.pop().unwrap()).unwrap();
-
-//        assert_eq!(script_txid, payout_txid);
 
         let msg: Message = Message::from_slice(&script_txid).unwrap();
 
-        if self.secp.verify(&msg, &sig, &pubkey.key).is_ok() {
+        if payout_txid.to_vec() == script_txid && self.secp.verify(&msg, &sig, &pubkey.key).is_ok() {
             self.op_1();
         }
         else

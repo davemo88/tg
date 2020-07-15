@@ -292,10 +292,28 @@ pub fn create_tx_fork_script(pubkey: &PublicKey, tx1: &Transaction, tx2: &Transa
     let pubkey_bytes = pubkey.to_bytes();
 
 // push_input(payout_signature),
+//    TgScript(vec![         
+//        OP_DUP,
+//        OP_PUSHDATA1(txid1.len().try_into().unwrap(), Vec::from(txid1)),
+//        OP_PUSHDATA1(pubkey_bytes.len().try_into().unwrap(), pubkey_bytes.clone()),
+//        OP_VERIFYSIG,
+//        OP_IF(
+//            TgScript(vec![
+//                OP_1,
+//            ]),
+//            Some(TgScript(vec![
+//                OP_PUSHDATA1(txid2.len().try_into().unwrap(), Vec::from(txid2)),
+//                OP_PUSHDATA1(pubkey_bytes.len().try_into().unwrap(), pubkey_bytes.clone()),
+//                OP_VERIFYSIG,
+//            ]))
+//        ),
+//        OP_VALIDATE,
+//    ]);
+
     TgScript(vec![         
-        OP_DUP,
-        OP_PUSHDATA1(txid1.len().try_into().unwrap(), Vec::from(txid1)),
         OP_PUSHDATA1(pubkey_bytes.len().try_into().unwrap(), pubkey_bytes.clone()),
+        OP_2DUP,
+        OP_PUSHDATA1(txid1.len().try_into().unwrap(), Vec::from(txid1)),
         OP_VERIFYSIG,
         OP_IF(
             TgScript(vec![
@@ -303,7 +321,6 @@ pub fn create_tx_fork_script(pubkey: &PublicKey, tx1: &Transaction, tx2: &Transa
             ]),
             Some(TgScript(vec![
                 OP_PUSHDATA1(txid2.len().try_into().unwrap(), Vec::from(txid2)),
-                OP_PUSHDATA1(pubkey_bytes.len().try_into().unwrap(), pubkey_bytes),
                 OP_VERIFYSIG,
             ]))
         ),
