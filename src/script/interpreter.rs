@@ -141,6 +141,7 @@ impl TgScriptInterpreter for TgScriptEnv {
             let next = script.0.remove(0);    
             println!("next op: {:?}", next);
 //            println!("preop stack: {:?}", self.stack);
+//            println!("preop stack depth: {:?}", self.stack.len());
             match next {
                 OP_0                                =>  self.op_0(),
                 OP_1                                =>  self.op_1(),
@@ -164,6 +165,7 @@ impl TgScriptInterpreter for TgScriptEnv {
                 OP_VALIDATE => self.op_validate(),
             }
 //            println!("postop stack: {:?}", self.stack);
+//            println!("postop stack depth: {:?}", self.stack.len());
         }
         self.eval_depth -= 1;
 

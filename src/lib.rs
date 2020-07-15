@@ -291,25 +291,6 @@ pub fn create_tx_fork_script(pubkey: &PublicKey, tx1: &Transaction, tx2: &Transa
     let txid2: &[u8] = &tx2.txid();
     let pubkey_bytes = pubkey.to_bytes();
 
-// push_input(payout_signature),
-//    TgScript(vec![         
-//        OP_DUP,
-//        OP_PUSHDATA1(txid1.len().try_into().unwrap(), Vec::from(txid1)),
-//        OP_PUSHDATA1(pubkey_bytes.len().try_into().unwrap(), pubkey_bytes.clone()),
-//        OP_VERIFYSIG,
-//        OP_IF(
-//            TgScript(vec![
-//                OP_1,
-//            ]),
-//            Some(TgScript(vec![
-//                OP_PUSHDATA1(txid2.len().try_into().unwrap(), Vec::from(txid2)),
-//                OP_PUSHDATA1(pubkey_bytes.len().try_into().unwrap(), pubkey_bytes.clone()),
-//                OP_VERIFYSIG,
-//            ]))
-//        ),
-//        OP_VALIDATE,
-//    ]);
-
     TgScript(vec![         
         OP_PUSHDATA1(pubkey_bytes.len().try_into().unwrap(), pubkey_bytes.clone()),
         OP_2DUP,
@@ -620,10 +601,12 @@ buyin: {:?}
         sign_challenge(&client, &mut challenge);
         broadcast_challenge_tx(&client, &challenge);
 
-//        let payout_request_p1 = create_signed_payout_request(&client, &challenge, &challenge.escrow.players[0], &challenge.escrow.referees[0]);
-//        let validation_result = validate_payout_request(payout_request_p1);
-//        assert!(validation_result.is_ok());
-//
+        println!("\np1 payout request");
+        let payout_request_p1 = create_signed_payout_request(&client, &challenge, &challenge.escrow.players[0], &challenge.escrow.referees[0]);
+        let validation_result = validate_payout_request(payout_request_p1);
+        assert!(validation_result.is_ok());
+
+        println!("\np2 payout request");
         let payout_request_p2 = create_signed_payout_request(&client, &challenge, &challenge.escrow.players[1], &challenge.escrow.referees[0]);
         let validation_result = validate_payout_request(payout_request_p2);
         assert!(validation_result.is_ok());

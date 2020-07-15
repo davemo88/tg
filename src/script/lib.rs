@@ -29,9 +29,9 @@ impl fmt::Debug for TgOpcode {
         match self {
            OP_0                                 =>  write!(f, "0"), 
            OP_1                                 =>  write!(f, "1"),
-           OP_PUSHDATA1(num_bytes, data)        =>  write!(f, "PUSHDATA1({})", format!("{:?}, {:?}", num_bytes, data)),
-           OP_PUSHDATA2(num_bytes, data)        =>  write!(f, "PUSHDATA2({})", format!("{:?}, {:?}", num_bytes, data)),
-           OP_PUSHDATA4(num_bytes, data)        =>  write!(f, "PUSHDATA4({})", format!("{:?}, {:?}", num_bytes, data)),
+           OP_PUSHDATA1(num_bytes, data)        =>  write!(f, "PUSHDATA1({})", format!("{:?}, [..]", num_bytes)),//"{:?}", num_bytes, data)),
+           OP_PUSHDATA2(num_bytes, data)        =>  write!(f, "PUSHDATA2({})", format!("{:?}, [..]", num_bytes)),//"{:?}", num_bytes, data)),
+           OP_PUSHDATA4(num_bytes, data)        =>  write!(f, "PUSHDATA4({})", format!("{:?}, [..]", num_bytes)),//"{:?}", num_bytes, data)),
            OP_IF(true_branch, false_branch)     =>  write!(f, "IF({})", format!("{:?}, {:?}", true_branch, false_branch)),
            OP_ELSE(false_branch)                =>  write!(f, "ELSE({})", format!("{:?}", false_branch)),
            OP_VALIDATE                          =>  write!(f, "VALIDATE"),
