@@ -2,60 +2,29 @@ use std::{
     collections::HashMap,
     convert::TryInto,
 };
-use secp256k1::{
-    Secp256k1,
-    Message,
-    Signature,
-    rand::{
-        rngs::OsRng,
-        RngCore,
-    },
-};
 use bitcoin::{
     Transaction,
     Address,
     Amount,
     util::key::PrivateKey,
     util::key::PublicKey,
-    hashes::{
-        Hash,
-        hex::FromHex,
-    },
-    consensus::{
-        encode,
-    }
 };
 
 use bitcoincore_rpc::{
-    Auth,
     Client,
     RpcApi,
     RawTx,
-    json::{
-        PubKeyOrAddress,
-        AddressType,
-        CreateRawTransactionInput,
-        SignRawTransactionInput,
-        GetRawTransactionResultVout,
-        GetRawTransactionResultVoutScriptPubKey,
-    },
+    json::CreateRawTransactionInput,
 };
 
 use crate::{
     MultisigEscrow,
-    BitcoindRpcConfig,
     Challenge,
-    ChallengeApi,
-    ChallengeState,
-    PayoutRequest,
     Result,
     TgError,
     NETWORK,
     MINER_FEE,
-    NUM_PLAYERS,
 };
-
-use crate::script::TgScript;
 
 pub struct TgRpcClient(pub Client);
 
@@ -63,6 +32,8 @@ pub trait TgRpcClientApi {
     fn create_challenge_funding_transaction(&self, escrow: &MultisigEscrow, pot: Amount) -> Result<Transaction>;
     fn create_challenge_payout_transaction(&self, escrow: &MultisigEscrow, funding_tx: &Transaction, player: &PublicKey) -> Result<Transaction>;
     fn get_inputs_for_address(&self, address: &Address, amount: Amount) -> (Vec<CreateRawTransactionInput>, Amount,);
+// TODO: make sure secp contexts are correctly set up, they shouldn't all be able to sign
+// TODO: this function might not belong here because it requires access to a private key
     fn sign_challenge_tx(&self, key: PrivateKey, challenge: &mut Challenge);
 }
 

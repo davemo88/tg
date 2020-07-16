@@ -5,21 +5,7 @@ use secp256k1::{
     Signature,
     All,
 };
-use bitcoin::{
-    Transaction,
-    Address,
-    Network,
-    Amount,
-    util::key::PrivateKey,
-    util::key::PublicKey,
-    hashes::{
-        Hash,
-        hex::FromHex,
-    },
-    consensus::{
-        encode,
-    }
-};
+use bitcoin::util::key::PublicKey;
 use crate::{
     script::{
         lib::{
@@ -44,6 +30,7 @@ pub struct TgScriptEnv {
     secp: Secp256k1<All>,
 }
 
+#[allow(dead_code)]
 impl TgScriptEnv {
     pub fn new(payout_request: PayoutRequest) -> Self {
         TgScriptEnv {
@@ -286,8 +273,17 @@ impl TgScriptInterpreter for TgScriptEnv {
 mod tests {
 
     use super::*;
-    use crate::script::TgOpcode::*;
+//    use crate::script::TgOpcode::*;
     use crate::script::parser::tg_script;
+//    use bitcoin::{
+//        hashes::{
+//            Hash,
+//            hex::FromHex,
+//        },
+//        consensus::{
+//            encode,
+//        }
+//    };
 
     const PUSHDATA_SCRIPT: &'static[u8] = &[0xD1,0x01,0xFF,0xD1,0x02,0x01,0x01];
     const CONDITIONAL_SCRIPT_TRUE: &'static[u8] = &[0x01,0xF1,0x01,0xF2,0x00,0xF3,0xF1,0x00,0xF3];

@@ -10,12 +10,12 @@ use secp256k1::{
     Signature,
 };
 
-use rand::Rng;
+//use rand::Rng;
 
 use bitcoin::{
     Transaction,
     Address,
-    Amount,
+//    Amount,
     Network,
     blockdata::{
         script::{
@@ -26,13 +26,13 @@ use bitcoin::{
     hashes::{
         Hash,
         HashEngine,
-        hex::{FromHex, ToHex},
+//        hex::{FromHex, ToHex},
         sha256::HashEngine as Sha2Engine,
         sha256::Hash as Sha2Hash,
     },
-    consensus::{
-        encode,
-    }
+//    consensus::{
+//        encode,
+//    }
 };
 
 mod key;
@@ -41,8 +41,8 @@ mod rpc;
 
 use script::{
     TgScript,
-    TgScriptEnv,
-    interpreter::TgScriptInterpreter,
+//    TgScriptEnv,
+//    interpreter::TgScriptInterpreter,
 };
 
 pub const PAYOUT_SCRIPT_MAX_SIZE: usize = 32;
@@ -173,6 +173,7 @@ impl RefereeServiceApi for RefereeService {
 }
 
 //NOTE: could use dummy tx requiring signing by referee to embed info in tx
+#[allow(dead_code)]
 impl Challenge {
 
     fn sign_payout_script(&mut self, key: PrivateKey) {
@@ -317,6 +318,11 @@ mod tests {
         TgRpcClientApi,
         TgRpcClient,
     };
+    use bitcoin::{
+        Amount,
+        hashes::hex::{FromHex, ToHex},
+        consensus::encode,
+    };
     use bitcoincore_rpc::{
         Auth,
         Client,
@@ -326,9 +332,9 @@ mod tests {
             PubKeyOrAddress,
             AddressType,
             CreateRawTransactionInput,
-            SignRawTransactionInput,
-            GetRawTransactionResultVout,
-            GetRawTransactionResultVoutScriptPubKey,
+//            SignRawTransactionInput,
+//            GetRawTransactionResultVout,
+//            GetRawTransactionResultVoutScriptPubKey,
         },
     };
 

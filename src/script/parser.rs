@@ -1,18 +1,14 @@
+
 use std::convert::TryInto;
 use nom::{
     self,
     IResult,
-    bytes::complete::{take, take_until, tag},
-    number::complete::{le_u8, be_u8, be_u16, be_u32},
+    bytes::complete::take,
+    number::complete::{be_u8, be_u16, be_u32},
     branch::alt,
     multi::{many1, length_data},
     combinator::opt,
     sequence::{tuple, preceded, terminated},
-    InputIter,
-    InputTake,
-    InputLength,
-    ToUsize,
-    error::ParseError,
 };
 use crate::{
     script::lib::{
@@ -33,30 +29,37 @@ fn op_bytecode(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], TgOpcode> {
     }
 }
 
+#[allow(dead_code)]
 fn op_0(input: &[u8]) -> IResult<&[u8], TgOpcode> {
     op_bytecode(TgOpcode::OP_0)(input)
 }
 
+#[allow(dead_code)]
 fn op_1(input: &[u8]) -> IResult<&[u8], TgOpcode> {
     op_bytecode(TgOpcode::OP_1)(input)
 }
 
+#[allow(dead_code)]
 fn op_drop(input: &[u8]) -> IResult<&[u8], TgOpcode> {
     op_bytecode(TgOpcode::OP_DROP)(input)
 }
 
+#[allow(dead_code)]
 fn op_dup(input: &[u8]) -> IResult<&[u8], TgOpcode> {
     op_bytecode(TgOpcode::OP_DUP)(input)
 }
 
+#[allow(dead_code)]
 fn op_2dup(input: &[u8]) -> IResult<&[u8], TgOpcode> {
     op_bytecode(TgOpcode::OP_2DUP)(input)
 }
 
+#[allow(dead_code)]
 fn op_equal(input: &[u8]) -> IResult<&[u8], TgOpcode> {
     op_bytecode(TgOpcode::OP_EQUAL)(input)
 }
 
+#[allow(dead_code)]
 fn op_if(input: &[u8]) -> IResult<&[u8], TgOpcode> {
     let (input, (true_branch, else_block)) = tuple((
         preceded(
@@ -88,6 +91,7 @@ fn op_else(input: &[u8]) -> IResult<&[u8], TgOpcode> {
     Ok((input, TgOpcode::OP_ELSE(else_script)))
 }
 
+#[allow(dead_code)]
 fn op_endif(input: &[u8]) -> IResult<&[u8], TgOpcode> {
     op_bytecode(TgOpcode::OP_ENDIF)(input)
 }
@@ -160,11 +164,11 @@ mod tests {
 
     const PUSHDATA_SCRIPT: &'static[u8] = &[0xD1,0x01,0xFF];//,0xD1,0x02,0x01,0x01];
     const CONDITIONAL_SCRIPT_TRUE: &'static[u8] = &[0x01,0xF1,0x01,0xF2,0x00,0xF3,0xF1,0x00,0xF3];
-    const ERROR_SCRIPT: &'static[u8] = &[0xA1];
+//    const ERROR_SCRIPT: &'static[u8] = &[0xA1];
 
     #[test]
     fn parser () {
-        let (input, script) = op_pushdata1(&PUSHDATA_SCRIPT).unwrap(); 
+        let (_input, script) = op_pushdata1(&PUSHDATA_SCRIPT).unwrap(); 
         println!("{:?}", script);
 
         let script = tg_script(&CONDITIONAL_SCRIPT_TRUE); 
