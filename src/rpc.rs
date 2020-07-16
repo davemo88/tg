@@ -62,13 +62,9 @@ pub struct TgRpcClient(pub Client);
 pub trait TgRpcClientApi {
     fn create_challenge_funding_transaction(&self, escrow: &MultisigEscrow, pot: Amount) -> Result<Transaction>;
     fn create_challenge_payout_transaction(&self, escrow: &MultisigEscrow, funding_tx: &Transaction, player: &PublicKey) -> Result<Transaction>;
-    fn verify_payout_request(&self, payout_request: PayoutRequest) -> bool;
     fn get_inputs_for_address(&self, address: &Address, amount: Amount) -> (Vec<CreateRawTransactionInput>, Amount,);
     fn sign_challenge_tx(&self, key: PrivateKey, challenge: &mut Challenge);
     fn sign_challenge_payout_script(&self, key: PrivateKey, challenge: &mut Challenge);
-//    fn get_challenge_state(&self, challenge: &Challenge) -> ChallengeState;
-//    fn verify_player_sigs(&self, player: PublicKey, challenge: &Challenge) -> bool;
-//    fn verify_referee_sig(&self, referee: PublicKey, challenge: &Challenge) -> bool;
 }
 
 impl TgRpcClientApi for TgRpcClient {
@@ -137,30 +133,13 @@ impl TgRpcClientApi for TgRpcClient {
         Ok(tx)
     }
 
-    fn verify_payout_request(&self, payout_request: PayoutRequest) -> bool {
-//NOTE: maybe just store this and the txid on challenge instead of full challenge and the full
-//payout script
-        let outs = HashMap::<String, Amount>::default();
-//        outs.insert(payout_scripthash_address.to_string(),Amount::ONE_BTC);
-        let tx = self.0.create_raw_transaction(
-            &[],
-            &outs,
-            None,
-            None,
-        ).unwrap();
-
-        println!("dummy {:?}", tx);
-
-        false
-    }
-
     fn create_challenge_payout_transaction(&self, escrow: &MultisigEscrow, funding_tx: &Transaction, player: &PublicKey) -> Result<Transaction> {
 // TODO: should check if the funding tx is in the blockchain since it probably shouldn't be
         let escrow_script_pubkey = escrow.address.script_pubkey();
         let mut vout: Option<(u32, Amount)> = None;
 
         for (i, txout,) in funding_tx.output.iter().enumerate() {
-            let address = Address::from_script(&txout.script_pubkey, NETWORK);
+//            let address = Address::from_script(&txout.script_pubkey, NETWORK);
             if escrow_script_pubkey == txout.script_pubkey {
                 vout = Some((i.try_into().unwrap(), Amount::from_sat(txout.value)));
             }
@@ -236,7 +215,9 @@ impl TgRpcClientApi for TgRpcClient {
     }
 
     fn sign_challenge_payout_script(&self, key: PrivateKey, challenge: &mut Challenge) {
+// if it were sequential dependent then different protocol:
 // if there is a sig there already, verify it and then add ours on top
+// but here it's sequential and independent, we add each sig by itself
         let secp = Secp256k1::new();
         let payout_script_hash = challenge.payout_script_hash();
         challenge.payout_script_hash_sigs.insert(key.public_key(&secp),secp.sign(&Message::from_slice(&payout_script_hash).unwrap(), &key.key));
