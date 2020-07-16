@@ -516,19 +516,28 @@ buyin: {:?}
         println!("p1 signing");
         let p1_key = client.0.dump_private_key(&p1_address).unwrap();
         client.sign_challenge_tx(p1_key, &mut challenge);
-        client.sign_challenge_payout_script(p1_key, &mut challenge);
+        sign_challenge_payout_script(p1_key, &mut challenge);
         println!("challenge state: {:?}", challenge.state());
 
         println!("p2 signing");
         let p2_key = client.0.dump_private_key(&p2_address).unwrap();
         client.sign_challenge_tx(p2_key, &mut challenge);
-        client.sign_challenge_payout_script(p2_key, &mut challenge);
+        sign_challenge_payout_script(p2_key, &mut challenge);
         println!("challenge state: {:?}", challenge.state());
 
         println!("ref signing");
         let ref_key = client.0.dump_private_key(&ref_address).unwrap();
-        client.sign_challenge_payout_script(ref_key, &mut challenge);
+        sign_challenge_payout_script(ref_key, &mut challenge);
         println!("challenge state: {:?}", challenge.state());
+    }
+
+    fn sign_challenge_payout_script(key: PrivateKey, challenge: &mut Challenge) {
+// if it were sequential dependent then different protocol:
+// if there is a sig there already, verify it and then add ours on top
+// but here it's sequential and independent, we add each sig by itself
+        let secp = Secp256k1::new();
+        let payout_script_hash = challenge.payout_script_hash();
+        challenge.payout_script_hash_sigs.insert(key.public_key(&secp),secp.sign(&Message::from_slice(&payout_script_hash).unwrap(), &key.key));
     }
 
     fn broadcast_challenge_tx(client: &TgRpcClient, challenge: &Challenge) {

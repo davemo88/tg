@@ -64,7 +64,6 @@ pub trait TgRpcClientApi {
     fn create_challenge_payout_transaction(&self, escrow: &MultisigEscrow, funding_tx: &Transaction, player: &PublicKey) -> Result<Transaction>;
     fn get_inputs_for_address(&self, address: &Address, amount: Amount) -> (Vec<CreateRawTransactionInput>, Amount,);
     fn sign_challenge_tx(&self, key: PrivateKey, challenge: &mut Challenge);
-    fn sign_challenge_payout_script(&self, key: PrivateKey, challenge: &mut Challenge);
 }
 
 impl TgRpcClientApi for TgRpcClient {
@@ -212,15 +211,6 @@ impl TgRpcClientApi for TgRpcClient {
         );
 //        println!("sign tx result: {:?}", result);
         challenge.funding_tx_hex = result.unwrap().hex.raw_hex();
-    }
-
-    fn sign_challenge_payout_script(&self, key: PrivateKey, challenge: &mut Challenge) {
-// if it were sequential dependent then different protocol:
-// if there is a sig there already, verify it and then add ours on top
-// but here it's sequential and independent, we add each sig by itself
-        let secp = Secp256k1::new();
-        let payout_script_hash = challenge.payout_script_hash();
-        challenge.payout_script_hash_sigs.insert(key.public_key(&secp),secp.sign(&Message::from_slice(&payout_script_hash).unwrap(), &key.key));
     }
 }
 
