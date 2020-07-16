@@ -166,9 +166,9 @@ impl RefereeServiceApi for RefereeService {
 }
 
 //NOTE: could use dummy tx requiring signing by arbiter to embed info in tx
-#[allow(dead_code)]
 impl Challenge {
 
+    #[allow(dead_code)]
     fn sign_payout_script(&mut self, key: PrivateKey) {
 // if there is a sig there already, verify it and then add ours on top
         let secp = Secp256k1::new();
@@ -176,6 +176,7 @@ impl Challenge {
         self.payout_script_hash_sigs.insert(key.public_key(&secp),secp.sign(&Message::from_slice(&payout_script_hash).unwrap(), &key.key));
     }
 
+    #[allow(dead_code)]
     fn verify_player_sigs(&self, player: PublicKey,  challenge: &Challenge) -> bool {
 //TODO: check funding tx sig too
         if challenge.escrow.players.contains(&player) {
@@ -189,6 +190,7 @@ impl Challenge {
         false
     }
 
+    #[allow(dead_code)]
     fn verify_arbiter_sig(&self, arbiter: PublicKey) -> bool {
 //TODO: check funding tx sig too
         if self.escrow.arbiters.contains(&arbiter) {
