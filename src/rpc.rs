@@ -41,12 +41,12 @@ impl TgRpcClientApi for TgRpcClient {
     fn create_challenge_funding_transaction(&self, escrow: &MultisigEscrow, pot: Amount) -> Result<Transaction> {
         let p1_address = Address::p2wpkh(&escrow.players[0], NETWORK);
         let p2_address = Address::p2wpkh(&escrow.players[1], NETWORK);
-        let cashier_address = Address::p2wpkh(&escrow.cashiers[0], NETWORK);
+        let arbiter_address = Address::p2wpkh(&escrow.arbiters[0], NETWORK);
 
 //        let pot = Amount::ONE_SAT * 2000000;
 
-        let cashier_fee = pot / 100;
-        let buyin = (pot + cashier_fee + Amount::from_sat(MINER_FEE)) / 2;
+        let arbiter_fee = pot / 100;
+        let buyin = (pot + arbiter_fee + Amount::from_sat(MINER_FEE)) / 2;
 
         let (p1_inputs, p1_total_in,) = self.get_inputs_for_address(&p1_address, buyin);
         let (p2_inputs, p2_total_in,) = self.get_inputs_for_address(&p2_address, buyin);
@@ -62,7 +62,7 @@ impl TgRpcClientApi for TgRpcClient {
 
         let mut outs = HashMap::<String, Amount>::default();
         outs.insert(escrow.address.to_string(), pot);
-        outs.insert(cashier_address.to_string(), cashier_fee);
+        outs.insert(arbiter_address.to_string(), arbiter_fee);
         outs.insert(p1_address.to_string(), p1_change);
         outs.insert(p2_address.to_string(), p2_change);
 
@@ -83,7 +83,7 @@ impl TgRpcClientApi for TgRpcClient {
 //        total in: {:?}
 //        total out: {:?}
 //        pot: {:?}
-//        cashier fee: {:?}
+//        arbiter fee: {:?}
 //        miner fee: {:?}
 //        p1 change: {:?}
 //        p2 change: {:?} 
@@ -93,13 +93,13 @@ impl TgRpcClientApi for TgRpcClient {
 //            total_in,
 //            total_out,
 //            pot, 
-//            cashier_fee,
+//            arbiter_fee,
 //            MINER_FEE, 
 //            p1_change, 
 //            p2_change,
-//            total_in - p1_change - p2_change - cashier_fee - Amount::from_sat(MINER_FEE),
+//            total_in - p1_change - p2_change - arbiter_fee - Amount::from_sat(MINER_FEE),
 //        );
-        assert!(total_in - p1_change - p2_change - cashier_fee - Amount::from_sat(MINER_FEE) == pot);
+        assert!(total_in - p1_change - p2_change - arbiter_fee - Amount::from_sat(MINER_FEE) == pot);
         Ok(tx)
     }
 

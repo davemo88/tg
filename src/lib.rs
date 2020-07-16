@@ -80,7 +80,7 @@ pub struct Challenge {
 // this tx needs to be mined before the payout script can be signed
 // because we need to create txs that spend from it in the payout script
 // there is no problem with this for the following reasons:
-// 1. the cashier doesn't need to sign the funding tx since they don't contribute coins
+// 1. the arbiter doesn't need to sign the funding tx since they don't contribute coins
 // 2. in a 2/3 multisig, the players can recover their funds at any time, e.g.
 // if the challenge doesn't proceed for some reason
 // above is only the case if don't use segwit, but no reason not to
@@ -129,9 +129,9 @@ pub enum ChallengeState {
     Issued,
 // signed by both players
     Accepted,
-// signed by both players and cashier
+// signed by both players and arbiter
     Certified,
-// signed by the cashier but not both players
+// signed by the arbiter but not both players
     Invalid,
 }
 
@@ -165,7 +165,7 @@ impl RefereeServiceApi for RefereeService {
 
 }
 
-//NOTE: could use dummy tx requiring signing by cashier to embed info in tx
+//NOTE: could use dummy tx requiring signing by arbiter to embed info in tx
 #[allow(dead_code)]
 impl Challenge {
 
@@ -189,14 +189,14 @@ impl Challenge {
         false
     }
 
-    fn verify_cashier_sig(&self, cashier: PublicKey) -> bool {
+    fn verify_arbiter_sig(&self, arbiter: PublicKey) -> bool {
 //TODO: check funding tx sig too
-        if self.escrow.cashiers.contains(&cashier) {
+        if self.escrow.arbiters.contains(&arbiter) {
             let secp = Secp256k1::new();        
             return secp.verify(
                 &Message::from_slice(&self.payout_script_hash()).unwrap(),
-                &self.payout_script_hash_sigs[&cashier],
-                &cashier.key
+                &self.payout_script_hash_sigs[&arbiter],
+                &arbiter.key
             ).is_ok()
         }
         false
@@ -219,12 +219,12 @@ impl Challenge {
             }
         }
 
-        let cashier_sig: bool = self.payout_script_hash_sigs.contains_key(&self.escrow.cashiers[0]) && secp.verify(
+        let arbiter_sig: bool = self.payout_script_hash_sigs.contains_key(&self.escrow.arbiters[0]) && secp.verify(
             &msg,
-            &self.payout_script_hash_sigs[&self.escrow.cashiers[0]],
-            &self.escrow.cashiers[0].key).is_ok();
+            &self.payout_script_hash_sigs[&self.escrow.arbiters[0]],
+            &self.escrow.arbiters[0].key).is_ok();
 
-        match cashier_sig {
+        match arbiter_sig {
             true => {
                 match num_player_sigs {
                     NUM_PLAYERS => ChallengeState::Certified,
@@ -252,7 +252,7 @@ pub struct MultisigEscrow {
     pub address: Address, 
     pub redeem_script: BitcoinScript,
     pub players: Vec<PublicKey>,
-    pub cashiers: Vec<PublicKey>,
+    pub arbiters: Vec<PublicKey>,
 }
 
 pub fn create_tx_fork_script(pubkey: &PublicKey, tx1: &Transaction, tx2: &Transaction) -> TgScript {
@@ -416,14 +416,14 @@ mod tests {
 
     }
 
-    fn create_2_of_3_multisig(client: &rpc::TgRpcClient, p1_pubkey: PublicKey, p2_pubkey: PublicKey, cashier_pubkey: PublicKey) -> MultisigEscrow {
+    fn create_2_of_3_multisig(client: &rpc::TgRpcClient, p1_pubkey: PublicKey, p2_pubkey: PublicKey, arbiter_pubkey: PublicKey) -> MultisigEscrow {
 
         let result = client.0.add_multisig_address(
             2,
             &[
                 PubKeyOrAddress::PubKey(&p1_pubkey),
                 PubKeyOrAddress::PubKey(&p2_pubkey),
-                PubKeyOrAddress::PubKey(&cashier_pubkey)
+                PubKeyOrAddress::PubKey(&arbiter_pubkey)
             ],
             None,
             None,
@@ -433,7 +433,7 @@ mod tests {
             address: result.address,
             redeem_script: result.redeem_script,
             players: vec!(p1_pubkey.clone(),p2_pubkey.clone()),
-            cashiers: vec!(cashier_pubkey.clone()),
+            arbiters: vec!(arbiter_pubkey.clone()),
         }
     }
 
@@ -441,7 +441,7 @@ mod tests {
 
         let p1_address = client.0.get_new_address(Some(PLAYER_1_ADDRESS_LABEL), Some(AddressType::Bech32)).unwrap();
         let p2_address = client.0.get_new_address(Some(PLAYER_2_ADDRESS_LABEL), Some(AddressType::Bech32)).unwrap();
-        let cashier_address = client.0.get_new_address(Some(REFEREE_ADDRESS_LABEL), Some(AddressType::Bech32)).unwrap();
+        let arbiter_address = client.0.get_new_address(Some(REFEREE_ADDRESS_LABEL), Some(AddressType::Bech32)).unwrap();
 //
         println!("fund players 1BTC each");
 
@@ -458,17 +458,17 @@ players:
 {:?} 
 {:?} 
 
-cashier:
+arbiter:
 {:?}
 
 pot: {:?}
-cashier fee: {:?}
+arbiter fee: {:?}
 miner fee: {:?}
 buyin: {:?}
 ",
             p1_address, 
             p2_address, 
-            cashier_address, 
+            arbiter_address, 
             POT_AMOUNT,
             POT_AMOUNT/100,
             Amount::from_sat(MINER_FEE),
@@ -477,12 +477,12 @@ buyin: {:?}
 
         let p1_pubkey = client.0.get_address_info(&p1_address).unwrap().pubkey.unwrap();
         let p2_pubkey = client.0.get_address_info(&p2_address).unwrap().pubkey.unwrap();
-        let cashier_pubkey = client.0.get_address_info(&cashier_address).unwrap().pubkey.unwrap();
+        let arbiter_pubkey = client.0.get_address_info(&arbiter_address).unwrap().pubkey.unwrap();
 
         let escrow = create_2_of_3_multisig(&client,
             p1_pubkey,
             p2_pubkey,
-            cashier_pubkey,
+            arbiter_pubkey,
         );
         println!("escrow {:?} created", escrow.address.to_string());
 
@@ -494,7 +494,7 @@ buyin: {:?}
         let payout_tx_p2 = client.create_challenge_payout_transaction(&escrow, &funding_tx, &p2_pubkey).unwrap();
         println!("payout tx for p2 {:?} created", payout_tx_p2.txid());
 
-        let payout_script = create_tx_fork_script(&cashier_pubkey, &payout_tx_p1, &payout_tx_p2);
+        let payout_script = create_tx_fork_script(&arbiter_pubkey, &payout_tx_p1, &payout_tx_p2);
         let mut hash_engine = Sha2Engine::default();
         hash_engine.input(&Vec::from(payout_script.clone()));
         let payout_script_hash: &[u8] = &Sha2Hash::from_engine(hash_engine);
@@ -512,7 +512,7 @@ buyin: {:?}
 
         let p1_address = Address::p2wpkh(&challenge.escrow.players[0], NETWORK);   
         let p2_address = Address::p2wpkh(&challenge.escrow.players[1], NETWORK);   
-        let cashier_address = Address::p2wpkh(&challenge.escrow.cashiers[0], NETWORK);   
+        let arbiter_address = Address::p2wpkh(&challenge.escrow.arbiters[0], NETWORK);   
 
         println!("challenge state: {:?}", challenge.state());
         println!("p1 signing");
@@ -527,9 +527,9 @@ buyin: {:?}
         sign_challenge_payout_script(p2_key, &mut challenge);
         println!("challenge state: {:?}", challenge.state());
 
-        println!("cashier signing");
-        let cashier_key = client.0.dump_private_key(&cashier_address).unwrap();
-        sign_challenge_payout_script(cashier_key, &mut challenge);
+        println!("arbiter signing");
+        let arbiter_key = client.0.dump_private_key(&arbiter_address).unwrap();
+        sign_challenge_payout_script(arbiter_key, &mut challenge);
         println!("challenge state: {:?}", challenge.state());
     }
 
@@ -545,21 +545,21 @@ buyin: {:?}
     fn broadcast_challenge_tx(client: &TgRpcClient, challenge: &Challenge) {
 
         println!("broadcasting signed challenge funding transaction");
-        let cashier_address = Address::p2wpkh(&challenge.escrow.cashiers[0], NETWORK);   
+        let arbiter_address = Address::p2wpkh(&challenge.escrow.arbiters[0], NETWORK);   
 
         let _result = client.0.send_raw_transaction(challenge.funding_tx_hex.clone());
 
         let _address = client.0.get_new_address(None, Some(AddressType::Legacy)).unwrap();
         let _result = client.0.generate_to_address(10, &_address);
 
-        let cashier_balance = client.0.get_received_by_address(&cashier_address, None).unwrap();
-        println!("cashier {:?} balance: {:?}", cashier_address.to_string(), cashier_balance);
-        let cashier_balance = client.0.get_received_by_address(&challenge.escrow.address, None).unwrap();
-        println!("multsig {:?} balance: {:?}", &challenge.escrow.address.to_string(), cashier_balance);
+        let arbiter_balance = client.0.get_received_by_address(&arbiter_address, None).unwrap();
+        println!("arbiter {:?} balance: {:?}", arbiter_address.to_string(), arbiter_balance);
+        let arbiter_balance = client.0.get_received_by_address(&challenge.escrow.address, None).unwrap();
+        println!("multsig {:?} balance: {:?}", &challenge.escrow.address.to_string(), arbiter_balance);
 
     }
     
-    fn create_signed_payout_request(client: &TgRpcClient, challenge: &Challenge, player: &PublicKey, cashier: &PublicKey) -> PayoutRequest {
+    fn create_signed_payout_request(client: &TgRpcClient, challenge: &Challenge, player: &PublicKey, arbiter: &PublicKey) -> PayoutRequest {
         let funding_tx: bitcoin::Transaction = encode::deserialize(&Vec::<u8>::from_hex(&challenge.funding_tx_hex).unwrap()).unwrap();
         let payout_tx = client.create_challenge_payout_transaction(&challenge.escrow, &funding_tx, &player).unwrap();
         let key = client.0.dump_private_key(&Address::p2wpkh(&player, NETWORK)).unwrap();
@@ -571,10 +571,10 @@ buyin: {:?}
         ).unwrap().hex.raw_hex();
         let payout_tx: bitcoin::Transaction = encode::deserialize(&Vec::<u8>::from_hex(&payout_tx).unwrap()).unwrap();
 
-        let cashier_key = client.0.dump_private_key(&Address::p2wpkh(&cashier, NETWORK)).unwrap();
+        let arbiter_key = client.0.dump_private_key(&Address::p2wpkh(&arbiter, NETWORK)).unwrap();
         let msg = Message::from_slice(&payout_tx.txid()).unwrap();
         let secp = Secp256k1::new();
-        let sig = secp.sign(&msg, &cashier_key.key);
+        let sig = secp.sign(&msg, &arbiter_key.key);
         let sig: Vec<u8> = sig.serialize_der().to_vec();
         let payout_script_sig: Vec<Vec<u8>> = vec!(sig); 
 
@@ -613,12 +613,12 @@ buyin: {:?}
         broadcast_challenge_tx(&client, &challenge);
 
         println!("\np1 payout request");
-        let payout_request_p1 = create_signed_payout_request(&client, &challenge, &challenge.escrow.players[0], &challenge.escrow.cashiers[0]);
+        let payout_request_p1 = create_signed_payout_request(&client, &challenge, &challenge.escrow.players[0], &challenge.escrow.arbiters[0]);
         let validation_result = validate_payout_request(payout_request_p1);
         assert!(validation_result.is_ok());
 
         println!("\np2 payout request");
-        let payout_request_p2 = create_signed_payout_request(&client, &challenge, &challenge.escrow.players[1], &challenge.escrow.cashiers[0]);
+        let payout_request_p2 = create_signed_payout_request(&client, &challenge, &challenge.escrow.players[1], &challenge.escrow.arbiters[0]);
         let validation_result = validate_payout_request(payout_request_p2);
         assert!(validation_result.is_ok());
 
