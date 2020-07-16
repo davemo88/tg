@@ -54,7 +54,9 @@ impl TgScriptEnv {
         let payout_request = self.payout_request.as_ref().unwrap().clone();
 //confirm payout script hash sigs on challenge
 // TODO: check funding_tx is signed by the correct parties and in the blockchain
-        assert_eq!(payout_request.challenge.state(), ChallengeState::Certified);
+        if payout_request.challenge.state() != ChallengeState::Certified {
+            return Err(TgError("invalid payout request - challenge is uncertified"))
+        }
 //push script sig to stack then evaluate the payout script
         for script_sig_item in payout_request.payout_script_sig {
             self.stack.push(script_sig_item);    
@@ -347,7 +349,4 @@ mod tests {
     }
 
 //    #[test]
-//    fn ref_token_sig() {
-//
-//    }
 }
