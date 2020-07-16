@@ -10,12 +10,9 @@ use secp256k1::{
     Signature,
 };
 
-//use rand::Rng;
-
 use bitcoin::{
     Transaction,
     Address,
-//    Amount,
     Network,
     blockdata::{
         script::{
@@ -26,13 +23,9 @@ use bitcoin::{
     hashes::{
         Hash,
         HashEngine,
-//        hex::{FromHex, ToHex},
         sha256::HashEngine as Sha2Engine,
         sha256::Hash as Sha2Hash,
     },
-//    consensus::{
-//        encode,
-//    }
 };
 
 mod key;
@@ -313,10 +306,13 @@ pub fn create_tx_fork_script(pubkey: &PublicKey, tx1: &Transaction, tx2: &Transa
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rpc::{
-        self,
-        TgRpcClientApi,
-        TgRpcClient,
+    use crate::{
+        script::TgScriptEnv,
+        rpc::{
+            self,
+            TgRpcClientApi,
+            TgRpcClient,
+        },
     };
     use bitcoin::{
         Amount,
@@ -487,8 +483,6 @@ buyin: {:?}
             ref_pubkey,
         );
         println!("escrow {:?} created", escrow.address.to_string());
-
-        let escrow_address = escrow.address.clone();
 
         let funding_tx = client.create_challenge_funding_transaction(&escrow, POT_AMOUNT).unwrap();
         println!("funding tx {:?} created", funding_tx.txid());
