@@ -31,11 +31,10 @@ use bitcoin::{
 mod key;
 mod script;
 mod rpc;
+mod player;
 
 use script::{
     TgScript,
-//    TgScriptEnv,
-//    interpreter::TgScriptInterpreter,
 };
 
 pub const PAYOUT_SCRIPT_MAX_SIZE: usize = 32;
@@ -72,6 +71,22 @@ impl Default for BitcoindRpcConfig {
             password: "password",
         }
     }
+}
+
+struct TgPlayer(PublicKey);
+
+trait Player {
+
+}
+
+impl Player for TgPlayer {
+
+}
+
+struct Arbiter(PublicKey);
+
+impl Arbiter {
+
 }
 
 #[derive(Clone)]
@@ -135,36 +150,6 @@ pub enum ChallengeState {
     Invalid,
 }
 
-
-#[derive(Clone)]
-pub struct PayoutRequest {
-    pub challenge: Challenge,
-// in bitcoin, a script is always invaluated in the context of a transaction
-// therefore the tx data, e.g. txid doesn't need to be pushed to the stack
-// explicitly by the script since it is guaranteed to be available in the context
-// that is similar in our case (there will always be a tx) but the tx is only part
-// of the PayoutRequest context. 
-    pub payout_tx: Transaction,
-// in bitcoin, signatures are not necessarily required for scripts to be satisfied
-// that is why signatures are given as explicit input to scripts while transactions 
-// are not, even though both are used commonly together e.g. in OP_CHECKSIG
-// if the way we use sigs is standardized, we could puts sigs in the context too
-// e.g. if a signature is required by all payout requests, then it can be reasonably
-// stored in the context instead of being pushed onto the stack as arbitrary input
-    pub payout_script_sig: Vec<Vec<u8>>,
-}
-
-pub struct RefereeService;
-
-pub trait RefereeServiceApi {
-
-
-}
-
-impl RefereeServiceApi for RefereeService {
-
-}
-
 //NOTE: could use dummy tx requiring signing by arbiter to embed info in tx
 impl Challenge {
 
@@ -187,7 +172,9 @@ impl Challenge {
                 &player.key
             ).is_ok()
         }
-        false
+        else {
+            false
+        }
     }
 
     #[allow(dead_code)]
@@ -244,6 +231,24 @@ impl Challenge {
     }
 }
 
+#[derive(Clone)]
+pub struct PayoutRequest {
+    pub challenge: Challenge,
+// in bitcoin, a script is always invaluated in the context of a transaction
+// therefore the tx data, e.g. txid doesn't need to be pushed to the stack
+// explicitly by the script since it is guaranteed to be available in the context
+// that is similar in our case (there will always be a tx) but the tx is only part
+// of the PayoutRequest context. 
+    pub payout_tx: Transaction,
+// in bitcoin, signatures are not necessarily required for scripts to be satisfied
+// that is why signatures are given as explicit input to scripts while transactions 
+// are not, even though both are used commonly together e.g. in OP_CHECKSIG
+// if the way we use sigs is standardized, we could puts sigs in the context too
+// e.g. if a signature is required by all payout requests, then it can be reasonably
+// stored in the context instead of being pushed onto the stack as arbitrary input
+    pub payout_script_sig: Vec<Vec<u8>>,
+}
+
 //NOTE: create all possible payout txs beforehand and then branch on something for a basic payout
 //script, e.g. in 1v1 winner takes all all to A or B based on some value,
 //could require signature from the TO. 
@@ -271,7 +276,7 @@ pub fn create_tx_fork_script(pubkey: &PublicKey, tx1: &Transaction, tx2: &Transa
 // won and therefore which transaction should be signed. the player also submits the transaction
 // which the escrow service should sign to release the funds
 //
-// the script takes input (signature, payout_tx):
+// the script takes input (signature, pubkey):
 //
 // if (verify(signature, pubkey, p1_wins_msg) && payout_tx == tx1)
 // || (verify(signature, pubkey, p2_wins_msg) && payout_tx == tx2):
@@ -332,9 +337,6 @@ mod tests {
             PubKeyOrAddress,
             AddressType,
             CreateRawTransactionInput,
-//            SignRawTransactionInput,
-//            GetRawTransactionResultVout,
-//            GetRawTransactionResultVoutScriptPubKey,
         },
     };
 
@@ -357,8 +359,6 @@ mod tests {
         let target_in_amount = Amount::ONE_BTC * 2;
 
         for utxo in faucet_unspent {
-
-//            println!("amount: {:?} spendable: {:?}", utxo.amount, utxo.spendable);
             if utxo.spendable {
                 tx_inputs.push(
                     CreateRawTransactionInput {
@@ -370,11 +370,9 @@ mod tests {
 
                 total_in_amount += utxo.amount;
                 if total_in_amount >= target_in_amount {
-//                    println!("hit the goal");
                     break
                 }
             }
-//
 //            println!("{:?} {:?}", total_in_amount, target_in_amount);
 
         }
@@ -624,6 +622,7 @@ buyin: {:?}
         let validation_result = validate_payout_request(payout_request_p2);
         assert!(validation_result.is_ok());
 
+// TODO add invalid payout requests for both players
 
     }
 }

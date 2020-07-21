@@ -32,9 +32,9 @@ impl fmt::Debug for TgOpcode {
         match self {
            OP_0                                 =>  write!(f, "0"), 
            OP_1                                 =>  write!(f, "1"),
-           OP_PUSHDATA1(num_bytes, _data)        =>  write!(f, "PUSHDATA1({})", format!("{:?}, [..]", num_bytes)),//"{:?}", num_bytes, data)),
-           OP_PUSHDATA2(num_bytes, _data)        =>  write!(f, "PUSHDATA2({})", format!("{:?}, [..]", num_bytes)),//"{:?}", num_bytes, data)),
-           OP_PUSHDATA4(num_bytes, _data)        =>  write!(f, "PUSHDATA4({})", format!("{:?}, [..]", num_bytes)),//"{:?}", num_bytes, data)),
+           OP_PUSHDATA1(num_bytes, _data)       =>  write!(f, "PUSHDATA1({})", format!("{:?}, [..]", num_bytes)),//"{:?}", num_bytes, data)),
+           OP_PUSHDATA2(num_bytes, _data)       =>  write!(f, "PUSHDATA2({})", format!("{:?}, [..]", num_bytes)),//"{:?}", num_bytes, data)),
+           OP_PUSHDATA4(num_bytes, _data)       =>  write!(f, "PUSHDATA4({})", format!("{:?}, [..]", num_bytes)),//"{:?}", num_bytes, data)),
            OP_IF(true_branch, false_branch)     =>  write!(f, "IF({})", format!("{:?}, {:?}", true_branch, false_branch)),
            OP_ELSE(false_branch)                =>  write!(f, "ELSE({})", format!("{:?}", false_branch)),
            OP_VALIDATE                          =>  write!(f, "VALIDATE"),
@@ -60,7 +60,7 @@ impl From<TgOpcode> for Vec<u8> {
             OP_IF(true_branch, None)                =>  { v.extend(Vec::from(true_branch)); v.push(OP_ENDIF.bytecode()); v },
             OP_IF(true_branch, Some(false_branch))  =>  { v.extend(Vec::from(true_branch)); v.extend(Vec::from(false_branch)); v.push(OP_ENDIF.bytecode()); v },
 //NOTE: don't think this should ever happen either ... hmmm
-            OP_ELSE(_false_branch)                   =>  { panic!("encountered naked OP_ELSE"); },
+            OP_ELSE(_false_branch)                  =>  { panic!("encountered OP_ELSE outside of OP_IF"); },
            _ => v,
         }
 
@@ -68,29 +68,26 @@ impl From<TgOpcode> for Vec<u8> {
 }
 
 impl TgOpcode {
-
-pub fn bytecode(&self) -> u8 {
-    use TgOpcode::*;
-    match *self {
-        OP_0                =>  0x00,
-        OP_1                =>  0x01,
-        OP_PUSHDATA1(_,_)   =>  0xD1,
-        OP_PUSHDATA2(_,_)   =>  0xD2,
-        OP_PUSHDATA4(_,_)   =>  0xD4,
-        OP_IF(_,_)          =>  0xF1,
-        OP_ELSE(_)          =>  0xF2,
-        OP_VALIDATE         =>  0xF3,
-        OP_ENDIF            =>  0xF3,
-        OP_DROP             =>  0x50,
-        OP_DUP              =>  0x52,
-        OP_2DUP             =>  0x53,
-        OP_EQUAL            =>  0xE1,
-        OP_VERIFYSIG        =>  0xC1,
-        OP_SHA256           =>  0xC2,
+    pub fn bytecode(&self) -> u8 {
+        use TgOpcode::*;
+        match *self {
+            OP_0                =>  0x00,
+            OP_1                =>  0x01,
+            OP_PUSHDATA1(_,_)   =>  0xD1,
+            OP_PUSHDATA2(_,_)   =>  0xD2,
+            OP_PUSHDATA4(_,_)   =>  0xD4,
+            OP_IF(_,_)          =>  0xF1,
+            OP_ELSE(_)          =>  0xF2,
+            OP_ENDIF            =>  0xF3,
+            OP_VALIDATE         =>  0xF4,
+            OP_DROP             =>  0x50,
+            OP_DUP              =>  0x52,
+            OP_2DUP             =>  0x53,
+            OP_EQUAL            =>  0xE1,
+            OP_VERIFYSIG        =>  0xC1,
+            OP_SHA256           =>  0xC2,
+        }
     }
-}
-
-
 }
 
 impl Into<u8> for TgOpcode {
@@ -110,6 +107,7 @@ impl Default for TgScript {
 
 impl From<TgScript> for Vec<u8> {
     fn from(script: TgScript) -> Vec<u8> {
+// TODO how to one-liner this ?
         let mut v = Vec::<u8>::new();
         for op in script.0 {
             v.extend(Vec::from(op));

@@ -63,6 +63,7 @@ fn op_equal(input: &[u8]) -> IResult<&[u8], TgOpcode> {
 fn op_if(input: &[u8]) -> IResult<&[u8], TgOpcode> {
     let (input, (true_branch, else_block)) = tuple((
         preceded(
+// TODO: this is a bit of a wart, creating a script to get the bytecode
             op_bytecode(TgOpcode::OP_IF(TgScript::default(),None)),
             tg_script,
         ),
@@ -164,7 +165,7 @@ mod tests {
 
     const PUSHDATA_SCRIPT: &'static[u8] = &[0xD1,0x01,0xFF];//,0xD1,0x02,0x01,0x01];
     const CONDITIONAL_SCRIPT_TRUE: &'static[u8] = &[0x01,0xF1,0x01,0xF2,0x00,0xF3,0xF1,0x00,0xF3];
-//    const ERROR_SCRIPT: &'static[u8] = &[0xA1];
+    const _ERROR_SCRIPT: &'static[u8] = &[0xA1];
 
     #[test]
     fn parser () {
