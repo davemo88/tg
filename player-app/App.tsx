@@ -1,17 +1,25 @@
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { Button, StyleSheet, Text, View } from 'react-native';
+import { Image, Button, StyleSheet, Text, TextInput, View } from 'react-native';
 
-export interface PortraitProps {
+export interface PlayerProps {
   name: string;
   address: string;
   picture_url: string;
 }
 
-const Portrait: React.FC<PortraitProps> = (props) => {
+const Player: React.FC<PlayerProps> = (props) => {
   return (
     <View>
-      <Text>{props.name}</Text>
+      <View>
+        <Image
+          style={styles.player_image}
+          source={props.picture_url}
+        />
+      </View>
+      <View>
+        <Text>{props.name}</Text>
+      </View>
     </View>
   );
 } 
@@ -21,9 +29,15 @@ export interface PotProps {
 }
 
 const Pot: React.FC<PotProps> = (props) => {
+  const [value, onChangeText] = React.useState('0');
+
   return (
     <View>
-      <Text>${props.amount}</Text>
+      <TextInput
+        style={{ height: 40, borderColor: 'grey', borderWidth: 1 }}
+        onChangeText={text => onChangeText(text)}
+        value={value}
+      />     
     </View>
   );
 } 
@@ -52,10 +66,18 @@ const Arbitration = (props) => {
   );
 }
 
-const Arbiter: React.FC<PortraitProps> = (props) => {
+const Arbiter: React.FC<PlayerProps> = (props) => {
   return (
     <View>
-      <Portrait name={props.name} /> 
+      <View>
+        <Image
+          style={styles.arbiter_image}
+          source={props.picture_url}
+        />
+      </View>
+      <View>
+        <Text>{props.name}</Text>
+      </View>
       <Text>arbiter</Text>
     </View>
   );
@@ -78,16 +100,16 @@ export default function App() {
   return (
       <View style={styles.container}>
         <Terms>
-          <Pot amount="100" />
+          <Pot />
           <PayoutScript script=" winner takes all" />
         </Terms>
         <Players>
-          <Portrait name="Akin Toulouse" />
+          <Player name="Akin Toulouse" picture_url="https://static-cdn.jtvnw.net/emoticons/v1/425618/1.0"/>
           <Text> vs. </Text>
-          <Portrait name="Betsy Wildly" />
+          <Player name="Betsy Wildly" picture_url="https://static-cdn.jtvnw.net/emoticons/v1/30259/1.0"/>
         </Players>
         <Arbitration>
-          <Arbiter name="Gordon Blue"/>
+          <Arbiter name="Gordon Blue" picture_url="https://static-cdn.jtvnw.net/emoticons/v1/28/1.0" />
         </Arbitration>
       </View>
   );
@@ -107,5 +129,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   arbitration: {
+  },
+  player_image: {
+    width: 28,
+    height: 28,
+  },
+  arbiter_image: {
+    width: 39,
+    height: 27,
   },
 });
