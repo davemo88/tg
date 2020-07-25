@@ -32,11 +32,11 @@ const Pot: React.FC<PotProps> = (props) => {
   const [value, onChangeText] = React.useState('0');
 
   return (
-    <View style={styles.pot}>
+    <View style={styles.card}>
       <Text style={{ color:"gold", fontSize:20 }}>Pot</Text>
       <View style={{ alignItems: "center", justifyContent: "center"}}>
         <Image
-          style={{ width:154, height:90 }}
+          style={{ width:128, height:80 }}
           source="http://petcaretips.net/daffyduck2.jpg"
         />
         <TextInput
@@ -55,7 +55,7 @@ export interface PayoutScriptProps {
 
 const PayoutScript: React.FC<PayoutScriptProps> = (props) => {
   return (
-    <View style={styles.payoutScript}>
+    <View style={styles.card}>
       <Text style={{ color:"lime", fontSize:20 }}>Payouts</Text>
       <View style={{ borderColor: "lime", borderWidth: 1, flex: 1 }}>
         <Text style={{ padding: 5 }}>{props.script}</Text>
@@ -90,7 +90,7 @@ const Arbitration = (props) => {
 
 const Arbiter: React.FC<PlayerProps> = (props) => {
   return (
-    <View style={{ borderWidth: 1}}>
+    <View style={styles.arbiter}>
       <Text style={{ padding: 1, fontSize: 16 }}>Arbiter</Text>
       <View style={{ alignItems: "center" }}>
         <Image
@@ -114,7 +114,7 @@ export default function App() {
         </Terms>
         <Players>
           <Player name="Akin Toulouse" pictureUrl="https://static-cdn.jtvnw.net/emoticons/v1/425618/1.0"/>
-          <View style={{ alignItems: "center", justifyContent: "center" }}>
+          <View style={{ alignItems: "center", justifyContent: "center", margin: 5 }}>
             <Image
               style={{ width: 25, height: 21, }}
               source="https://i.imgur.com/riXXKnJ.png"
@@ -143,25 +143,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   arbitration: {
+    borderWidth: 1,
+  },
+  arbiter: {
+    backgroundColor: "whitesmoke",
   },
   player: {
     padding: 10,
+    backgroundColor: "lightslategrey",
+    borderWidth: 1,
   },
-  pot: {
-    width: 200, 
-    height: 200, 
+  card: {
+    width: 150, 
+    height: 180, 
     borderWidth: 2, 
     padding: 10,
     margin: 2,
-  },
-  payoutScript: {
-    width: 200, 
-    height: 200, 
-    borderWidth: 2, 
-    padding: 10,
-    margin: 2,
-    //    alignItems: "center", 
-    //    justifyContent: "center"
   },
   arbitration: {
     padding: 10,
