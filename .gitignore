@@ -1,3 +1,13 @@
-/target
-Cargo.lock
 *.swp
+/arb/target
+/arb/Cargo.lock
+player-app/node_modules/**/*
+player-app/.expo/*
+player-app/npm-debug.*
+player-app/*.jks
+player-app/*.p8
+player-app/*.p12
+player-app/*.key
+player-app/*.mobileprovision
+player-app/*.orig.*
+player-app/web-build/

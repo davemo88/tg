@@ -31,7 +31,6 @@ use bitcoin::{
 mod key;
 mod script;
 mod rpc;
-mod player;
 
 use script::{
     TgScript,
