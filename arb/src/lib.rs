@@ -119,6 +119,9 @@ pub struct Challenge {
 // this value is unique to this challenge because it includes the funding txid
 //    pub payout_script_hash_sig: Option<Signature>,
 // TODO: probably better for serialization to make this a list
+// TODO: needs to sign more than just payout script.
+// can a signed payout script be paired with the wrong / a fraudulent challenge. is any reference
+// made to the challenge during payout request validation? or simply the script? is that secure?
     pub payout_script_hash_sigs: HashMap<PublicKey, Signature>,
 }
 

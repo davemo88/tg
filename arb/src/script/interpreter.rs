@@ -50,6 +50,7 @@ impl TgScriptEnv {
         }
 
 // TODO: ensure payout_tx is signed by the same player making the request
+// TODO: ensure payout_tx is not already in the blockchain (but then who cares?)
 
         let payout_request = self.payout_request.as_ref().unwrap().clone();
 //confirm payout script hash sigs on challenge
