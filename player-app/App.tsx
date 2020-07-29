@@ -71,12 +71,19 @@ const CurrencySymbol = (props) => {
 
 const HomeHeader = (props) => {
   return(
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, margin: 5, backgroundColor: 'slategrey', }}>
-      <Player name="Akin Toulouse" pictureUrl="https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0"/>
-      <View style={{ alignItems: 'center' }}>
-        <Currency amount='420' />
-        <Text style={{ textDecorationLine: 'underline', color: 'lightblue' }}>Address</Text>
+    <View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, backgroundColor: 'white', padding: 5, margin: 5 }}>
+        <View>
+          <Text style={{ fontSize: 20, }}>Profile</Text>
+        </View>
       </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, margin: 5, backgroundColor: 'slategrey', }}>
+        <Player name="Akin Toulouse" pictureUrl="https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0"/>
+        <View style={{ alignItems: 'center' }}>
+          <Currency amount='420' />
+          <Text style={{ textDecorationLine: 'underline', color: 'lightblue' }}>Address</Text>
+        </View>
+      </View> 
     </View> 
   )
 }
@@ -88,7 +95,7 @@ const ChallengeListItem = (props) => {
       <View style={{ flexDirection: 'row', padding: 5, margin: 5, alignItems: 'center', justifyContent: 'center', }}>
         <Text>Status . . . </Text>
         <View>
-          <Currency amount='100' />
+          <Currency amount={props.amount} />
           <Button 
             title="Details" 
             onPress={() => 
@@ -208,10 +215,10 @@ const Home = ({ navigation }) => {
           <View style={{ padding: 5, }}>
             <FlatList
               data={[
-                {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0"},
-                {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0"},
+                {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0", amount: '100' },
+                {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0", amount: '200' },
               ]}
-              renderItem={({item}) => <ChallengeListItem navigation={navigation} name={item.name} pictureUrl={item.pictureUrl} />}
+              renderItem={({item}) => <ChallengeListItem navigation={navigation} name={item.name} pictureUrl={item.pictureUrl} amount={item.amount} />}
             />
           </View>
         </View>
@@ -255,9 +262,7 @@ const NewChallenge = ({ navigation }) => {
         <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
           <Button 
             title="OK" 
-            onPress={() => 
-              navigation.navigate('Home')
-            }
+            onPress={() => navigation.navigate('Home') }
           />
         </View>
       </View>
