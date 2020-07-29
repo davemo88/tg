@@ -1,7 +1,7 @@
 import 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
+import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
@@ -51,18 +51,30 @@ const PlayerSelectorButton: React.FC<PlayerSelectorButton> = (props) => {
   )
 }
 
+const Currency = (props) => {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', padding: 20, }}>
+      <Text style={{ fontSize: 16 }}>{props.amount}</Text>
+      <CurrencySymbol />
+    </View>
+  )
+}
+
+const CurrencySymbol = (props) => {
+  return (
+    <Image
+      style={styles.smallEmote}
+      source="https://static-cdn.jtvnw.net/emoticons/v1/90076/1.0"
+    />
+  )
+}
+
 const HomeHeader = (props) => {
   return(
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, margin: 5, backgroundColor: 'slategrey', }}>
       <Player name="Akin Toulouse" pictureUrl="https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0"/>
       <View style={{ alignItems: 'center' }}>
-        <View style={{ width: 100, flexDirection: 'row', alignItems: 'center', padding: 20, }}>
-          <Text>420</Text>
-          <Image
-            style={styles.smallEmote}
-            source="https://static-cdn.jtvnw.net/emoticons/v1/90076/1.0"
-          />
-        </View>
+        <Currency amount='420' />
         <Text style={{ textDecorationLine: 'underline', color: 'lightblue' }}>Address</Text>
       </View>
     </View> 
@@ -74,12 +86,14 @@ const ChallengeListItem = (props) => {
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'slategrey', margin: 5, padding: 5 }}>
       <Player name={props.name} pictureUrl={props.pictureUrl} />
       <View style={{ flexDirection: 'row', padding: 5, margin: 5, alignItems: 'center', justifyContent: 'center', }}>
-        <Text>Status: . . . </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', padding: 20, }}>
-          <Text>100</Text>
-          <Image
-            style={styles.smallEmote}
-            source="https://static-cdn.jtvnw.net/emoticons/v1/90076/1.0"
+        <Text>Status . . . </Text>
+        <View>
+          <Currency amount='100' />
+          <Button 
+            title="Details" 
+            onPress={() => 
+              props.navigation.navigate('Challenge Details')
+            }
           />
         </View>
       </View>
@@ -178,7 +192,7 @@ const Home = ({ navigation }) => {
           <HomeHeader />
         </View>
         <View style={{ flex: 3, }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, backgroundColor: 'white' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, backgroundColor: 'white', padding: 5, margin: 5 }}>
             <View>
               <Text style={{ fontSize: 20, }}>Challenges</Text>
             </View>
@@ -197,7 +211,7 @@ const Home = ({ navigation }) => {
                 {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0"},
                 {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0"},
               ]}
-              renderItem={({item}) => <ChallengeListItem name={item.name} pictureUrl={item.pictureUrl} />}
+              renderItem={({item}) => <ChallengeListItem navigation={navigation} name={item.name} pictureUrl={item.pictureUrl} />}
             />
           </View>
         </View>
@@ -208,6 +222,8 @@ const Home = ({ navigation }) => {
 const NewChallenge = ({ navigation }) => {
   const [playerName, onChangePlayerName] = React.useState('');
   const [challengeAmount, onChangeChallengeAmount] = React.useState('');
+  const [isEnabled, setIsEnabled] = React.useState(false);
+  const toggleSwitch = () => setIsEnabled(previousState => !previousState);
 
   return (
     <View style={styles.newPlayer}>
@@ -221,21 +237,29 @@ const NewChallenge = ({ navigation }) => {
             value={challengeAmount}
             style={{ borderWidth: 1, width: 100, margin: 10, padding: 4, textAlign: 'right' }}
           />     
-          <Image
-            style={styles.smallEmote}
-            source="https://static-cdn.jtvnw.net/emoticons/v1/90076/1.0"
-          />
+          <CurrencySymbol />
         </View>
       </View>
-      <View style={{flexDirection: 'row' }}>
-      <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey' }}>
-        <Button 
-          title="OK" 
-          onPress={() => 
-            navigation.navigate('Home')
-          }
-        />
-      </View>
+      <View style={{ flexDirection: 'row' }}>
+        <View style={{ flexDirection: 'row', backgroundColor: 'lightslategrey', alignItems: 'center', justifyContent: 'space-between', padding: 10, margin: 10, }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 16, }}>Sign</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Switch 
+              onValueChange={toggleSwitch}
+              value={isEnabled}
+            />
+          </View>
+        </View>
+        <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
+          <Button 
+            title="OK" 
+            onPress={() => 
+              navigation.navigate('Home')
+            }
+          />
+        </View>
       </View>
     </View>
   );
@@ -261,6 +285,7 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
+        <Stack.Screen name="Player Select" component={PlayerSelect} />
         <Stack.Screen 
           name="Home"
           component={Home}
@@ -275,7 +300,6 @@ export default function App() {
             //            },
         }}
         />
-        <Stack.Screen name="Player Select" component={PlayerSelect} />
         <Stack.Screen name="New Player" component={NewPlayer} />
         <Stack.Screen name="New Challenge" component={NewChallenge} />
         <Stack.Screen name="Challenge Details" component={ChallengeDetails} />
