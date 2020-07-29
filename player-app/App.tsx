@@ -53,17 +53,17 @@ const PlayerSelectorButton: React.FC<PlayerSelectorButton> = (props) => {
 
 const HomeHeader = (props) => {
   return(
-    <View style={{ flexDirection: 'row', borderWidth: 1, alignItems: 'center', justifyContent: 'space-between', padding: 10, margin: 10, }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, margin: 5, backgroundColor: 'slategrey', }}>
       <Player name="Akin Toulouse" pictureUrl="https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0"/>
       <View style={{ alignItems: 'center' }}>
-        <Text>Cheese</Text>
         <View style={{ width: 100, flexDirection: 'row', alignItems: 'center', padding: 20, }}>
-          <Text>100</Text>
+          <Text>420</Text>
           <Image
             style={styles.smallEmote}
             source="https://static-cdn.jtvnw.net/emoticons/v1/90076/1.0"
           />
         </View>
+        <Text style={{ textDecorationLine: 'underline', color: 'lightblue' }}>Address</Text>
       </View>
     </View> 
   )
@@ -71,10 +71,17 @@ const HomeHeader = (props) => {
 
 const ChallengeListItem = (props) => {
   return (
-    <View style={{ flexDirection: 'row', backgroundColor: 'lightslategrey', borderWidth: 1, }}>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'slategrey', margin: 5, padding: 5 }}>
       <Player name={props.name} pictureUrl={props.pictureUrl} />
-      <View style={{ padding: 5, margin: 5, justifyContent: 'center' }}>
+      <View style={{ flexDirection: 'row', padding: 5, margin: 5, alignItems: 'center', justifyContent: 'center', }}>
         <Text>Status: . . . </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', padding: 20, }}>
+          <Text>100</Text>
+          <Image
+            style={styles.smallEmote}
+            source="https://static-cdn.jtvnw.net/emoticons/v1/90076/1.0"
+          />
+        </View>
       </View>
     </View>
   )
@@ -167,10 +174,11 @@ const NewPlayer = ({ navigation }) => {
 const Home = ({ navigation }) => {
   return (
     <View style={styles.home}>
-      <View>
-        <HomeHeader />
-        <View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 10, borderWidth: 1, padding: 10, }}>
+        <View style={{ flex: 1, justifyContent: 'flex-start', }}>
+          <HomeHeader />
+        </View>
+        <View style={{ flex: 3, }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, backgroundColor: 'white' }}>
             <View>
               <Text style={{ fontSize: 20, }}>Challenges</Text>
             </View>
@@ -187,12 +195,12 @@ const Home = ({ navigation }) => {
             <FlatList
               data={[
                 {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0"},
+                {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0"},
               ]}
               renderItem={({item}) => <ChallengeListItem name={item.name} pictureUrl={item.pictureUrl} />}
             />
           </View>
         </View>
-      </View>
     </View>
   );
 }
@@ -203,18 +211,21 @@ const NewChallenge = ({ navigation }) => {
 
   return (
     <View style={styles.newPlayer}>
+      <Text style={{ fontSize: 20 }}>Choose Opponent</Text>
       <PlayerSelector name='Betsy Wildly' pictureUrl='https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0' />
-      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'lightslategrey', margin: 10, padding: 10 }}>
-        <Text>Cheese</Text>
-        <TextInput
-          onChangeText={text => onChangeChallengeAmount(text)}
-          value={challengeAmount}
-          style={{ borderWidth: 1, width: 100, margin: 10, padding: 4, textAlign: 'right' }}
-        />     
-        <Image
-          style={styles.smallEmote}
-          source="https://static-cdn.jtvnw.net/emoticons/v1/90076/1.0"
-        />
+      <View style={{ backgroundColor: 'lightslategrey', alignItems: 'center', padding: 10 }}>
+        <Text style={{ fontSize: 16 }}>Cheese</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'lightslategrey', }}>
+          <TextInput
+            onChangeText={text => onChangeChallengeAmount(text)}
+            value={challengeAmount}
+            style={{ borderWidth: 1, width: 100, margin: 10, padding: 4, textAlign: 'right' }}
+          />     
+          <Image
+            style={styles.smallEmote}
+            source="https://static-cdn.jtvnw.net/emoticons/v1/90076/1.0"
+          />
+        </View>
       </View>
       <View style={{flexDirection: 'row' }}>
       <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey' }}>
@@ -250,7 +261,20 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        <Stack.Screen name="Home" component={Home} />
+        <Stack.Screen 
+          name="Home"
+          component={Home}
+          options={{
+            title: 'Home',
+            //            headerStyle: {
+            //              backgroundColor: '#f4511e',
+            //            },
+            //            headerTintColor: '#fff',
+            //            headerTitleStyle: {
+            //              fontWeight: 'bold',
+            //            },
+        }}
+        />
         <Stack.Screen name="Player Select" component={PlayerSelect} />
         <Stack.Screen name="New Player" component={NewPlayer} />
         <Stack.Screen name="New Challenge" component={NewChallenge} />
@@ -282,7 +306,6 @@ const styles = StyleSheet.create({
   player: {
     padding: 10,
     backgroundColor: 'lightslategrey',
-    borderWidth: 1,
   },
   payoutScript: {
     flex: 1,
@@ -335,7 +358,7 @@ const styles = StyleSheet.create({
   home: {
     flex: 1,
     backgroundColor: 'grey',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'stretch',
+    justifyContent: 'flex-start',
   }
 });
