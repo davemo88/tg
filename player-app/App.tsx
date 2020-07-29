@@ -53,7 +53,7 @@ const PlayerSelectorButton: React.FC<PlayerSelectorButton> = (props) => {
 
 const Currency = (props) => {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', padding: 20, }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', }}>
       <Text style={{ fontSize: 16 }}>{props.amount}</Text>
       <CurrencySymbol />
     </View>
@@ -72,9 +72,9 @@ const CurrencySymbol = (props) => {
 const HomeHeader = (props) => {
   return(
     <View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, backgroundColor: 'white', padding: 5, margin: 5 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, backgroundColor: 'white', padding: 5, margin: 5, height: 42, }}>
         <View>
-          <Text style={{ fontSize: 20, }}>Profile</Text>
+          <Text style={{ fontSize: 20, }}>Player</Text>
         </View>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, margin: 5, backgroundColor: 'slategrey', }}>
@@ -95,7 +95,9 @@ const ChallengeListItem = (props) => {
       <View style={{ flexDirection: 'row', padding: 5, margin: 5, alignItems: 'center', justifyContent: 'center', }}>
         <Text>Status . . . </Text>
         <View>
-          <Currency amount={props.amount} />
+          <View style={{ padding: 20 }}>
+            <Currency amount={props.amount} />
+          </View>
           <Button 
             title="Details" 
             onPress={() => 
@@ -111,7 +113,7 @@ const ChallengeListItem = (props) => {
 const Arbiter: React.FC<PlayerProps> = (props) => {
   return (
     <View style={styles.arbiter}>
-      <View style={{ alignItems: "center" }}>
+      <View style={{ alignItems: "center", padding: 2, margin: 2, }}>
         <Image
           style={styles.arbiterImage}
           source={props.pictureUrl}
@@ -199,7 +201,7 @@ const Home = ({ navigation }) => {
           <HomeHeader />
         </View>
         <View style={{ flex: 3, }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, backgroundColor: 'white', padding: 5, margin: 5 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, backgroundColor: 'white', padding: 5, margin: 5, height: 42, }}>
             <View>
               <Text style={{ fontSize: 20, }}>Challenges</Text>
             </View>
@@ -261,7 +263,7 @@ const NewChallenge = ({ navigation }) => {
         </View>
         <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
           <Button 
-            title="OK" 
+            title="SEND" 
             onPress={() => navigation.navigate('Home') }
           />
         </View>
@@ -273,13 +275,78 @@ const NewChallenge = ({ navigation }) => {
 const ChallengeDetails = ({ navigation }) => {
   return (
     <View style={styles.challengeDetails}>
+      <View style={{ flex: 2, alignItems: 'center', justifyContent: 'space-around', }}>
+        <View style= {{flexDirection: 'row', justifyContent: 'space-between' }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 20 }}>Opponent</Text>
+            <Player name='Betsy Wildly' pictureUrl='https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0' />
+          </View>
+          <View style={{ flex: 1, alignItems: 'flex-end' }}>
+              <Text style={{ fontSize: 20 }}>Amount</Text>
+            <View style={{ flex: 1, justifyContent: 'center' }}>
+              <Currency amount='100' />
+            </View>
+          </View>
+        </View>
+        <View>
+          <Text style={{ fontSize: 20 }}>Status</Text>
+          <Text> . . . </Text>
+        </View>
+        <View>
+          <Text style={{ fontSize: 20 }}>Arbiter</Text>
+          <Arbiter name='Gordon Blue' pictureUrl='https://static-cdn.jtvnw.net/emoticons/v1/28/1.0' />
+        </View>
+      </View>
+      <View style={{ flex: 1, justifyContent: 'center' }}>
+        <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
+          <Button 
+            title="Payout Request" 
+            onPress={() => navigation.navigate('Payout Request') }
+          />
+        </View>
+      </View>
     </View>
   );
 }
 
 const PayoutRequest = ({ navigation }) => {
+  const [refToken, onChangeRefToken] = React.useState('');
+  const [isEnabled, setIsEnabled] = React.useState(false);
+  const toggleSwitch = () => setIsEnabled(previousState => !previousState);
+
   return (
     <View style={styles.payoutRequest}>
+      <View>
+        <Player name='Akin Toulouse' pictureUrl='https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0' />
+        <View style={{ alignItems: 'center' }}>
+          <Text>Recipient</Text>
+        </View>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'lightslategrey', margin: 10, padding: 10 }}>
+        <Text>Referee Token</Text>
+        <TextInput
+          onChangeText={text => onChangeRefToken(text)}
+          value={refToken}
+          style={{ borderWidth: 1, flex: 1, margin: 10, padding: 4, }}
+        />     
+      </View>
+      <View style={{ flexDirection: 'row', backgroundColor: 'lightslategrey', alignItems: 'center', justifyContent: 'space-between', padding: 10, margin: 10, }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 16, }}>Sign</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Switch 
+            onValueChange={toggleSwitch}
+            value={isEnabled}
+          />
+        </View>
+      </View>
+      <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
+        <Button 
+          title="SEND" 
+          onPress={() => navigation.navigate('Home') }
+        />
+      </View>
     </View>
   );
 }
@@ -291,6 +358,7 @@ export default function App() {
     <NavigationContainer>
       <Stack.Navigator>
         <Stack.Screen name="Player Select" component={PlayerSelect} />
+        <Stack.Screen name="New Player" component={NewPlayer} />
         <Stack.Screen 
           name="Home"
           component={Home}
@@ -305,7 +373,6 @@ export default function App() {
             //            },
         }}
         />
-        <Stack.Screen name="New Player" component={NewPlayer} />
         <Stack.Screen name="New Challenge" component={NewChallenge} />
         <Stack.Screen name="Challenge Details" component={ChallengeDetails} />
         <Stack.Screen name="Payout Request" component={PayoutRequest} />
@@ -329,7 +396,6 @@ const styles = StyleSheet.create({
   arbiter: {
     backgroundColor: 'lightslategrey',
     padding: 10,
-    margin: 5,
     borderWidth: 1,
   },
   player: {
@@ -389,5 +455,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'grey',
     alignItems: 'stretch',
     justifyContent: 'flex-start',
-  }
+  },
+  challengeDetails: {
+    flex: 1,
+    backgroundColor: 'grey',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  payoutRequest: {
+    flex: 1,
+    backgroundColor: 'grey',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

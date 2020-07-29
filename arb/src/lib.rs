@@ -123,6 +123,9 @@ pub struct Challenge {
 // can a signed payout script be paired with the wrong / a fraudulent challenge. is any reference
 // made to the challenge during payout request validation? or simply the script? is that secure?
     pub payout_script_hash_sigs: HashMap<PublicKey, Signature>,
+
+// need to add challenge id a la tx id (hash of challenge data) and sign that instead of just the
+// payout script
 }
 
 pub trait ChallengeApi {
