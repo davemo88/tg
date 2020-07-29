@@ -1,7 +1,7 @@
 import 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { Image, Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
@@ -20,86 +20,64 @@ const Player: React.FC<PlayerProps> = (props) => {
           source={props.pictureUrl}
         />
       </View>
-      <View style={{ backgroundColor: "slategrey", padding: 1 }}>
+      <View style={{ alignItems: 'center', backgroundColor: "slategrey", padding: 1 }}>
         <Text style={{ fontSize: 17 }}>{props.name}</Text>
       </View>
     </View>
   );
 } 
 
-const Players = (props) => {
+const PlayerSelector = (props) => {
   return (
-    <View>
-      <View style={{ alignItems: "center", padding: 5 }}>
-        <Text style={{ fontSize: 20 }}>Players</Text>
-      </View>
-      <View style={styles.players}>
-        {props.children}
-      </View>
+    <View style={styles.playerSelector}>
+      <PlayerSelectorButton forward={false} />
+      <Player name={props.name} pictureUrl={props.pictureUrl} />
+      <PlayerSelectorButton forward={true} />
     </View>
-  );
-} 
-
-
-export interface PotProps {
-  amount: number;
+  )
 }
 
-const Pot: React.FC<PotProps> = (props) => {
-  const [value, onChangeText] = React.useState('100');
-
-  return (
-    <View style={styles.pot}>
-      <Text style={{ color:"gold", fontSize:20,}}>Pot</Text>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center"}}>
-        <TextInput
-          onChangeText={text => onChangeText(text)}
-          value={value}
-          style={{ borderWidth: 1, borderColor: "gold", width: 75, margin: 10, textAlign: "right", padding: 4, }}
-        />     
-        <Image
-          style={styles.smallEmote}
-          source="https://static-cdn.jtvnw.net/emoticons/v1/90076/1.0"
-        />
-      </View>
-    </View>
-  );
-} 
-
-export interface PayoutScriptProps {
-  script: string;
+export interface PlayerSelectorButton {
+  forward: bool;
 }
 
-const PayoutScript: React.FC<PayoutScriptProps> = (props) => {
+const PlayerSelectorButton: React.FC<PlayerSelectorButton> = (props) => {
+
+  let display = props.forward ? ">" : "<";
   return (
-    <View style={styles.payoutScript}>
-      <Text style={{ color:"lime", fontSize:20 }}>Payouts</Text>
-      <View style={{ borderColor: "lime", borderWidth: 1, flex: 1 }}>
-        <Text style={{ padding: 5 }}>{props.script}</Text>
-      </View>
+    <View style={{ justifyContent: 'center', padding: 10 }}>
+      <Button title={display} />
     </View>
-  );
+  )
 }
 
-const Terms = (props) => {
-  return (
-    <View style={styles.terms}>
-      {props.children}
-    </View>
-  );
+const HomeHeader = (props) => {
+  return(
+    <View style={{ flexDirection: 'row', borderWidth: 1, alignItems: 'center', justifyContent: 'space-between', padding: 10, margin: 10, }}>
+      <Player name="Akin Toulouse" pictureUrl="https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0"/>
+      <View style={{ alignItems: 'center' }}>
+        <Text>Cheese</Text>
+        <View style={{ width: 100, flexDirection: 'row', alignItems: 'center', padding: 20, }}>
+          <Text>100</Text>
+          <Image
+            style={styles.smallEmote}
+            source="https://static-cdn.jtvnw.net/emoticons/v1/90076/1.0"
+          />
+        </View>
+      </View>
+    </View> 
+  )
 }
 
-const Arbitration = (props) => {
+const ChallengeListItem = (props) => {
   return (
-    <View style={styles.arbitration}>
-      <View style={{ alignItems: "center" }}>
-        <Text style={{ fontSize: 15 }}>Arbiter</Text>
-      </View>
-      <View >
-        {props.children}
+    <View style={{ flexDirection: 'row', backgroundColor: 'lightslategrey', borderWidth: 1, }}>
+      <Player name={props.name} pictureUrl={props.pictureUrl} />
+      <View style={{ padding: 5, margin: 5, justifyContent: 'center' }}>
+        <Text>Status: . . . </Text>
       </View>
     </View>
-  );
+  )
 }
 
 const Arbiter: React.FC<PlayerProps> = (props) => {
@@ -122,66 +100,144 @@ const Arbiter: React.FC<PlayerProps> = (props) => {
   );
 } 
 
-const OldChallenge = (props) => {
-  return (
-      <View style={styles.container}>
-        <Text style={{ margin: 10, fontSize: 24 }}>New Challenge</Text>
-        <Terms>
-          <Pot />
-        </Terms>
-        <Players>
-          <Player name="Akin Toulouse" pictureUrl="https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0"/>
-          <View style={{ alignItems: "center", justifyContent: "center", margin: 5 }}>
-            <Image
-              style={{ width: 25, height: 21, }}
-              source="https://i.imgur.com/riXXKnJ.png"
-            />
-          </View>
-          <Player name="Betsy Wildly" pictureUrl="https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0"/>
-        </Players>
-        <Arbitration>
-          <Arbiter name="Gordon Blue" pictureUrl="https://static-cdn.jtvnw.net/emoticons/v1/28/1.0" />
-        </Arbitration>
-      </View>
-  );
-}
-
-const PlayerSelect = (props) => {
-  return (
-    <View style={styles.playerSelect}>
-    </View>
-  );
-}
-
-const NewPlayer = (props) => {
+const PlayerSelect = ({ navigation }) => {
   return (
     <View style={styles.newPlayer}>
+        <PlayerSelector name="Akin Toulouse" pictureUrl="https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0"/>
+        <View style={{ padding: 10 }}>
+          <Button 
+            title="OK" 
+            onPress={() => 
+              navigation.navigate('Home')
+            }
+          />
+        </View>
+        <View style={{ padding: 40 }}>
+          <Button 
+            title="New Player" 
+            onPress={() => 
+              navigation.navigate('New Player')
+            }
+          />
+        </View>
     </View>
   );
 }
 
-const Home = (props) => {
+const NewPlayer = ({ navigation }) => {
+  const [playerName, onChangePlayerName] = React.useState('');
+  const [pictureUrl, onChangePictureUrl] = React.useState('');
+
+  return (
+    <View style={styles.newPlayer}>
+      <Image
+        style={styles.mediumEmote}
+        source=''
+      />
+      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'lightslategrey', margin: 10, padding: 10 }}>
+        <Text>Player Name</Text>
+        <TextInput
+          onChangeText={text => onChangePlayerName(text)}
+          value={playerName}
+          style={{ borderWidth: 1, flex: 1, margin: 10, padding: 4, }}
+        />     
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'lightslategrey', margin: 10, padding: 10 }}>
+        <Text>Picture Url</Text>
+        <TextInput
+          onChangeText={text => onChangePictureUrl(text)}
+          value={pictureUrl}
+          style={{ borderWidth: 1, flex: 1, margin: 10, padding: 4, }}
+        />     
+      </View>
+      <View style={{flexDirection: 'row' }}>
+      <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey' }}>
+        <Button 
+          title="OK" 
+          onPress={() => 
+            navigation.navigate('Player Select')
+          }
+        />
+      </View>
+      </View>
+    </View>
+  );
+}
+
+const Home = ({ navigation }) => {
   return (
     <View style={styles.home}>
+      <View>
+        <HomeHeader />
+        <View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 10, borderWidth: 1, padding: 10, }}>
+            <View>
+              <Text style={{ fontSize: 20, }}>Challenges</Text>
+            </View>
+            <View>
+              <Button 
+                title="New"
+                onPress={() => 
+                  navigation.navigate('New Challenge')
+                }
+              />
+            </View>
+          </View>
+          <View style={{ padding: 5, }}>
+            <FlatList
+              data={[
+                {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0"},
+              ]}
+              renderItem={({item}) => <ChallengeListItem name={item.name} pictureUrl={item.pictureUrl} />}
+            />
+          </View>
+        </View>
+      </View>
     </View>
   );
 }
 
-const NewChallenge = (props) => {
+const NewChallenge = ({ navigation }) => {
+  const [playerName, onChangePlayerName] = React.useState('');
+  const [challengeAmount, onChangeChallengeAmount] = React.useState('');
+
   return (
-    <View style={styles.newChallenge}>
+    <View style={styles.newPlayer}>
+      <PlayerSelector name='Betsy Wildly' pictureUrl='https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0' />
+      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'lightslategrey', margin: 10, padding: 10 }}>
+        <Text>Cheese</Text>
+        <TextInput
+          onChangeText={text => onChangeChallengeAmount(text)}
+          value={challengeAmount}
+          style={{ borderWidth: 1, width: 100, margin: 10, padding: 4, textAlign: 'right' }}
+        />     
+        <Image
+          style={styles.smallEmote}
+          source="https://static-cdn.jtvnw.net/emoticons/v1/90076/1.0"
+        />
+      </View>
+      <View style={{flexDirection: 'row' }}>
+      <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey' }}>
+        <Button 
+          title="OK" 
+          onPress={() => 
+            navigation.navigate('Home')
+          }
+        />
+      </View>
+      </View>
     </View>
   );
 }
 
-const ChallengeDetails = (props) => {
+const ChallengeDetails = ({ navigation }) => {
   return (
     <View style={styles.challengeDetails}>
     </View>
   );
 }
 
-const PayoutRequest = (props) => {
+const PayoutRequest = ({ navigation }) => {
   return (
     <View style={styles.payoutRequest}>
     </View>
@@ -194,10 +250,9 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        <Stack.Screen name="Old Challenge" component={OldChallenge} />
+        <Stack.Screen name="Home" component={Home} />
         <Stack.Screen name="Player Select" component={PlayerSelect} />
         <Stack.Screen name="New Player" component={NewPlayer} />
-        <Stack.Screen name="Home" component={Home} />
         <Stack.Screen name="New Challenge" component={NewChallenge} />
         <Stack.Screen name="Challenge Details" component={ChallengeDetails} />
         <Stack.Screen name="Payout Request" component={PayoutRequest} />
@@ -207,32 +262,26 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'grey',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   players: {
-    flexDirection: "row",
+    flexDirection: 'row',
     flex: 2,
   },
   terms: {
-    flexDirection: "row",
+    flexDirection: 'row',
     alignItems: 'center',
   },
   arbitration: {
     borderWidth: 1,
   },
   arbiter: {
-    backgroundColor: "lightslategrey",
+    backgroundColor: 'lightslategrey',
     padding: 10,
     margin: 5,
     borderWidth: 1,
   },
   player: {
     padding: 10,
-    backgroundColor: "lightslategrey",
+    backgroundColor: 'lightslategrey',
     borderWidth: 1,
   },
   payoutScript: {
@@ -260,12 +309,33 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
   },
-  potImage: {
-    width: 56,
-    height: 56,
-  },
   arbiterImage: {
     width: 39,
     height: 27,
   },
+  playerSelect: {
+    flex: 1,
+    backgroundColor: 'grey',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playerSelector: {
+    padding: 10,
+    margin: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newPlayer: {
+    flex: 1,
+    backgroundColor: 'grey',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  home: {
+    flex: 1,
+    backgroundColor: 'grey',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }
 });
