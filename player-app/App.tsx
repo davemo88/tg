@@ -1,6 +1,8 @@
 import 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
+import { Provider } from 'react-redux';
+import { createStore } from 'redux';
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -441,22 +443,23 @@ const NewOpponent = ({ navigation }) => {
   );
 }
 
+
 const Stack = createStackNavigator();
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen name="New Opponent" component={NewOpponent} />
-        <Stack.Screen name="Player Select" component={PlayerSelect} />
-        <Stack.Screen name="Home" component={Home} />
-        <Stack.Screen name="Challenge Details" component={ChallengeDetails} />
-        <Stack.Screen name="New Player" component={NewPlayer} />
-        <Stack.Screen name="New Challenge" component={NewChallenge} />
-        <Stack.Screen name="Players Payout" component={PlayersPayout} />
-        <Stack.Screen name="Arbiter Payout" component={ArbiterPayout} />
-      </Stack.Navigator>
-    </NavigationContainer>
+      <NavigationContainer>
+        <Stack.Navigator>
+          <Stack.Screen name="Player Select" component={PlayerSelect} />
+          <Stack.Screen name="Home" component={Home} />
+          <Stack.Screen name="Challenge Details" component={ChallengeDetails} />
+          <Stack.Screen name="New Player" component={NewPlayer} />
+          <Stack.Screen name="New Opponent" component={NewOpponent} />
+          <Stack.Screen name="New Challenge" component={NewChallenge} />
+          <Stack.Screen name="Players Payout" component={PlayersPayout} />
+          <Stack.Screen name="Arbiter Payout" component={ArbiterPayout} />
+        </Stack.Navigator>
+      </NavigationContainer>
   );
 }
 
