@@ -28,13 +28,17 @@ const Player: React.FC<PlayerProps> = (props) => {
 } 
 
 const PlayerSelector = (props) => {
+  const [playerIndex, setPlayerIndex] = React.useState(0);
+  //  const toggleSwitch = () => setIsEnabled(previousState => !previousState);
+
+
   return (
     <View style={styles.playerSelector}>
       <PlayerSelectorButton forward={false} />
-      <Player name={props.name} pictureUrl={props.pictureUrl} />
+        <Player name={props.players[playerIndex].name} pictureUrl={props.players[playerIndex].pictureUrl} />
       <PlayerSelectorButton forward={true} />
     </View>
-  )
+  );
 }
 
 export interface PlayerSelectorButton {
@@ -43,12 +47,14 @@ export interface PlayerSelectorButton {
 
 const PlayerSelectorButton: React.FC<PlayerSelectorButton> = (props) => {
 
-  let display = props.forward ? ">" : "<";
   return (
     <View style={{ justifyContent: 'center', padding: 10 }}>
-      <Button title={display} />
+      <Button
+        title={ props.forward ? ">" : "<" } 
+        onPress={() => {}}
+      />
     </View>
-  )
+  );
 }
 
 const Currency = (props) => {
@@ -57,7 +63,7 @@ const Currency = (props) => {
       <Text style={{ fontSize: 16 }}>{props.amount}</Text>
       <CurrencySymbol />
     </View>
-  )
+  );
 }
 
 const CurrencySymbol = (props) => {
@@ -66,7 +72,26 @@ const CurrencySymbol = (props) => {
       style={styles.smallEmote}
       source="https://static-cdn.jtvnw.net/emoticons/v1/90076/1.0"
     />
-  )
+  );
+}
+
+const SignatureSwitch = (props) => {
+  const [isEnabled, setIsEnabled] = React.useState(false);
+  const toggleSwitch = () => setIsEnabled(previousState => !previousState);
+
+  return (
+    <View style={{ flexDirection: 'row', backgroundColor: 'lightslategrey', alignItems: 'center', justifyContent: 'space-between', padding: 10, margin: 10, }}>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 16, }}>Sign</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Switch 
+          onValueChange={toggleSwitch}
+          value={isEnabled}
+        />
+      </View>
+    </View>
+  );
 }
 
 const HomeHeader = (props) => {
@@ -80,12 +105,12 @@ const HomeHeader = (props) => {
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, margin: 5, backgroundColor: 'slategrey', }}>
         <Player name="Akin Toulouse" pictureUrl="https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0"/>
         <View style={{ alignItems: 'center' }}>
-          <Currency amount='420' />
+          <Currency amount='9999' />
           <Text style={{ textDecorationLine: 'underline', color: 'lightblue' }}>Address</Text>
         </View>
       </View> 
     </View> 
-  )
+  );
 }
 
 const ChallengeListItem = (props) => {
@@ -107,7 +132,7 @@ const ChallengeListItem = (props) => {
         </View>
       </View>
     </View>
-  )
+  );
 }
 
 const Arbiter: React.FC<PlayerProps> = (props) => {
@@ -133,10 +158,15 @@ const Arbiter: React.FC<PlayerProps> = (props) => {
 const PlayerSelect = ({ navigation }) => {
   return (
     <View style={styles.newPlayer}>
-        <PlayerSelector name="Akin Toulouse" pictureUrl="https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0"/>
+        <PlayerSelector
+          players={[
+                {name: "Akin Toulouse", pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0"},
+                {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0", amount: '100' },
+        ]}
+        />
         <View style={{ padding: 10 }}>
           <Button 
-            title="OK" 
+            title="Ok" 
             onPress={() => 
               navigation.navigate('Home')
             }
@@ -183,7 +213,7 @@ const NewPlayer = ({ navigation }) => {
       <View style={{flexDirection: 'row' }}>
       <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey' }}>
         <Button 
-          title="OK" 
+          title="Ok" 
           onPress={() => 
             navigation.navigate('Player Select')
           }
@@ -231,15 +261,24 @@ const Home = ({ navigation }) => {
 const NewChallenge = ({ navigation }) => {
   const [playerName, onChangePlayerName] = React.useState('');
   const [challengeAmount, onChangeChallengeAmount] = React.useState('');
-  const [isEnabled, setIsEnabled] = React.useState(false);
-  const toggleSwitch = () => setIsEnabled(previousState => !previousState);
 
   return (
     <View style={styles.newPlayer}>
       <Text style={{ fontSize: 20 }}>Choose Opponent</Text>
-      <PlayerSelector name='Betsy Wildly' pictureUrl='https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0' />
+      <PlayerSelector
+        players={[
+              {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0", amount: '100' },
+              {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0", amount: '200' },
+      ]}
+      />
+      <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
+        <Button 
+          title="New Opponent" 
+          onPress={() => navigation.navigate('New Opponent') }
+        />
+      </View>
       <View style={{ backgroundColor: 'lightslategrey', alignItems: 'center', padding: 10 }}>
-        <Text style={{ fontSize: 16 }}>Cheese</Text>
+        <Text style={{ fontSize: 16 }}>Amount</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'lightslategrey', }}>
           <TextInput
             onChangeText={text => onChangeChallengeAmount(text)}
@@ -250,20 +289,10 @@ const NewChallenge = ({ navigation }) => {
         </View>
       </View>
       <View style={{ flexDirection: 'row' }}>
-        <View style={{ flexDirection: 'row', backgroundColor: 'lightslategrey', alignItems: 'center', justifyContent: 'space-between', padding: 10, margin: 10, }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 16, }}>Sign</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Switch 
-              onValueChange={toggleSwitch}
-              value={isEnabled}
-            />
-          </View>
-        </View>
+        <SignatureSwitch />
         <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
           <Button 
-            title="SEND" 
+            title="Send" 
             onPress={() => navigation.navigate('Home') }
           />
         </View>
@@ -297,11 +326,17 @@ const ChallengeDetails = ({ navigation }) => {
           <Arbiter name='Gordon Blue' pictureUrl='https://static-cdn.jtvnw.net/emoticons/v1/28/1.0' />
         </View>
       </View>
-      <View style={{ flex: 1, justifyContent: 'center' }}>
+      <View style={{ flex: 1,  }}>
         <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
           <Button 
-            title="Payout Request" 
-            onPress={() => navigation.navigate('Payout Request') }
+            title="Players Payout" 
+            onPress={() => navigation.navigate('Players Payout') }
+          />
+        </View>
+        <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
+          <Button 
+            title="Arbiter Payout" 
+            onPress={() => navigation.navigate('Arbiter Payout') }
           />
         </View>
       </View>
@@ -309,18 +344,22 @@ const ChallengeDetails = ({ navigation }) => {
   );
 }
 
-const PayoutRequest = ({ navigation }) => {
+const ArbiterPayout = ({ navigation }) => {
   const [refToken, onChangeRefToken] = React.useState('');
-  const [isEnabled, setIsEnabled] = React.useState(false);
-  const toggleSwitch = () => setIsEnabled(previousState => !previousState);
 
   return (
     <View style={styles.payoutRequest}>
-      <View>
-        <Player name='Akin Toulouse' pictureUrl='https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0' />
-        <View style={{ alignItems: 'center' }}>
-          <Text>Recipient</Text>
+      <View style={{ alignItems: 'center' }}>
+        <View>
+          <Text style={{ fontSize: 20 }}>Recipient</Text>
         </View>
+        <PlayerSelector
+          players={[
+                {name: "Akin Toulouse", pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0"},
+                {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0", amount: '200' },
+        ]}
+        />
+        <Currency amount='100' />
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'lightslategrey', margin: 10, padding: 10 }}>
         <Text>Referee Token</Text>
@@ -330,24 +369,75 @@ const PayoutRequest = ({ navigation }) => {
           style={{ borderWidth: 1, flex: 1, margin: 10, padding: 4, }}
         />     
       </View>
-      <View style={{ flexDirection: 'row', backgroundColor: 'lightslategrey', alignItems: 'center', justifyContent: 'space-between', padding: 10, margin: 10, }}>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 16, }}>Sign</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Switch 
-            onValueChange={toggleSwitch}
-            value={isEnabled}
-          />
-        </View>
+      <View>
+        <Text style={{ fontSize: 16 }}>Arbiter</Text>
+        <Arbiter name='Gordon Blue' pictureUrl='https://static-cdn.jtvnw.net/emoticons/v1/28/1.0' />
       </View>
+      <SignatureSwitch />
       <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
         <Button 
-          title="SEND" 
+          title="Send" 
           onPress={() => navigation.navigate('Home') }
         />
       </View>
     </View>
+  );
+}
+
+const PlayersPayout = ({ navigation }) => {
+  return (
+    <View style={styles.payoutRequest}>
+      <View>
+        <View style={{ alignItems: 'center' }}>
+          <Text style={{ fontSize: 20 }}>Recipient</Text>
+        </View>
+        <PlayerSelector
+          players={[
+                {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0", amount: '100' },
+                {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0", amount: '200' },
+        ]}
+        />
+      </View>
+      <Currency amount='100' />
+      <View style={{ flexDirection: 'row' }}>
+        <SignatureSwitch />
+        <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
+          <Button 
+            title="Send" 
+            onPress={() => navigation.navigate('Home') }
+          />
+        </View>
+      </View>
+    </View>
+  )
+}
+
+const NewOpponent = ({ navigation }) => {
+  const [opponentName, onChangeOpponentName] = React.useState('');
+
+  return (
+    <View style={styles.newPlayer}>
+      <Image
+        style={styles.mediumEmote}
+        source=''
+      />
+      <View style={{alignItems: 'center', backgroundColor: 'lightslategrey', margin: 10, padding: 10 }}>
+        <TextInput
+          onChangeText={text => onChangeOpponentName(text)}
+          value={opponentName}
+          style={{ borderWidth: 1, flex: 1, margin: 10, padding: 4, }}
+        />     
+        <Text>Enter Opponent Name or Address</Text>
+      </View>
+      <View style={{flexDirection: 'row' }}>
+        <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey' }}>
+          <Button 
+            title="Ok" 
+            onPress={() => navigation.navigate('Player Select')}
+          />
+       </View>
+     </View>
+   </View>
   );
 }
 
@@ -357,25 +447,14 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
+        <Stack.Screen name="New Opponent" component={NewOpponent} />
         <Stack.Screen name="Player Select" component={PlayerSelect} />
-        <Stack.Screen name="New Player" component={NewPlayer} />
-        <Stack.Screen 
-          name="Home"
-          component={Home}
-          options={{
-            title: 'Home',
-            //            headerStyle: {
-            //              backgroundColor: '#f4511e',
-            //            },
-            //            headerTintColor: '#fff',
-            //            headerTitleStyle: {
-            //              fontWeight: 'bold',
-            //            },
-        }}
-        />
-        <Stack.Screen name="New Challenge" component={NewChallenge} />
+        <Stack.Screen name="Home" component={Home} />
         <Stack.Screen name="Challenge Details" component={ChallengeDetails} />
-        <Stack.Screen name="Payout Request" component={PayoutRequest} />
+        <Stack.Screen name="New Player" component={NewPlayer} />
+        <Stack.Screen name="New Challenge" component={NewChallenge} />
+        <Stack.Screen name="Players Payout" component={PlayersPayout} />
+        <Stack.Screen name="Arbiter Payout" component={ArbiterPayout} />
       </Stack.Navigator>
     </NavigationContainer>
   );
