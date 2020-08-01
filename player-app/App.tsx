@@ -1,19 +1,20 @@
 import 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { Provider } from 'react-redux';
-import { createStore } from 'redux';
+import { useSelector, useDispatch, Provider } from 'react-redux';
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
-export interface PlayerProps {
+import { store, newplayer } from './src/store.ts';
+import { Player } from './src/datatypes.ts'
+
+export interface PlayerPortratiProps {
   name: string;
-  address: string;
   pictureUrl: string;
 }
 
-const Player: React.FC<PlayerProps> = (props) => {
+const PlayerPortrait: React.FC<PlayerPortraitProps> = (props) => {
   return (
     <View style={styles.player}>
       <View style={{ alignItems: "center" }}>
@@ -31,29 +32,29 @@ const Player: React.FC<PlayerProps> = (props) => {
 
 const PlayerSelector = (props) => {
   const [playerIndex, setPlayerIndex] = React.useState(0);
-  //  const toggleSwitch = () => setIsEnabled(previousState => !previousState);
-
+  const playerIds = useSelector(state => state.playerIds);
+  const players = useSelector(state => state.players);
 
   return (
     <View style={styles.playerSelector}>
-      <PlayerSelectorButton forward={false} />
-        <Player name={props.players[playerIndex].name} pictureUrl={props.players[playerIndex].pictureUrl} />
-      <PlayerSelectorButton forward={true} />
+      <PlayerSelectorButton playerIndex={playerIndex} setPlayerIndex={setPlayerIndex} forward={false} />
+        <PlayerPortrait name={players[playerIds[playerIndex]].name} pictureUrl={players[playerIds[playerIndex]].pictureUrl} />
+      <PlayerSelectorButton playerIndex={playerIndex} setPlayerIndex={setPlayerIndex} forward={true} />
     </View>
   );
 }
 
-export interface PlayerSelectorButton {
-  forward: bool;
-}
-
-const PlayerSelectorButton: React.FC<PlayerSelectorButton> = (props) => {
+const PlayerSelectorButton = (props) => {
+  const playerIds = useSelector(state => state.playerIds);
 
   return (
     <View style={{ justifyContent: 'center', padding: 10 }}>
       <Button
         title={ props.forward ? ">" : "<" } 
-        onPress={() => {}}
+        onPress={() => {
+          let newPlayerIndex = props.forward ? props.playerIndex+1 : props.playerIndex-1;
+          props.setPlayerIndex((newPlayerIndex + playerIds.length) % playerIds.length);
+        }}
       />
     </View>
   );
@@ -105,7 +106,7 @@ const HomeHeader = (props) => {
         </View>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, margin: 5, backgroundColor: 'slategrey', }}>
-        <Player name="Akin Toulouse" pictureUrl="https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0"/>
+        <PlayerPortrait name="Akin Toulouse" pictureUrl="https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0"/>
         <View style={{ alignItems: 'center' }}>
           <Currency amount='9999' />
           <Text style={{ textDecorationLine: 'underline', color: 'lightblue' }}>Address</Text>
@@ -118,7 +119,7 @@ const HomeHeader = (props) => {
 const ChallengeListItem = (props) => {
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'slategrey', margin: 5, padding: 5 }}>
-      <Player name={props.name} pictureUrl={props.pictureUrl} />
+      <PlayerPortrait name={props.name} pictureUrl={props.pictureUrl} />
       <View style={{ flexDirection: 'row', padding: 5, margin: 5, alignItems: 'center', justifyContent: 'center', }}>
         <Text>Status . . . </Text>
         <View>
@@ -187,19 +188,21 @@ const PlayerSelect = ({ navigation }) => {
 }
 
 const NewPlayer = ({ navigation }) => {
-  const [playerName, onChangePlayerName] = React.useState('');
-  const [pictureUrl, onChangePictureUrl] = React.useState('');
+  const [playerName, setPlayerName] = React.useState('');
+  const [pictureUrl, setPictureUrl] = React.useState('');
+  const playerIds = useSelector(state => state.playerIds);
+
+  const dispatch = useDispatch();
+
+  const newPlayer = (player, playerId) => dispatch(newplayer(player, playerId));
 
   return (
     <View style={styles.newPlayer}>
-      <Image
-        style={styles.mediumEmote}
-        source=''
-      />
+      <PlayerPortrait name={playerName} pictureUrl={pictureUrl} />
       <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'lightslategrey', margin: 10, padding: 10 }}>
         <Text>Player Name</Text>
         <TextInput
-          onChangeText={text => onChangePlayerName(text)}
+          onChangeText={text => setPlayerName(text)}
           value={playerName}
           style={{ borderWidth: 1, flex: 1, margin: 10, padding: 4, }}
         />     
@@ -207,7 +210,7 @@ const NewPlayer = ({ navigation }) => {
       <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'lightslategrey', margin: 10, padding: 10 }}>
         <Text>Picture Url</Text>
         <TextInput
-          onChangeText={text => onChangePictureUrl(text)}
+          onChangeText={text => setPictureUrl(text)}
           value={pictureUrl}
           style={{ borderWidth: 1, flex: 1, margin: 10, padding: 4, }}
         />     
@@ -216,9 +219,16 @@ const NewPlayer = ({ navigation }) => {
       <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey' }}>
         <Button 
           title="Ok" 
-          onPress={() => 
+          onPress={() => {
+            newPlayer(
+              {
+                name: playerName,
+                pictureUrl: pictureUrl
+              },  
+              playerIds.length+1,
+            );
             navigation.navigate('Player Select')
-          }
+          } }
         />
       </View>
       </View>
@@ -310,7 +320,7 @@ const ChallengeDetails = ({ navigation }) => {
         <View style= {{flexDirection: 'row', justifyContent: 'space-between' }}>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 20 }}>Opponent</Text>
-            <Player name='Betsy Wildly' pictureUrl='https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0' />
+            <PlayerPortrait name='Betsy Wildly' pictureUrl='https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0' />
           </View>
           <View style={{ flex: 1, alignItems: 'flex-end' }}>
               <Text style={{ fontSize: 20 }}>Amount</Text>
@@ -443,11 +453,43 @@ const NewOpponent = ({ navigation }) => {
   );
 }
 
-
+/*
+  store data structure: 
+  {
+    playerIds: [1, 2, 3, ... ],
+    players: {
+      1: { player_1 },
+      2: { player_2 },
+      3: { player_3 },
+            .
+            .
+            .
+    },
+    opponentIds: [1, 2, 3, ... ],
+    opponents: {
+      1: { opponent_1 },
+      2: { opponent_2 },
+      3: { opponent_3 },
+            .
+            .
+            .
+    },
+    challengeIds: [1, 2, 3, ... ],
+    challenges: {
+      1: { challeneges_1 },
+      2: { challeneges_2 },
+      3: { challeneges_3 },
+            .
+            .
+            .
+    },
+  } 
+ */
 const Stack = createStackNavigator();
 
 export default function App() {
   return (
+    <Provider store={store}>
       <NavigationContainer>
         <Stack.Navigator>
           <Stack.Screen name="Player Select" component={PlayerSelect} />
@@ -460,6 +502,7 @@ export default function App() {
           <Stack.Screen name="Arbiter Payout" component={ArbiterPayout} />
         </Stack.Navigator>
       </NavigationContainer>
+    </Provider>
   );
 }
 
