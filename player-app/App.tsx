@@ -6,7 +6,7 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
-import { store, newplayer } from './src/store.ts';
+import { store, playerSelectors } from './src/redux.ts';
 import { Player } from './src/datatypes.ts'
 
 export interface PlayerPortratiProps {
@@ -32,20 +32,23 @@ const PlayerPortrait: React.FC<PlayerPortraitProps> = (props) => {
 
 const PlayerSelector = (props) => {
   const [playerIndex, setPlayerIndex] = React.useState(0);
-  const playerIds = useSelector(state => state.playerIds);
-  const players = useSelector(state => state.players);
+  const playerIds = playerSelectors.selectIds(store.getState());
+  const players = playerSelectors.selectEntities(store.getState());
 
   return (
     <View style={styles.playerSelector}>
       <PlayerSelectorButton playerIndex={playerIndex} setPlayerIndex={setPlayerIndex} forward={false} />
-        <PlayerPortrait name={players[playerIds[playerIndex]].name} pictureUrl={players[playerIds[playerIndex]].pictureUrl} />
+      <PlayerPortrait 
+        name={players[playerIds[playerIndex]].name}
+        pictureUrl={players[playerIds[playerIndex]].pictureUrl}
+      />
       <PlayerSelectorButton playerIndex={playerIndex} setPlayerIndex={setPlayerIndex} forward={true} />
     </View>
   );
 }
 
 const PlayerSelectorButton = (props) => {
-  const playerIds = useSelector(state => state.playerIds);
+  const numPlayers = playerSelectors.selectTotal(store.getState());
 
   return (
     <View style={{ justifyContent: 'center', padding: 10 }}>
@@ -53,7 +56,7 @@ const PlayerSelectorButton = (props) => {
         title={ props.forward ? ">" : "<" } 
         onPress={() => {
           let newPlayerIndex = props.forward ? props.playerIndex+1 : props.playerIndex-1;
-          props.setPlayerIndex((newPlayerIndex + playerIds.length) % playerIds.length);
+          props.setPlayerIndex((newPlayerIndex + numPlayers) % numPlayers);
         }}
       />
     </View>
@@ -190,11 +193,6 @@ const PlayerSelect = ({ navigation }) => {
 const NewPlayer = ({ navigation }) => {
   const [playerName, setPlayerName] = React.useState('');
   const [pictureUrl, setPictureUrl] = React.useState('');
-  const playerIds = useSelector(state => state.playerIds);
-
-  const dispatch = useDispatch();
-
-  const newPlayer = (player, playerId) => dispatch(newplayer(player, playerId));
 
   return (
     <View style={styles.newPlayer}>

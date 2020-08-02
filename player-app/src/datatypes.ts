@@ -1,4 +1,5 @@
-export interface Player {
+export type Player {
+  id: string;
   name: string;
   pictureUrl: string;
   balance: number;
