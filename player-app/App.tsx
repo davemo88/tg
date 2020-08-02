@@ -2,11 +2,12 @@ import 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { useSelector, useDispatch, Provider } from 'react-redux';
+import { nanoid } from '@reduxjs/toolkit'
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
-import { store, playerSelectors } from './src/redux.ts';
+import { store, playerSlice, playerSelectors } from './src/redux.ts';
 import { Player } from './src/datatypes.ts'
 
 export interface PlayerPortratiProps {
@@ -218,13 +219,7 @@ const NewPlayer = ({ navigation }) => {
         <Button 
           title="Ok" 
           onPress={() => {
-            newPlayer(
-              {
-                name: playerName,
-                pictureUrl: pictureUrl
-              },  
-              playerIds.length+1,
-            );
+            store.dispatch(playerSlice.actions.playerAdded({ id: nanoid(), name: playerName, pictureUrl: pictureUrl }));
             navigation.navigate('Player Select')
           } }
         />

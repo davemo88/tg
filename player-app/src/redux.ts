@@ -36,7 +36,7 @@ import { Player } from './datatypes.ts'
 
 const playerAdapter = createEntityAdapter<Player>({});
 
-const playerSlice = createSlice({
+export const playerSlice = createSlice({
   name: 'players',
   initialState: playerAdapter.getInitialState(),
   reducers: {
@@ -51,10 +51,10 @@ export const store = configureStore({
 })
 
 store.dispatch(playerSlice.actions.playerAdded({ id: nanoid(), name: 'Akin Toulouse', pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0' }));
-store.dispatch(playerSlice.actions.playerAdded({ id: nanoid(), name: 'Bacon Toulouse', pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0' }));
-store.dispatch(playerSlice.actions.playerAdded({ id: nanoid(), name: 'Curry Toulouse', pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0' }));
+store.dispatch(playerSlice.actions.playerAdded({ id: nanoid(), name: 'Duncan Hoops', pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/111700/2.0' }));
+store.dispatch(playerSlice.actions.playerAdded({ id: nanoid(), name: 'Lesley Eyeball', pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/134255/2.0' }));
 
-//type RootState = ReturnType<typeof store.getState>
-//
-//export const playerSelectors = playerAdapter.getSelectors<RootState>( state => state.players );
-export const playerSelectors = playerAdapter.getSelectors( state => state.players );
+type RootState = ReturnType<typeof store.getState>
+
+export const playerSelectors = playerAdapter.getSelectors<RootState>( state => state.players );
+//export const playerSelectors = playerAdapter.getSelectors( state => state.players );
