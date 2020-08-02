@@ -7,7 +7,7 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
-import { store, playerSlice, playerSelectors } from './src/redux.ts';
+import { store, playerSlice, playerSelectors, opponentSlice, selectedPlayerIdSlice, } from './src/redux.ts';
 import { Player } from './src/datatypes.ts'
 
 export interface PlayerPortratiProps {
@@ -33,15 +33,15 @@ const PlayerPortrait: React.FC<PlayerPortraitProps> = (props) => {
 
 const PlayerSelector = (props) => {
   const [playerIndex, setPlayerIndex] = React.useState(0);
-  const playerIds = playerSelectors.selectIds(store.getState());
-  const players = playerSelectors.selectEntities(store.getState());
+  const selectedPlayerId = store.getState().selectedPlayerId;
+  const selectedPlayer = playerSelectors.selectById(store.getState(), selectedPlayerId);
 
   return (
     <View style={styles.playerSelector}>
       <PlayerSelectorButton playerIndex={playerIndex} setPlayerIndex={setPlayerIndex} forward={false} />
       <PlayerPortrait 
-        name={players[playerIds[playerIndex]].name}
-        pictureUrl={players[playerIds[playerIndex]].pictureUrl}
+        name={selectedPlayer.name}
+        pictureUrl={selectedPlayer.pictureUrl}
       />
       <PlayerSelectorButton playerIndex={playerIndex} setPlayerIndex={setPlayerIndex} forward={true} />
     </View>
@@ -50,6 +50,7 @@ const PlayerSelector = (props) => {
 
 const PlayerSelectorButton = (props) => {
   const numPlayers = playerSelectors.selectTotal(store.getState());
+  const playerIds = playerSelectors.selectIds(store.getState());
 
   return (
     <View style={{ justifyContent: 'center', padding: 10 }}>
@@ -57,7 +58,9 @@ const PlayerSelectorButton = (props) => {
         title={ props.forward ? ">" : "<" } 
         onPress={() => {
           let newPlayerIndex = props.forward ? props.playerIndex+1 : props.playerIndex-1;
-          props.setPlayerIndex((newPlayerIndex + numPlayers) % numPlayers);
+          newPlayerIndex = (newPlayerIndex + numPlayers) % numPlayers;
+          props.setPlayerIndex(newPlayerIndex);
+          store.dispatch(selectedPlayerIdSlice.actions.setSelectedPlayerId(playerIds[newPlayerIndex]));
         }}
       />
     </View>
@@ -266,6 +269,8 @@ const Home = ({ navigation }) => {
 const NewChallenge = ({ navigation }) => {
   const [playerName, onChangePlayerName] = React.useState('');
   const [challengeAmount, onChangeChallengeAmount] = React.useState('');
+  const opponentIds = opponentSelectors.selectIds(store.getState());
+  const opponents = opponentSelectors.selectEntities(store.getState());
 
   return (
     <View style={styles.newPlayer}>
@@ -303,6 +308,38 @@ const NewChallenge = ({ navigation }) => {
         </View>
       </View>
     </View>
+  );
+}
+
+const NewOpponent = ({ navigation }) => {
+  const [opponentName, onChangeOpponentName] = React.useState('');
+
+  return (
+    <View style={styles.newPlayer}>
+      <Image
+        style={styles.mediumEmote}
+        source=''
+      />
+      <View style={{alignItems: 'center', backgroundColor: 'lightslategrey', margin: 10, padding: 10 }}>
+        <TextInput
+          onChangeText={text => onChangeOpponentName(text)}
+          value={opponentName}
+          style={{ borderWidth: 1, flex: 1, margin: 10, padding: 4, }}
+        />     
+        <Text>Enter Opponent Name or Address</Text>
+      </View>
+      <View style={{flexDirection: 'row' }}>
+        <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey' }}>
+          <Button 
+            title="Ok" 
+            onPress={() => {
+              store.dispatch(playerSlice.actions.playerAdded({ id: nanoid(), name: opponentName, pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/03259/2.0' }));
+              navigation.navigate('New Challenge')
+            } }
+          />
+       </View>
+     </View>
+   </View>
   );
 }
 
@@ -415,35 +452,6 @@ const PlayersPayout = ({ navigation }) => {
       </View>
     </View>
   )
-}
-
-const NewOpponent = ({ navigation }) => {
-  const [opponentName, onChangeOpponentName] = React.useState('');
-
-  return (
-    <View style={styles.newPlayer}>
-      <Image
-        style={styles.mediumEmote}
-        source=''
-      />
-      <View style={{alignItems: 'center', backgroundColor: 'lightslategrey', margin: 10, padding: 10 }}>
-        <TextInput
-          onChangeText={text => onChangeOpponentName(text)}
-          value={opponentName}
-          style={{ borderWidth: 1, flex: 1, margin: 10, padding: 4, }}
-        />     
-        <Text>Enter Opponent Name or Address</Text>
-      </View>
-      <View style={{flexDirection: 'row' }}>
-        <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey' }}>
-          <Button 
-            title="Ok" 
-            onPress={() => navigation.navigate('Player Select')}
-          />
-       </View>
-     </View>
-   </View>
-  );
 }
 
 /*

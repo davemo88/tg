@@ -1,38 +1,6 @@
 import { createStore } from 'redux';
-import { nanoid, createEntityAdapter, createSlice, configureStore } from '@reduxjs/toolkit'
+import { nanoid, createEntityAdapter, createSlice, createReducer, createAction, configureStore } from '@reduxjs/toolkit'
 import { Player } from './datatypes.ts'
-/*
-  store data structure: 
-  {
-    playerIds: [1, 2, 3, ... ],
-    players: {
-      1: { player_1 },
-      2: { player_2 },
-      3: { player_3 },
-            .
-            .
-            .
-    },
-    opponentIds: [1, 2, 3, ... ],
-    opponents: {
-      1: { opponent_1 },
-      2: { opponent_2 },
-      3: { opponent_3 },
-            .
-            .
-            .
-    },
-    challengeIds: [1, 2, 3, ... ],
-    challenges: {
-      1: { challeneges_1 },
-      2: { challeneges_2 },
-      3: { challeneges_3 },
-            .
-            .
-            .
-    },
-  } 
- */
 
 const playerAdapter = createEntityAdapter<Player>({});
 
@@ -44,17 +12,44 @@ export const playerSlice = createSlice({
   }
 })
 
-export const store = configureStore({
-  reducer: {
-    players: playerSlice.reducer,
+const opponentAdapter = createEntityAdapter<Opponent>({});
+
+export const opponentSlice = createSlice({
+  name: 'opponents',
+  initialState: opponentAdapter.getInitialState(),
+  reducers: {
+    opponentAdded: opponentAdapter.addOne,
   }
 })
 
+export const selectedPlayerIdSlice = createSlice({
+  name: 'selectedPlayerId',
+  initialState: 'bogus selected player id',
+  reducers: {
+    setSelectedPlayerId:  (state, action) => action.payload
+  }
+})
+
+export const store = configureStore({
+  reducer: {
+    players: playerSlice.reducer,
+    opponents: opponentSlice.reducer,
+    selectedPlayerId: selectedPlayerIdSlice.reducer,
+  }
+})
+
+// test players
 store.dispatch(playerSlice.actions.playerAdded({ id: nanoid(), name: 'Akin Toulouse', pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0' }));
 store.dispatch(playerSlice.actions.playerAdded({ id: nanoid(), name: 'Duncan Hoops', pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/111700/2.0' }));
-store.dispatch(playerSlice.actions.playerAdded({ id: nanoid(), name: 'Lesley Eyeball', pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/134255/2.0' }));
+store.dispatch(playerSlice.actions.playerAdded({ id: nanoid(), name: 'Lesley Grillz', pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/134255/2.0' }));
+
+// select first player
+store.dispatch(selectedPlayerIdSlice.actions.setSelectedPlayerId(store.getState().players.ids[0]));
+
+// test opponent
+store.dispatch(opponentSlice.actions.opponentAdded({ id: nanoid(), name: 'Betsy Wildly', pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/03259/2.0' }));
 
 type RootState = ReturnType<typeof store.getState>
 
 export const playerSelectors = playerAdapter.getSelectors<RootState>( state => state.players );
-//export const playerSelectors = playerAdapter.getSelectors( state => state.players );
+export const opponentSelectors = opponentAdapter.getSelectors<RootState>( state => state.opponents );
