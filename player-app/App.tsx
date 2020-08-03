@@ -174,7 +174,7 @@ const ChallengeListItem = (props) => {
           <Button 
             title="Details" 
             onPress={() => 
-              props.navigation.navigate('Challenge Details')
+              props.navigation.push('Challenge Details', { challengeId: props.challenge.id })
             }
           />
         </View>
@@ -379,25 +379,28 @@ const NewOpponent = ({ navigation }) => {
   );
 }
 
-const ChallengeDetails = ({ navigation }) => {
+const ChallengeDetails = ({ route, navigation }) => {
+  const { challengeId } = route.params;
+  const challenge = challengeSelectors.selectById(store.getState(), challengeId);
+  const opponent = opponentSelectors.selectById(store.getState(), challenge.opponentId);
   return (
     <View style={styles.challengeDetails}>
       <View style={{ flex: 2, alignItems: 'center', justifyContent: 'space-around', }}>
         <View style= {{flexDirection: 'row', justifyContent: 'space-between' }}>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 20 }}>Opponent</Text>
-            <PlayerPortrait name='Betsy Wildly' pictureUrl='https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0' />
+            <PlayerPortrait name={opponent.name} pictureUrl={opponent.pictureUrl} />
           </View>
           <View style={{ flex: 1, alignItems: 'flex-end' }}>
               <Text style={{ fontSize: 20 }}>Amount</Text>
             <View style={{ flex: 1, justifyContent: 'center' }}>
-              <Currency amount='100' />
+              <Currency amount={challenge.pot} />
             </View>
           </View>
         </View>
         <View>
           <Text style={{ fontSize: 20 }}>Status</Text>
-          <Text> . . . </Text>
+          <Text>{challenge.status}</Text>
         </View>
         <View>
           <Text style={{ fontSize: 20 }}>Arbiter</Text>
