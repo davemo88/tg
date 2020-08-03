@@ -101,6 +101,7 @@ pub struct Challenge {
 // segwit makes it possible to create transaction that spend from unmined txs
 // because the txid will not change
 //    pub funding_tx_hex: Vec<u8>,
+//    maybe this should be a Transaction
     pub funding_tx_hex: String,
 // must include data unique to this challenge e.g. funding tx id, so old signatures for similar
 // payouts (e.g. rematches) can't be used, since its hash is signed and use for later verification

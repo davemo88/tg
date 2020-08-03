@@ -7,7 +7,7 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
-import { store, playerSlice, playerSelectors, opponentSlice, selectedPlayerIdSlice, } from './src/redux.ts';
+import { store, playerSlice, playerSelectors, opponentSelectors, opponentSlice, challengeSelectors, challengeSlice, selectedPlayerIdSlice, } from './src/redux.ts';
 import { Player } from './src/datatypes.ts'
 
 export interface PlayerPortratiProps {
@@ -67,6 +67,39 @@ const PlayerSelectorButton = (props) => {
   );
 }
 
+const OpponentSelector = (props) => {
+  const opponentIds = opponentSelectors.selectIds(store.getState());
+  const selectedOpponent = opponentSelectors.selectById(store.getState(), opponentIds[props.opponentIndex]);
+
+  return (
+    <View style={styles.playerSelector}>
+      <OpponentSelectorButton opponentIndex={props.opponentIndex} setOpponentIndex={props.setOpponentIndex} forward={false} />
+      <PlayerPortrait 
+        name={selectedOpponent.name}
+        pictureUrl={selectedOpponent.pictureUrl}
+      />
+      <OpponentSelectorButton opponentIndex={props.opponentIndex} setOpponentIndex={props.setOpponentIndex} forward={true} />
+    </View>
+  );
+}
+
+const OpponentSelectorButton = (props) => {
+  const numOpponents = opponentSelectors.selectTotal(store.getState());
+
+  return (
+    <View style={{ justifyContent: 'center', padding: 10 }}>
+      <Button
+        title={ props.forward ? ">" : "<" } 
+        onPress={() => {
+          let newOpponentIndex = props.forward ? props.opponentIndex+1 : props.opponentIndex-1;
+          newOpponentIndex = (newOpponentIndex + numOpponents) % numOpponents;
+          props.setOpponentIndex(newOpponentIndex);
+        }}
+      />
+    </View>
+  );
+}
+
 const Currency = (props) => {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', }}>
@@ -105,6 +138,9 @@ const SignatureSwitch = (props) => {
 }
 
 const HomeHeader = (props) => {
+  const selectedPlayerId = store.getState().selectedPlayerId;
+  const selectedPlayer = playerSelectors.selectById(store.getState(), selectedPlayerId);
+
   return(
     <View>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, backgroundColor: 'white', padding: 5, margin: 5, height: 42, }}>
@@ -113,9 +149,9 @@ const HomeHeader = (props) => {
         </View>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, margin: 5, backgroundColor: 'slategrey', }}>
-        <PlayerPortrait name="Akin Toulouse" pictureUrl="https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0"/>
+        <PlayerPortrait name={selectedPlayer.name} pictureUrl={selectedPlayer.pictureUrl} />
         <View style={{ alignItems: 'center' }}>
-          <Currency amount='9999' />
+          <Currency amount={selectedPlayer.balance} />
           <Text style={{ textDecorationLine: 'underline', color: 'lightblue' }}>Address</Text>
         </View>
       </View> 
@@ -124,14 +160,16 @@ const HomeHeader = (props) => {
 }
 
 const ChallengeListItem = (props) => {
+  const opponent = opponentSelectors.selectById(store.getState(), props.challenge.opponentId);
+
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'slategrey', margin: 5, padding: 5 }}>
-      <PlayerPortrait name={props.name} pictureUrl={props.pictureUrl} />
+      <PlayerPortrait name={opponent.name} pictureUrl={opponent.pictureUrl} />
       <View style={{ flexDirection: 'row', padding: 5, margin: 5, alignItems: 'center', justifyContent: 'center', }}>
-        <Text>Status . . . </Text>
+        <Text>Status: {props.challenge.status}</Text>
         <View>
           <View style={{ padding: 20 }}>
-            <Currency amount={props.amount} />
+            <Currency amount={props.challenge.pot} />
           </View>
           <Button 
             title="Details" 
@@ -168,12 +206,7 @@ const Arbiter: React.FC<PlayerProps> = (props) => {
 const PlayerSelect = ({ navigation }) => {
   return (
     <View style={styles.newPlayer}>
-        <PlayerSelector
-          players={[
-                {name: "Akin Toulouse", pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0"},
-                {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0", amount: '100' },
-        ]}
-        />
+        <PlayerSelector />
         <View style={{ padding: 10 }}>
           <Button 
             title="Ok" 
@@ -223,7 +256,7 @@ const NewPlayer = ({ navigation }) => {
           title="Ok" 
           onPress={() => {
             store.dispatch(playerSlice.actions.playerAdded({ id: nanoid(), name: playerName, pictureUrl: pictureUrl }));
-            navigation.navigate('Player Select')
+            navigation.push('Player Select')
           } }
         />
       </View>
@@ -233,6 +266,8 @@ const NewPlayer = ({ navigation }) => {
 }
 
 const Home = ({ navigation }) => {
+  const challenges = challengeSelectors.selectAll(store.getState());
+
   return (
     <View style={styles.home}>
         <View style={{ flex: 1, justifyContent: 'flex-start', }}>
@@ -254,11 +289,8 @@ const Home = ({ navigation }) => {
           </View>
           <View style={{ padding: 5, }}>
             <FlatList
-              data={[
-                {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0", amount: '100' },
-                {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0", amount: '200' },
-              ]}
-              renderItem={({item}) => <ChallengeListItem navigation={navigation} name={item.name} pictureUrl={item.pictureUrl} amount={item.amount} />}
+              data={challenges}
+              renderItem={({item}) => <ChallengeListItem navigation={navigation} challenge={item} />}
             />
           </View>
         </View>
@@ -269,18 +301,13 @@ const Home = ({ navigation }) => {
 const NewChallenge = ({ navigation }) => {
   const [playerName, onChangePlayerName] = React.useState('');
   const [challengeAmount, onChangeChallengeAmount] = React.useState('');
+  const [opponentIndex, setOpponentIndex] = React.useState(0);
   const opponentIds = opponentSelectors.selectIds(store.getState());
-  const opponents = opponentSelectors.selectEntities(store.getState());
 
   return (
     <View style={styles.newPlayer}>
       <Text style={{ fontSize: 20 }}>Choose Opponent</Text>
-      <PlayerSelector
-        players={[
-              {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0", amount: '100' },
-              {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0", amount: '200' },
-      ]}
-      />
+      <OpponentSelector opponentIndex={opponentIndex} setOpponentIndex={setOpponentIndex} />
       <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
         <Button 
           title="New Opponent" 
@@ -302,8 +329,16 @@ const NewChallenge = ({ navigation }) => {
         <SignatureSwitch />
         <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
           <Button 
-            title="Send" 
-            onPress={() => navigation.navigate('Home') }
+            title="Issue" 
+            onPress={() => {
+              store.dispatch(challengeSlice.actions.challengeAdded({ 
+                id: nanoid(),
+                opponentId: opponentIds[opponentIndex],
+                pot: challengeAmount,
+                status: 'Issued',
+              }))
+              navigation.push('Home') 
+            } }
           />
         </View>
       </View>
@@ -312,7 +347,7 @@ const NewChallenge = ({ navigation }) => {
 }
 
 const NewOpponent = ({ navigation }) => {
-  const [opponentName, onChangeOpponentName] = React.useState('');
+  const [opponentName, setOpponentName] = React.useState('');
 
   return (
     <View style={styles.newPlayer}>
@@ -322,7 +357,7 @@ const NewOpponent = ({ navigation }) => {
       />
       <View style={{alignItems: 'center', backgroundColor: 'lightslategrey', margin: 10, padding: 10 }}>
         <TextInput
-          onChangeText={text => onChangeOpponentName(text)}
+          onChangeText={text => setOpponentName(text)}
           value={opponentName}
           style={{ borderWidth: 1, flex: 1, margin: 10, padding: 4, }}
         />     
@@ -333,8 +368,9 @@ const NewOpponent = ({ navigation }) => {
           <Button 
             title="Ok" 
             onPress={() => {
-              store.dispatch(playerSlice.actions.playerAdded({ id: nanoid(), name: opponentName, pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/03259/2.0' }));
-              navigation.navigate('New Challenge')
+              store.dispatch(opponentSlice.actions.opponentAdded({ id: nanoid(), name: opponentName, pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0' }));
+              setOpponentName('');
+              navigation.push('New Challenge')
             } }
           />
        </View>
@@ -396,10 +432,6 @@ const ArbiterPayout = ({ navigation }) => {
           <Text style={{ fontSize: 20 }}>Recipient</Text>
         </View>
         <PlayerSelector
-          players={[
-                {name: "Akin Toulouse", pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0"},
-                {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0", amount: '200' },
-        ]}
         />
         <Currency amount='100' />
       </View>
@@ -433,12 +465,7 @@ const PlayersPayout = ({ navigation }) => {
         <View style={{ alignItems: 'center' }}>
           <Text style={{ fontSize: 20 }}>Recipient</Text>
         </View>
-        <PlayerSelector
-          players={[
-                {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0", amount: '100' },
-                {name: 'Betsy Wildly', pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0", amount: '200' },
-        ]}
-        />
+        <PlayerSelector />
       </View>
       <Currency amount='100' />
       <View style={{ flexDirection: 'row' }}>
@@ -454,38 +481,6 @@ const PlayersPayout = ({ navigation }) => {
   )
 }
 
-/*
-  store data structure: 
-  {
-    playerIds: [1, 2, 3, ... ],
-    players: {
-      1: { player_1 },
-      2: { player_2 },
-      3: { player_3 },
-            .
-            .
-            .
-    },
-    opponentIds: [1, 2, 3, ... ],
-    opponents: {
-      1: { opponent_1 },
-      2: { opponent_2 },
-      3: { opponent_3 },
-            .
-            .
-            .
-    },
-    challengeIds: [1, 2, 3, ... ],
-    challenges: {
-      1: { challeneges_1 },
-      2: { challeneges_2 },
-      3: { challeneges_3 },
-            .
-            .
-            .
-    },
-  } 
- */
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -508,10 +503,6 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  players: {
-    flexDirection: 'row',
-    flex: 2,
-  },
   terms: {
     flexDirection: 'row',
     alignItems: 'center',
