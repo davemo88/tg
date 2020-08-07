@@ -76,39 +76,6 @@ const PlayerSelectorButton = (props) => {
   );
 }
 
-const OpponentSelector = (props) => {
-  const opponentIds = opponentSelectors.selectIds(store.getState());
-  const selectedOpponent = opponentSelectors.selectById(store.getState(), opponentIds[props.opponentIndex]);
-
-  return (
-    <View style={styles.playerSelector}>
-      <OpponentSelectorButton opponentIndex={props.opponentIndex} setOpponentIndex={props.setOpponentIndex} forward={false} />
-      <PlayerPortrait 
-        name={selectedOpponent.name}
-        pictureUrl={selectedOpponent.pictureUrl}
-      />
-      <OpponentSelectorButton opponentIndex={props.opponentIndex} setOpponentIndex={props.setOpponentIndex} forward={true} />
-    </View>
-  );
-}
-
-const OpponentSelectorButton = (props) => {
-  const numOpponents = opponentSelectors.selectTotal(store.getState());
-
-  return (
-    <View style={{ justifyContent: 'center', padding: 10 }}>
-      <Button
-        title={ props.forward ? ">" : "<" } 
-        onPress={() => {
-          let newOpponentIndex = props.forward ? props.opponentIndex+1 : props.opponentIndex-1;
-          newOpponentIndex = (newOpponentIndex + numOpponents) % numOpponents;
-          props.setOpponentIndex(newOpponentIndex);
-        }}
-      />
-    </View>
-  );
-}
-
 const Currency = (props) => {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', }}>
@@ -170,10 +137,11 @@ const HomeHeader = (props) => {
 
 const ChallengeListItem = (props) => {
   const opponent = opponentSelectors.selectById(store.getState(), props.challenge.opponentId);
+  const opponentPlayer = playerSelectors.selectById(store.getState(), opponent.playerId);
 
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'slategrey', margin: 5, padding: 5 }}>
-      <PlayerPortrait name={opponent.name} pictureUrl={opponent.pictureUrl} />
+      <PlayerPortrait name={opponentPlayer.name} pictureUrl={opponentPlayer.pictureUrl} />
       <View style={{ flexDirection: 'row', padding: 5, margin: 5, alignItems: 'center', justifyContent: 'center', }}>
         <Text>Status: {props.challenge.status}</Text>
         <View>
@@ -227,16 +195,16 @@ const LocalPlayerSelect = ({ navigation }) => {
       <View style={{ padding: 10 }}>
         <Button 
           title="Ok" 
-          onPress={() => 
+          onPress={() => {
+            store.dispatch(selectedPlayerIdSlice.actions.setSelectedPlayerId(selectedPlayerId));
             navigation.navigate('Home')
-          }
+          } }
         />
       </View>
       <View style={{ padding: 40 }}>
         <Button 
           title="New Player" 
           onPress={() => {
-            store.dispatch(selectedPlayerIdSlice.actions.setSelectedPlayerId(playerIds[playerId]));
             navigation.navigate('New Player')
           } }
         />
@@ -319,15 +287,14 @@ const Home = ({ navigation }) => {
 }
 
 const NewChallenge = ({ navigation }) => {
-  const [playerName, onChangePlayerName] = React.useState('');
   const [challengeAmount, onChangeChallengeAmount] = React.useState('');
-  const [opponentIndex, setOpponentIndex] = React.useState(0);
-  const opponentIds = opponentSelectors.selectIds(store.getState());
+  const opponents = opponentSelectors.selectAll(store.getState());
+  const [selectedOpponentId, setSelectedOpponentId] = React.useState(opponents[0].playerId);
 
   return (
     <View style={styles.newPlayer}>
       <Text style={{ fontSize: 20 }}>Choose Opponent</Text>
-      <OpponentSelector opponentIndex={opponentIndex} setOpponentIndex={setOpponentIndex} />
+      <PlayerSelector selectedPlayerId={selectedOpponentId} setSelectedPlayerId={setSelectedOpponentId} playerIds={opponents.map(oppo => oppo.playerId)} />
       <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
         <Button 
           title="New Opponent" 
@@ -353,7 +320,7 @@ const NewChallenge = ({ navigation }) => {
             onPress={() => {
               store.dispatch(challengeSlice.actions.challengeAdded({ 
                 id: nanoid(),
-                opponentId: opponentIds[opponentIndex],
+                opponentId: opponents.find(oppo => oppo.playerId === selectedOpponentId).id,
                 pot: challengeAmount,
                 status: 'Issued',
               }))
