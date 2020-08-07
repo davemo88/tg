@@ -7,10 +7,10 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
-import { store, playerSlice, playerSelectors, opponentSelectors, opponentSlice, challengeSelectors, challengeSlice, selectedPlayerIdSlice, } from './src/redux.ts';
+import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, opponentSelectors, opponentSlice, challengeSelectors, challengeSlice, selectedPlayerIdSlice, } from './src/redux.ts';
 import { Player } from './src/datatypes.ts'
 
-export interface PlayerPortratiProps {
+export interface PlayerPortraitProps {
   name: string;
   pictureUrl: string;
 }
@@ -31,36 +31,45 @@ const PlayerPortrait: React.FC<PlayerPortraitProps> = (props) => {
   );
 } 
 
+export interface PlayerSelectorProps {
+  playerIds: string[];
+  selectedPlayerId: string;
+  setSelectedPlayerId: (newPlayerId: string) => void;
+}
+
 const PlayerSelector = (props) => {
-  const [playerIndex, setPlayerIndex] = React.useState(0);
-  const selectedPlayerId = store.getState().selectedPlayerId;
-  const selectedPlayer = playerSelectors.selectById(store.getState(), selectedPlayerId);
+  const selectedPlayer = playerSelectors.selectById(store.getState(), props.selectedPlayerId);
 
   return (
     <View style={styles.playerSelector}>
-      <PlayerSelectorButton playerIndex={playerIndex} setPlayerIndex={setPlayerIndex} forward={false} />
+      <PlayerSelectorButton forward={false} selectedPlayerId={props.selectedPlayerId} setSelectedPlayerId={props.setSelectedPlayerId} playerIds={props.playerIds} />
       <PlayerPortrait 
         name={selectedPlayer.name}
         pictureUrl={selectedPlayer.pictureUrl}
       />
-      <PlayerSelectorButton playerIndex={playerIndex} setPlayerIndex={setPlayerIndex} forward={true} />
+      <PlayerSelectorButton forward={true} selectedPlayerId={props.selectedPlayerId} setSelectedPlayerId={props.setSelectedPlayerId} playerIds={props.playerIds} />
     </View>
   );
 }
 
+export interface PlayerSelectorButton {
+  forward: bool;
+  playerIds: string[];
+  selectedPlayerId: string;
+  setSelectedPlayerId: (newPlayerId: string) => void;
+}
+
 const PlayerSelectorButton = (props) => {
-  const numPlayers = playerSelectors.selectTotal(store.getState());
-  const playerIds = playerSelectors.selectIds(store.getState());
+  const playerIndex = props.playerIds.findIndex((playerId) => playerId === props.selectedPlayerId );
 
   return (
     <View style={{ justifyContent: 'center', padding: 10 }}>
       <Button
         title={ props.forward ? ">" : "<" } 
         onPress={() => {
-          let newPlayerIndex = props.forward ? props.playerIndex+1 : props.playerIndex-1;
-          newPlayerIndex = (newPlayerIndex + numPlayers) % numPlayers;
-          props.setPlayerIndex(newPlayerIndex);
-          store.dispatch(selectedPlayerIdSlice.actions.setSelectedPlayerId(playerIds[newPlayerIndex]));
+          let newPlayerIndex = props.forward ? playerIndex+1 : playerIndex-1;
+          newPlayerIndex = (newPlayerIndex + props.playerIds.length) % props.playerIds.length;
+          props.setSelectedPlayerId(props.playerIds[newPlayerIndex]);
         }}
       />
     </View>
@@ -203,26 +212,35 @@ const Arbiter: React.FC<PlayerProps> = (props) => {
   );
 } 
 
-const PlayerSelect = ({ navigation }) => {
+const LocalPlayerSelect = ({ navigation }) => {
+  const localPlayers = localPlayerSelectors.selectAll(store.getState());
+  const [selectedPlayerId, setSelectedPlayerId] = React.useState(store.getState().selectedPlayerId)
+
+
   return (
     <View style={styles.newPlayer}>
-        <PlayerSelector />
-        <View style={{ padding: 10 }}>
-          <Button 
-            title="Ok" 
-            onPress={() => 
-              navigation.navigate('Home')
-            }
-          />
-        </View>
-        <View style={{ padding: 40 }}>
-          <Button 
-            title="New Player" 
-            onPress={() => 
-              navigation.navigate('New Player')
-            }
-          />
-        </View>
+      <PlayerSelector 
+        selectedPlayerId={selectedPlayerId}
+        setSelectedPlayerId={setSelectedPlayerId}
+        playerIds={localPlayers.map(l => l.playerId)}
+      />
+      <View style={{ padding: 10 }}>
+        <Button 
+          title="Ok" 
+          onPress={() => 
+            navigation.navigate('Home')
+          }
+        />
+      </View>
+      <View style={{ padding: 40 }}>
+        <Button 
+          title="New Player" 
+          onPress={() => {
+            store.dispatch(selectedPlayerIdSlice.actions.setSelectedPlayerId(playerIds[playerId]));
+            navigation.navigate('New Player')
+          } }
+        />
+      </View>
     </View>
   );
 }
@@ -270,6 +288,7 @@ const Home = ({ navigation }) => {
 
   return (
     <View style={styles.home}>
+      <View style={{ minWidth: 360, flex:1, alignItems: 'stretch' }}>
         <View style={{ flex: 1, justifyContent: 'flex-start', }}>
           <HomeHeader />
         </View>
@@ -294,6 +313,7 @@ const Home = ({ navigation }) => {
             />
           </View>
         </View>
+      </View>
     </View>
   );
 }
@@ -411,13 +431,13 @@ const ChallengeDetails = ({ route, navigation }) => {
         <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
           <Button 
             title="Players Payout" 
-            onPress={() => navigation.navigate('Players Payout') }
+            onPress={() => navigation.push('Players Payout') }
           />
         </View>
         <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
           <Button 
             title="Arbiter Payout" 
-            onPress={() => navigation.navigate('Arbiter Payout') }
+            onPress={() => navigation.push('Arbiter Payout') }
           />
         </View>
       </View>
@@ -491,7 +511,7 @@ export default function App() {
     <Provider store={store}>
       <NavigationContainer>
         <Stack.Navigator>
-          <Stack.Screen name="Player Select" component={PlayerSelect} />
+          <Stack.Screen name="Player Select" component={LocalPlayerSelect} />
           <Stack.Screen name="Home" component={Home} />
           <Stack.Screen name="Challenge Details" component={ChallengeDetails} />
           <Stack.Screen name="New Player" component={NewPlayer} />
@@ -573,7 +593,7 @@ const styles = StyleSheet.create({
   home: {
     flex: 1,
     backgroundColor: 'grey',
-    alignItems: 'stretch',
+    alignItems: 'center',
     justifyContent: 'flex-start',
   },
   challengeDetails: {

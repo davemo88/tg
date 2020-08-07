@@ -2,13 +2,17 @@ export type Player {
   id: string;
   name: string;
   pictureUrl: string;
-  balance: number;
+}
+
+export type LocalPlayer {
+  id: string,
+  playerId: string,
+  balance: number,
 }
 
 export type Opponent {
-  id: string;
-  name: string;
-  pictureUrl: string;
+  id: string,
+  playerId: string,
 }
 
 export type Challenge {
