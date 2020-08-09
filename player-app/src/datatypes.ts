@@ -1,16 +1,16 @@
-export type Player = {
+export interface Player {
   id:               string;
   name:             string;
   pictureUrl:       string;
 }
 
-export type LocalPlayer = {
+export interface LocalPlayer {
   id:               string,
   playerId:         string,
   balance:          number,
 }
 
-export type Challenge = {
+export interface Challenge {
   id:               string;
   playerOneId:      string;
   PlayerTwoId:      string;
@@ -19,6 +19,14 @@ export type Challenge = {
   playerOneSig:     bool;
   playerTwoSig:     bool;
   arbiterSig:       bool;
+}
+
+export const isSignedBy = (challenge: Challenge, player: Player): bool => {
+  return (
+    ((playerOneId === player.id) && playerOneSig)
+    ||
+    ((playerTwoId === player.id) && playerTwoSig)
+  )
 }
 
 export enum ChallengeStatus {
@@ -31,7 +39,7 @@ export enum ChallengeStatus {
   Invalid,
 }
 
-export const getChallengeStatus = (challenge: Challenge) => {
+export const getChallengeStatus = (challenge: Challenge): ChallengeStatus => {
   if (challenge.playerOneSig && challenge.playerTwoSig && challenge.arbiterSig && challenge.funding_tx) {
     return ChallengeStatus.Live;
   }
@@ -41,11 +49,13 @@ export const getChallengeStatus = (challenge: Challenge) => {
   else if (challenge.playerOneSig && challenge.playerTwoSig) {
     return ChallengeStatus.Accepted;
   }
-  else if ((challenge.PlayerOneSig || challenge.playerTwoSig) && !challenge.arbiterSig) {
+  else if ((challenge.playerOneSig || challenge.playerTwoSig) && !challenge.arbiterSig) {
     return ChallengeStatus.Issued;
   }
   else if (challenge.arbiterSig) {
     return ChallengeStatus.Invalid;
   }
-  return ChallengeStatus.Unsigned;
+  else {
+    return ChallengeStatus.Unsigned;
+  }
 }

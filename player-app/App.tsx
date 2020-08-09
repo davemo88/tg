@@ -142,11 +142,18 @@ const HomeHeader = (props) => {
 }
 
 const ChallengeListItem = (props) => {
-  const playerTwo = playerSelectors.selectById(store.getState(), props.challenge.playerTwoId);
+  const selectedLocalPlayer: LocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
+  let otherPlayer: Player;
+  if (props.challenge.playerOneId === selectedLocalPlayer.playerId) {
+    otherPlayer = playerSelectors.selectById(store.getState(), props.challenge.playerTwoId);
+  }
+  else {
+    otherPlayer = playerSelectors.selectById(store.getState(), props.challenge.playerOneId);
+  }
 
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'slategrey', margin: 5, padding: 5 }}>
-      <PlayerPortrait name={playerTwo.name} pictureUrl={playerTwo.pictureUrl} />
+      <PlayerPortrait name={otherPlayer.name} pictureUrl={otherPlayer.pictureUrl} />
       <View style={{ flexDirection: 'row', padding: 5, margin: 5, alignItems: 'center', justifyContent: 'center', }}>
         <ChallengeStatusView challenge={props.challenge} />
         <View>
@@ -199,7 +206,7 @@ const LocalPlayerSelect = ({ navigation }) => {
   const [selectedPlayerId, setSelectedPlayerId] = React.useState(localPlayers[0].playerId)
 
   return (
-    <View style={styles.newPlayer}>
+    <View style={styles.container}>
       <PlayerSelector 
         selectedPlayerId={selectedPlayerId}
         setSelectedPlayerId={setSelectedPlayerId}
@@ -232,7 +239,7 @@ const NewLocalPlayer = ({ navigation }) => {
   const [pictureUrl, setPictureUrl] = React.useState('');
 
   return (
-    <View style={styles.newPlayer}>
+    <View style={styles.container}>
       <PlayerPortrait name={playerName} pictureUrl={pictureUrl} />
       <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'lightslategrey', margin: 10, padding: 10 }}>
         <Text>Player Name</Text>
@@ -270,10 +277,11 @@ const NewLocalPlayer = ({ navigation }) => {
 const Home = ({ navigation }) => {
   const selectedLocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
 
-  const challenges = challengeSelectors
-    .selectAll(store.getState())
-    .filter((challenge, i, a) =>{ return challenge.playerOneId === selectedLocalPlayer.playerId })
-    .filter((challenge, i, a) =>{ return challenge.status != 'Resolved' });
+  const challenges = challengeSelectors.selectAll(store.getState())
+  .filter((challenge, i, a) =>{ return (
+    (challenge.playerOneId === selectedLocalPlayer.playerId || challenge.playerTwoId === selectedLocalPlayer.playerId)
+  )})
+  .filter((challenge, i, a) =>{ return challenge.status != 'Resolved' });
 
   return (
     <View style={styles.home}>
@@ -324,7 +332,7 @@ const NewChallenge = ({ navigation }) => {
   }
 
   return (
-    <View style={styles.newPlayer}>
+    <View style={styles.container}>
       <Text style={{ fontSize: 20 }}>Choose Player</Text>
       <PlayerSelector selectedPlayerId={playerTwoId} setSelectedPlayerId={setPlayerTwoId} playerIds={playerTwos.map(p => p.id)} />
       <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
@@ -362,7 +370,10 @@ const NewChallenge = ({ navigation }) => {
                 playerOneId: selectedLocalPlayer.playerId,
                 playerTwoId: playerTwoId,
                 pot: challengeAmount,
-                status: 'Issued',
+                funding_tx: false,
+                playerOneSig: true,
+                playerTwoSig: false,
+                arbiterSig: false,
               }))
               navigation.push('Home') 
             } }
@@ -377,7 +388,7 @@ const AddPlayer = ({ navigation }) => {
   const [playerName, setPlayerName] = React.useState('');
 
   return (
-    <View style={styles.newPlayer}>
+    <View style={styles.container}>
       <Image
         style={styles.mediumEmote}
         source=''
@@ -410,14 +421,22 @@ const AddPlayer = ({ navigation }) => {
 const ChallengeDetails = ({ route, navigation }) => {
   const { challengeId } = route.params;
   const challenge = challengeSelectors.selectById(store.getState(), challengeId);
-  const playerTwo = playerSelectors.selectById(store.getState(), challenge.playerTwoId);
+  const selectedLocalPlayer: LocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
+  let otherPlayer: Player;
+  if (challenge.playerOneId === selectedLocalPlayer.playerId) {
+    otherPlayer = playerSelectors.selectById(store.getState(), challenge.playerTwoId);
+  }
+  else {
+    otherPlayer = playerSelectors.selectById(store.getState(), challenge.playerOneId);
+  }
+
   return (
-    <View style={styles.challengeDetails}>
+    <View style={styles.container}>
       <View style={{ flex: 2, alignItems: 'center', justifyContent: 'space-around', }}>
         <View style= {{flexDirection: 'row', justifyContent: 'space-between' }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 20 }}>Player 2</Text>
-            <PlayerPortrait name={playerTwo.name} pictureUrl={playerTwo.pictureUrl} />
+            <Text style={{ fontSize: 20 }}>Opponent</Text>
+            <PlayerPortrait name={otherPlayer.name} pictureUrl={otherPlayer.pictureUrl} />
           </View>
           <View style={{ flex: 1, alignItems: 'flex-end' }}>
               <Text style={{ fontSize: 20 }}>Pot</Text>
@@ -435,7 +454,7 @@ const ChallengeDetails = ({ route, navigation }) => {
       <View style={{ flex: 1,  }}>
         <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
           <Button 
-            disabled={challenge.status !== 'Live'}
+            disabled={getChallengeStatus(challenge) != ChallengeStatus.Live}
             title="Request Payout" 
             onPress={() => navigation.push('Request Payout', { challengeId }) }
           />
@@ -466,7 +485,7 @@ const RequestPayout = ({ route, navigation }) => {
   }
 
   return (
-    <View style={styles.payoutRequest}>
+    <View style={styles.container}>
       <View>
         <View style={{ alignItems: 'center' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -622,28 +641,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  newPlayer: {
-    flex: 1,
-    backgroundColor: 'grey',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   home: {
     flex: 1,
     backgroundColor: 'grey',
     alignItems: 'center',
     justifyContent: 'flex-start',
   },
-  challengeDetails: {
+  container: {
     flex: 1,
     backgroundColor: 'grey',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  payoutRequest: {
-    flex: 1,
-    backgroundColor: 'grey',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  }
 });

@@ -77,7 +77,6 @@ store.dispatch(challengeSlice.actions.challengeAdded({
   playerOneId: 'akin',
   playerTwoId: 'betsy',
   pot: 256,
-  status: 'Live',
   funding_tx: true,
   playerOneSig: true,
   playerTwoSig: true,
@@ -88,7 +87,6 @@ store.dispatch(challengeSlice.actions.challengeAdded({
   playerOneId: 'akin',
   playerTwoId: 'stan',
   pot: 123,
-  status: 'Certified',
   funding_tx: false,
   playerOneSig: true,
   playerTwoSig: true,
@@ -96,13 +94,22 @@ store.dispatch(challengeSlice.actions.challengeAdded({
 }))
 store.dispatch(challengeSlice.actions.challengeAdded({ 
   id: nanoid(),
+  playerOneId: 'akin',
+  playerTwoId: 'lesley',
+  pot: 6,
+  funding_tx: false,
+  playerOneSig: false,
+  playerTwoSig: true,
+  arbiterSig: false,
+}))
+store.dispatch(challengeSlice.actions.challengeAdded({ 
+  id: nanoid(),
   playerOneId: 'duncan',
   playerTwoId: 'betsy',
   pot: 6,
-  status: 'Issued',
   funding_tx: false,
-  playerOneSig: true,
-  playerTwoSig: false,
+  playerOneSig: false,
+  playerTwoSig: true,
   arbiterSig: false,
 }))
 store.dispatch(challengeSlice.actions.challengeAdded({ 
@@ -110,7 +117,6 @@ store.dispatch(challengeSlice.actions.challengeAdded({
   playerOneId: 'lesley',
   playerTwoId: 'stan',
   pot: 11143,
-  status: 'Live',
   funding_tx: true,
   playerOneSig: true,
   playerTwoSig: true,
