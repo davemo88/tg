@@ -315,8 +315,8 @@ const NewChallenge = ({ navigation }) => {
       <PlayerSelector selectedPlayerId={playerTwoId} setSelectedPlayerId={setPlayerTwoId} playerIds={playerTwos.map(p => p.id)} />
       <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
         <Button 
-          title="New Player" 
-          onPress={() => navigation.navigate('New Player') }
+          title="Add Player" 
+          onPress={() => navigation.navigate('Add Player') }
         />
       </View>
       <View style={{ backgroundColor: 'lightslategrey', alignItems: 'center', padding: 10 }}>
@@ -354,7 +354,7 @@ const NewChallenge = ({ navigation }) => {
   );
 }
 
-const NewPlayer = ({ navigation }) => {
+const AddPlayer = ({ navigation }) => {
   const [playerName, setPlayerName] = React.useState('');
 
   return (
@@ -517,7 +517,7 @@ export default function App() {
           <Stack.Screen name="Home" component={Home} />
           <Stack.Screen name="Challenge Details" component={ChallengeDetails} />
           <Stack.Screen name="New Local Player" component={NewLocalPlayer} />
-          <Stack.Screen name="New Player" component={NewPlayer} />
+          <Stack.Screen name="Add Player" component={AddPlayer} />
           <Stack.Screen name="New Challenge" component={NewChallenge} />
           <Stack.Screen name="Request Payout" component={RequestPayout} />
         </Stack.Navigator>
