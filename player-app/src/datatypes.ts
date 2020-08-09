@@ -10,14 +10,10 @@ export type LocalPlayer {
   balance: number,
 }
 
-export type Opponent {
-  id: string,
-  playerId: string,
-}
-
 export type Challenge {
   id: string;
-  opponentId: string;
+  playerOneId: string;
+  PlayerTwoId: string;
   pot: number;
   status: string;
 }

@@ -6,8 +6,10 @@ import { nanoid } from '@reduxjs/toolkit'
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import Slider from '@react-native-community/slider';
 
-import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, opponentSelectors, opponentSlice, challengeSelectors, challengeSlice, selectedPlayerIdSlice, } from './src/redux.ts';
+
+import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, selectedLocalPlayerIdSlice, } from './src/redux.ts';
 import { Player } from './src/datatypes.ts'
 
 export interface PlayerPortraitProps {
@@ -114,8 +116,8 @@ const SignatureSwitch = (props) => {
 }
 
 const HomeHeader = (props) => {
-  const selectedPlayerId = store.getState().selectedPlayerId;
-  const selectedPlayer = playerSelectors.selectById(store.getState(), selectedPlayerId);
+  const selectedLocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
+  const selectedPlayer = playerSelectors.selectById(store.getState(), selectedLocalPlayer.playerId);
 
   return(
     <View>
@@ -127,7 +129,7 @@ const HomeHeader = (props) => {
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, margin: 5, backgroundColor: 'slategrey', }}>
         <PlayerPortrait name={selectedPlayer.name} pictureUrl={selectedPlayer.pictureUrl} />
         <View style={{ alignItems: 'center' }}>
-          <Currency amount={selectedPlayer.balance} />
+          <Currency amount={selectedLocalPlayer.balance} />
           <Text style={{ textDecorationLine: 'underline', color: 'lightblue' }}>Address</Text>
         </View>
       </View> 
@@ -136,12 +138,11 @@ const HomeHeader = (props) => {
 }
 
 const ChallengeListItem = (props) => {
-  const opponent = opponentSelectors.selectById(store.getState(), props.challenge.opponentId);
-  const opponentPlayer = playerSelectors.selectById(store.getState(), opponent.playerId);
+  const playerTwo = playerSelectors.selectById(store.getState(), props.challenge.playerTwoId);
 
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'slategrey', margin: 5, padding: 5 }}>
-      <PlayerPortrait name={opponentPlayer.name} pictureUrl={opponentPlayer.pictureUrl} />
+      <PlayerPortrait name={playerTwo.name} pictureUrl={playerTwo.pictureUrl} />
       <View style={{ flexDirection: 'row', padding: 5, margin: 5, alignItems: 'center', justifyContent: 'center', }}>
         <Text>Status: {props.challenge.status}</Text>
         <View>
@@ -182,8 +183,7 @@ const Arbiter: React.FC<PlayerProps> = (props) => {
 
 const LocalPlayerSelect = ({ navigation }) => {
   const localPlayers = localPlayerSelectors.selectAll(store.getState());
-  const [selectedPlayerId, setSelectedPlayerId] = React.useState(store.getState().selectedPlayerId)
-
+  const [selectedPlayerId, setSelectedPlayerId] = React.useState(localPlayers[0].playerId)
 
   return (
     <View style={styles.newPlayer}>
@@ -196,16 +196,17 @@ const LocalPlayerSelect = ({ navigation }) => {
         <Button 
           title="Ok" 
           onPress={() => {
-            store.dispatch(selectedPlayerIdSlice.actions.setSelectedPlayerId(selectedPlayerId));
+            const selectedLocalPlayer = localPlayers.find(l => l.playerId === selectedPlayerId);
+            store.dispatch(selectedLocalPlayerIdSlice.actions.setSelectedLocalPlayerId(selectedLocalPlayer.id));
             navigation.navigate('Home')
           } }
         />
       </View>
       <View style={{ padding: 40 }}>
         <Button 
-          title="New Player" 
+          title="New Local Player" 
           onPress={() => {
-            navigation.navigate('New Player')
+            navigation.navigate('New Local Player')
           } }
         />
       </View>
@@ -213,7 +214,7 @@ const LocalPlayerSelect = ({ navigation }) => {
   );
 }
 
-const NewPlayer = ({ navigation }) => {
+const NewLocalPlayer = ({ navigation }) => {
   const [playerName, setPlayerName] = React.useState('');
   const [pictureUrl, setPictureUrl] = React.useState('');
 
@@ -241,7 +242,9 @@ const NewPlayer = ({ navigation }) => {
         <Button 
           title="Ok" 
           onPress={() => {
-            store.dispatch(playerSlice.actions.playerAdded({ id: nanoid(), name: playerName, pictureUrl: pictureUrl }));
+            const newPlayerId = nanoid();
+            store.dispatch(playerSlice.actions.playerAdded({ id: newPlayerId, name: playerName, pictureUrl: pictureUrl }));
+            store.dispatch(localPlayerSlice.actions.localPlayerAdded({ id: nanoid(), playerId: newPlayerId, balance: 0 }));
             navigation.push('Player Select')
           } }
         />
@@ -252,7 +255,11 @@ const NewPlayer = ({ navigation }) => {
 }
 
 const Home = ({ navigation }) => {
-  const challenges = challengeSelectors.selectAll(store.getState());
+  const selectedLocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
+
+  const challenges = challengeSelectors
+    .selectAll(store.getState())
+    .filter((challenge, i, a) =>{ return challenge.playerOneId === selectedLocalPlayer.playerId });
 
   return (
     <View style={styles.home}>
@@ -287,18 +294,29 @@ const Home = ({ navigation }) => {
 }
 
 const NewChallenge = ({ navigation }) => {
-  const [challengeAmount, onChangeChallengeAmount] = React.useState('');
-  const opponents = opponentSelectors.selectAll(store.getState());
-  const [selectedOpponentId, setSelectedOpponentId] = React.useState(opponents[0].playerId);
+  const selectedLocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
+  const playerTwos = playerSelectors
+    .selectAll(store.getState())
+    .filter((player, i, a) => player.id != selectedLocalPlayer.playerId);
+  const [challengeAmount, onChangeChallengeAmount] = React.useState('0');
+  const [playerTwoId, setPlayerTwoId] = React.useState(playerTwos[0].id);
+  const [isSigned, setIsSigned] = React.useState(false);
+
+  const valid = () => {
+    if ((parseInt(challengeAmount) > 0) && isSigned) {
+      return true
+    }
+    return false
+  }
 
   return (
     <View style={styles.newPlayer}>
-      <Text style={{ fontSize: 20 }}>Choose Opponent</Text>
-      <PlayerSelector selectedPlayerId={selectedOpponentId} setSelectedPlayerId={setSelectedOpponentId} playerIds={opponents.map(oppo => oppo.playerId)} />
+      <Text style={{ fontSize: 20 }}>Choose Player</Text>
+      <PlayerSelector selectedPlayerId={playerTwoId} setSelectedPlayerId={setPlayerTwoId} playerIds={playerTwos.map(p => p.id)} />
       <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
         <Button 
-          title="New Opponent" 
-          onPress={() => navigation.navigate('New Opponent') }
+          title="New Player" 
+          onPress={() => navigation.navigate('New Player') }
         />
       </View>
       <View style={{ backgroundColor: 'lightslategrey', alignItems: 'center', padding: 10 }}>
@@ -306,6 +324,7 @@ const NewChallenge = ({ navigation }) => {
         <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'lightslategrey', }}>
           <TextInput
             onChangeText={text => onChangeChallengeAmount(text)}
+            onBlur={() => {if (Number.isNaN(parseInt(challengeAmount))) { onChangeChallengeAmount('0')}}}
             value={challengeAmount}
             style={{ borderWidth: 1, width: 100, margin: 10, padding: 4, textAlign: 'right' }}
           />     
@@ -316,11 +335,13 @@ const NewChallenge = ({ navigation }) => {
         <SignatureSwitch />
         <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
           <Button 
+            disabled={!valid()}
             title="Issue" 
             onPress={() => {
               store.dispatch(challengeSlice.actions.challengeAdded({ 
                 id: nanoid(),
-                opponentId: opponents.find(oppo => oppo.playerId === selectedOpponentId).id,
+                playerOneId: selectedLocalPlayer.playerId,
+                playerTwoId: playerTwoId,
                 pot: challengeAmount,
                 status: 'Issued',
               }))
@@ -333,8 +354,8 @@ const NewChallenge = ({ navigation }) => {
   );
 }
 
-const NewOpponent = ({ navigation }) => {
-  const [opponentName, setOpponentName] = React.useState('');
+const NewPlayer = ({ navigation }) => {
+  const [playerName, setPlayerName] = React.useState('');
 
   return (
     <View style={styles.newPlayer}>
@@ -344,19 +365,20 @@ const NewOpponent = ({ navigation }) => {
       />
       <View style={{alignItems: 'center', backgroundColor: 'lightslategrey', margin: 10, padding: 10 }}>
         <TextInput
-          onChangeText={text => setOpponentName(text)}
-          value={opponentName}
+          onChangeText={text => setPlayerName(text)}
+          value={playerName}
           style={{ borderWidth: 1, flex: 1, margin: 10, padding: 4, }}
         />     
-        <Text>Enter Opponent Name or Address</Text>
+        <Text>Enter Player Name or Address</Text>
       </View>
       <View style={{flexDirection: 'row' }}>
         <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey' }}>
           <Button 
             title="Ok" 
             onPress={() => {
-              store.dispatch(opponentSlice.actions.opponentAdded({ id: nanoid(), name: opponentName, pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0' }));
-              setOpponentName('');
+              const newPlayerId = nanoid();
+              store.dispatch(playerSlice.actions.playerAdded({ id: newPlayerId, name: playerName, pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0' }));
+              setPlayerName('');
               navigation.push('New Challenge')
             } }
           />
@@ -369,17 +391,17 @@ const NewOpponent = ({ navigation }) => {
 const ChallengeDetails = ({ route, navigation }) => {
   const { challengeId } = route.params;
   const challenge = challengeSelectors.selectById(store.getState(), challengeId);
-  const opponent = opponentSelectors.selectById(store.getState(), challenge.opponentId);
+  const playerTwo = playerSelectors.selectById(store.getState(), challenge.playerTwoId);
   return (
     <View style={styles.challengeDetails}>
       <View style={{ flex: 2, alignItems: 'center', justifyContent: 'space-around', }}>
         <View style= {{flexDirection: 'row', justifyContent: 'space-between' }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 20 }}>Opponent</Text>
-            <PlayerPortrait name={opponent.name} pictureUrl={opponent.pictureUrl} />
+            <Text style={{ fontSize: 20 }}>Player 2</Text>
+            <PlayerPortrait name={playerTwo.name} pictureUrl={playerTwo.pictureUrl} />
           </View>
           <View style={{ flex: 1, alignItems: 'flex-end' }}>
-              <Text style={{ fontSize: 20 }}>Amount</Text>
+              <Text style={{ fontSize: 20 }}>Pot</Text>
             <View style={{ flex: 1, justifyContent: 'center' }}>
               <Currency amount={challenge.pot} />
             </View>
@@ -397,14 +419,8 @@ const ChallengeDetails = ({ route, navigation }) => {
       <View style={{ flex: 1,  }}>
         <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
           <Button 
-            title="Players Payout" 
-            onPress={() => navigation.push('Players Payout') }
-          />
-        </View>
-        <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
-          <Button 
-            title="Arbiter Payout" 
-            onPress={() => navigation.push('Arbiter Payout') }
+            title="Request Payout" 
+            onPress={() => navigation.push('Request Payout', { challengeId }) }
           />
         </View>
       </View>
@@ -412,52 +428,71 @@ const ChallengeDetails = ({ route, navigation }) => {
   );
 }
 
-const ArbiterPayout = ({ navigation }) => {
-  const [refToken, onChangeRefToken] = React.useState('');
+const RequestPayout = ({ route, navigation }) => {
+  const { challengeId } = route.params;
+  const challenge = challengeSelectors.selectById(store.getState(), challengeId);
+  const playerTwo = playerSelectors.selectById(store.getState(), challenge.playerTwoId)
+  const selectedLocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
+  const selectedPlayer = playerSelectors.selectById(store.getState(), selectedLocalPlayer.playerId);
+  const [playerOnePayout, setPlayerOnPayout] = React.useState(challenge.pot);
+  const [playerTwoPayout, setPlayerTwoPayout] = React.useState(0);
+  const [isArbitratedPayout, setIsArbitratedPayout] = React.useState(false);
+  const toggleArbitration = () => setIsArbitratedPayout(previousState => !previousState);
+  const [arbitrationToken, setArbitrationToken] = React.useState('');
 
-  return (
-    <View style={styles.payoutRequest}>
-      <View style={{ alignItems: 'center' }}>
-        <View>
-          <Text style={{ fontSize: 20 }}>Recipient</Text>
-        </View>
-        <PlayerSelector
-        />
-        <Currency amount='100' />
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'lightslategrey', margin: 10, padding: 10 }}>
-        <Text>Referee Token</Text>
-        <TextInput
-          onChangeText={text => onChangeRefToken(text)}
-          value={refToken}
-          style={{ borderWidth: 1, flex: 1, margin: 10, padding: 4, }}
-        />     
-      </View>
-      <View>
-        <Text style={{ fontSize: 16 }}>Arbiter</Text>
-        <Arbiter name='Gordon Blue' pictureUrl='https://static-cdn.jtvnw.net/emoticons/v1/28/1.0' />
-      </View>
-      <SignatureSwitch />
-      <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
-        <Button 
-          title="Send" 
-          onPress={() => navigation.navigate('Home') }
-        />
-      </View>
-    </View>
-  );
-}
-
-const PlayersPayout = ({ navigation }) => {
   return (
     <View style={styles.payoutRequest}>
       <View>
         <View style={{ alignItems: 'center' }}>
-          <Text style={{ fontSize: 20 }}>Recipient</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={{ fontSize: 16 }}>Total Pot: </Text>
+            <Currency amount={challenge.pot} />
+          </View>
+          <Text style={{ fontSize: 16 }}>Distribute Pot</Text>
+          <View style={{ flexDirection: 'row', }}>
+          </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-start', padding: 10 }}>
+            <View style={{ alignItems: 'center', padding: 5 }}>
+              <PlayerPortrait name={selectedPlayer.name} pictureUrl={selectedPlayer.pictureUrl} />
+              <Currency amount={ localPlayerPayout } />
+            </View>
+            <View style={{ alignItems: 'center', padding: 5 }}>
+              <PlayerPortrait name={playerTwo.name} pictureUrl={playerTwo.pictureUrl} />
+              <Currency amount={ playerTwoPayout } />
+            </View>
+          </View>
+          <Slider
+            style={{ width: 200, height: 40, padding: 5, margin: 5, }}
+            value="0"
+            onValueChange={ (value) => {
+              const newPLayerOnePayout = Math.floor((1-value) * challenge.pot);
+              setPlayerOnePayout(newPLayerOnePayout);
+              setPlayerTwoPayout(challenge.pot - newPLayerOnePayout);
+            }}
+          />
         </View>
-        <PlayerSelector />
       </View>
-      <Currency amount='100' />
+      <View style={{ padding: 5 }}>
+        <Text>Arbitrated Payout</Text>
+        <Switch 
+          onValueChange={toggleArbitration}
+          value={isArbitratedPayout}
+        />
+      </View>
+      { isArbitratedPayout && 
+        <View style={{ alignItems: 'center' }}>
+          <Text style={{ padding: 2 }}>Arbiter</Text>
+          <View>
+            <Arbiter name='Gordon Blue' pictureUrl='https://static-cdn.jtvnw.net/emoticons/v1/28/1.0' />
+          </View>
+          <Text style={{ padding: 2 }}>Token</Text>
+          <TextInput
+            value={arbitrationToken}
+            onChangeText={text => setArbitrationToken(text)}
+            style={{ borderWidth: 1, flex: 1, margin: 10, padding: 4, }}
+          />
+        </View>
+      }
       <View style={{ flexDirection: 'row' }}>
         <SignatureSwitch />
         <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
@@ -481,11 +516,10 @@ export default function App() {
           <Stack.Screen name="Player Select" component={LocalPlayerSelect} />
           <Stack.Screen name="Home" component={Home} />
           <Stack.Screen name="Challenge Details" component={ChallengeDetails} />
+          <Stack.Screen name="New Local Player" component={NewLocalPlayer} />
           <Stack.Screen name="New Player" component={NewPlayer} />
-          <Stack.Screen name="New Opponent" component={NewOpponent} />
           <Stack.Screen name="New Challenge" component={NewChallenge} />
-          <Stack.Screen name="Players Payout" component={PlayersPayout} />
-          <Stack.Screen name="Arbiter Payout" component={ArbiterPayout} />
+          <Stack.Screen name="Request Payout" component={RequestPayout} />
         </Stack.Navigator>
       </NavigationContainer>
     </Provider>
@@ -507,6 +541,7 @@ const styles = StyleSheet.create({
   },
   player: {
     padding: 10,
+    minWidth: 140,
     backgroundColor: 'lightslategrey',
   },
   payoutScript: {
