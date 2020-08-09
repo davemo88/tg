@@ -29,6 +29,7 @@ export const challengeSlice = createSlice({
   initialState: challengeAdapter.getInitialState(),
   reducers: {
     challengeAdded: challengeAdapter.addOne,
+    challengeUpdated: challengeAdapter.updateOne,
   }
 })
 

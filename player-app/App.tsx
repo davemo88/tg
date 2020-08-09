@@ -96,9 +96,13 @@ const CurrencySymbol = (props) => {
   );
 }
 
-const SignatureSwitch = (props) => {
-  const [isEnabled, setIsEnabled] = React.useState(false);
-  const toggleSwitch = () => setIsEnabled(previousState => !previousState);
+export interface SignatureSwitchProps {
+  isSigned: bool;
+  setIsSigned: (newIsSigned: bool) => void;
+}
+
+const SignatureSwitch: React.FC<SignatureSwitchProps> = (props) => {
+  const toggleSwitch = () => props.setIsSigned(previousState => !previousState);
 
   return (
     <View style={{ flexDirection: 'row', backgroundColor: 'lightslategrey', alignItems: 'center', justifyContent: 'space-between', padding: 10, margin: 10, }}>
@@ -108,7 +112,7 @@ const SignatureSwitch = (props) => {
       <View style={{ flex: 1 }}>
         <Switch 
           onValueChange={toggleSwitch}
-          value={isEnabled}
+          value={props.isSigned}
         />
       </View>
     </View>
@@ -259,7 +263,8 @@ const Home = ({ navigation }) => {
 
   const challenges = challengeSelectors
     .selectAll(store.getState())
-    .filter((challenge, i, a) =>{ return challenge.playerOneId === selectedLocalPlayer.playerId });
+    .filter((challenge, i, a) =>{ return challenge.playerOneId === selectedLocalPlayer.playerId })
+    .filter((challenge, i, a) =>{ return challenge.status != 'Resolved' });
 
   return (
     <View style={styles.home}>
@@ -332,12 +337,13 @@ const NewChallenge = ({ navigation }) => {
         </View>
       </View>
       <View style={{ flexDirection: 'row' }}>
-        <SignatureSwitch />
+        <SignatureSwitch isSigned={isSigned} setIsSigned={setIsSigned} />
         <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
           <Button 
             disabled={!valid()}
             title="Issue" 
             onPress={() => {
+// native code here
               store.dispatch(challengeSlice.actions.challengeAdded({ 
                 id: nanoid(),
                 playerOneId: selectedLocalPlayer.playerId,
@@ -430,15 +436,23 @@ const ChallengeDetails = ({ route, navigation }) => {
 
 const RequestPayout = ({ route, navigation }) => {
   const { challengeId } = route.params;
-  const challenge = challengeSelectors.selectById(store.getState(), challengeId);
+  let challenge = challengeSelectors.selectById(store.getState(), challengeId);
   const playerTwo = playerSelectors.selectById(store.getState(), challenge.playerTwoId)
   const selectedLocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
   const selectedPlayer = playerSelectors.selectById(store.getState(), selectedLocalPlayer.playerId);
-  const [playerOnePayout, setPlayerOnPayout] = React.useState(challenge.pot);
+  const [playerOnePayout, setPlayerOnePayout] = React.useState(challenge.pot);
   const [playerTwoPayout, setPlayerTwoPayout] = React.useState(0);
   const [isArbitratedPayout, setIsArbitratedPayout] = React.useState(false);
   const toggleArbitration = () => setIsArbitratedPayout(previousState => !previousState);
   const [arbitrationToken, setArbitrationToken] = React.useState('');
+  const [isSigned, setIsSigned] = React.useState(false);
+
+  const valid = () => {
+    if (isSigned && (!isArbitratedPayout || (arbitrationToken != ''))) {
+      return true;
+    }
+    return false
+  }
 
   return (
     <View style={styles.payoutRequest}>
@@ -454,7 +468,7 @@ const RequestPayout = ({ route, navigation }) => {
           <View style={{ flexDirection: 'row', justifyContent: 'flex-start', padding: 10 }}>
             <View style={{ alignItems: 'center', padding: 5 }}>
               <PlayerPortrait name={selectedPlayer.name} pictureUrl={selectedPlayer.pictureUrl} />
-              <Currency amount={ localPlayerPayout } />
+              <Currency amount={ playerOnePayout } />
             </View>
             <View style={{ alignItems: 'center', padding: 5 }}>
               <PlayerPortrait name={playerTwo.name} pictureUrl={playerTwo.pictureUrl} />
@@ -494,11 +508,18 @@ const RequestPayout = ({ route, navigation }) => {
         </View>
       }
       <View style={{ flexDirection: 'row' }}>
-        <SignatureSwitch />
+        <SignatureSwitch isSigned={isSigned} setIsSigned={setIsSigned} />
         <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
           <Button 
+            disabled={!valid()}
             title="Send" 
-            onPress={() => navigation.navigate('Home') }
+            onPress={() => {
+              store.dispatch(challengeSlice.actions.challengeUpdated({ 
+                id: challenge.id,
+                changes: { status: 'Resolved' }
+              }))
+              navigation.push('Home')
+            } }
           />
         </View>
       </View>
