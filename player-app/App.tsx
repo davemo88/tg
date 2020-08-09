@@ -425,6 +425,7 @@ const ChallengeDetails = ({ route, navigation }) => {
       <View style={{ flex: 1,  }}>
         <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
           <Button 
+            disabled={challenge.status !== 'Live'}
             title="Request Payout" 
             onPress={() => navigation.push('Request Payout', { challengeId }) }
           />

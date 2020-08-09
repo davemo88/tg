@@ -76,7 +76,7 @@ store.dispatch(challengeSlice.actions.challengeAdded({
   playerOneId: 'akin',
   playerTwoId: 'betsy',
   pot: 256,
-  status: 'Issued',
+  status: 'Live',
 }))
 store.dispatch(challengeSlice.actions.challengeAdded({ 
   id: nanoid(),
@@ -89,15 +89,15 @@ store.dispatch(challengeSlice.actions.challengeAdded({
   id: nanoid(),
   playerOneId: 'duncan',
   playerTwoId: 'betsy',
-  pot: 256,
+  pot: 6,
   status: 'Issued',
 }))
 store.dispatch(challengeSlice.actions.challengeAdded({ 
   id: nanoid(),
   playerOneId: 'lesley',
   playerTwoId: 'stan',
-  pot: 123,
-  status: 'Certified',
+  pot: 11143,
+  status: 'Live',
 }))
 
 type RootState = ReturnType<typeof store.getState>
