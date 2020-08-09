@@ -19,6 +19,7 @@ export const localPlayerSlice = createSlice({
   initialState: localPlayerAdapter.getInitialState(),
   reducers: {
     localPlayerAdded: localPlayerAdapter.addOne,
+    localPlayerUpdated: localPlayerAdapter.updateOne,
   }
 })
 
@@ -77,6 +78,10 @@ store.dispatch(challengeSlice.actions.challengeAdded({
   playerTwoId: 'betsy',
   pot: 256,
   status: 'Live',
+  funding_tx: true,
+  playerOneSig: true,
+  playerTwoSig: true,
+  arbiterSig: true,
 }))
 store.dispatch(challengeSlice.actions.challengeAdded({ 
   id: nanoid(),
@@ -84,6 +89,10 @@ store.dispatch(challengeSlice.actions.challengeAdded({
   playerTwoId: 'stan',
   pot: 123,
   status: 'Certified',
+  funding_tx: false,
+  playerOneSig: true,
+  playerTwoSig: true,
+  arbiterSig: true,
 }))
 store.dispatch(challengeSlice.actions.challengeAdded({ 
   id: nanoid(),
@@ -91,6 +100,10 @@ store.dispatch(challengeSlice.actions.challengeAdded({
   playerTwoId: 'betsy',
   pot: 6,
   status: 'Issued',
+  funding_tx: false,
+  playerOneSig: true,
+  playerTwoSig: false,
+  arbiterSig: false,
 }))
 store.dispatch(challengeSlice.actions.challengeAdded({ 
   id: nanoid(),
@@ -98,6 +111,10 @@ store.dispatch(challengeSlice.actions.challengeAdded({
   playerTwoId: 'stan',
   pot: 11143,
   status: 'Live',
+  funding_tx: true,
+  playerOneSig: true,
+  playerTwoSig: true,
+  arbiterSig: true,
 }))
 
 type RootState = ReturnType<typeof store.getState>

@@ -10,7 +10,7 @@ import Slider from '@react-native-community/slider';
 
 
 import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, selectedLocalPlayerIdSlice, } from './src/redux.ts';
-import { Player } from './src/datatypes.ts'
+import { Player, LocalPlayer, Challenge, ChallengeStatus, getChallengeStatus } from './src/datatypes.ts'
 
 export interface PlayerPortraitProps {
   name: string;
@@ -148,7 +148,7 @@ const ChallengeListItem = (props) => {
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'slategrey', margin: 5, padding: 5 }}>
       <PlayerPortrait name={playerTwo.name} pictureUrl={playerTwo.pictureUrl} />
       <View style={{ flexDirection: 'row', padding: 5, margin: 5, alignItems: 'center', justifyContent: 'center', }}>
-        <Text>Status: {props.challenge.status}</Text>
+        <ChallengeStatusView challenge={props.challenge} />
         <View>
           <View style={{ padding: 20 }}>
             <Currency amount={props.challenge.pot} />
@@ -165,7 +165,16 @@ const ChallengeListItem = (props) => {
   );
 }
 
-const Arbiter: React.FC<PlayerProps> = (props) => {
+const ChallengeStatusView = (props) => {
+  return(
+    <View>
+      <Text style={{ fontSize: 20 }}>Status</Text>
+      <Text>{ChallengeStatus[getChallengeStatus(props.challenge)]}</Text>
+    </View>
+  )
+}
+
+const Arbiter = (props) => {
   return (
     <View style={styles.arbiter}>
       <View style={{ alignItems: "center", padding: 2, margin: 2, }}>
@@ -343,6 +352,10 @@ const NewChallenge = ({ navigation }) => {
             disabled={!valid()}
             title="Issue" 
             onPress={() => {
+              store.dispatch(localPlayerSlice.actions.localPlayerUpdated({ 
+                id: selectedLocalPlayer.id,
+                changes: { balance: selectedLocalPlayer.balance - Math.ceil(challengeAmount/2) }
+              }))
 // native code here
               store.dispatch(challengeSlice.actions.challengeAdded({ 
                 id: nanoid(),
@@ -413,10 +426,7 @@ const ChallengeDetails = ({ route, navigation }) => {
             </View>
           </View>
         </View>
-        <View>
-          <Text style={{ fontSize: 20 }}>Status</Text>
-          <Text>{challenge.status}</Text>
-        </View>
+        <ChallengeStatusView challenge={challenge} />
         <View>
           <Text style={{ fontSize: 20 }}>Arbiter</Text>
           <Arbiter name='Gordon Blue' pictureUrl='https://static-cdn.jtvnw.net/emoticons/v1/28/1.0' />
@@ -515,6 +525,10 @@ const RequestPayout = ({ route, navigation }) => {
             disabled={!valid()}
             title="Send" 
             onPress={() => {
+              store.dispatch(localPlayerSlice.actions.localPlayerUpdated({ 
+                id: selectedLocalPlayer.id,
+                changes: { balance: selectedLocalPlayer.balance + playerOnePayout }
+              }))
               store.dispatch(challengeSlice.actions.challengeUpdated({ 
                 id: challenge.id,
                 changes: { status: 'Resolved' }
