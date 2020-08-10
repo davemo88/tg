@@ -64,13 +64,6 @@ store.dispatch(localPlayerSlice.actions.localPlayerAdded({ id: 'local-akin', pla
 store.dispatch(localPlayerSlice.actions.localPlayerAdded({ id: 'local-duncan', playerId: 'duncan', balance: 101, }))
 store.dispatch(localPlayerSlice.actions.localPlayerAdded({ id: 'local-lesley', playerId: 'lesley', balance: 2727}))
 
-// select Akin by default
-store.dispatch(
-  selectedLocalPlayerIdSlice.actions.setSelectedLocalPlayerId(
-    'local-akin'
-  )
-);
-
 // test challenges
 store.dispatch(challengeSlice.actions.challengeAdded({ 
   id: nanoid(),

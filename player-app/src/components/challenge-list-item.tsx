@@ -22,14 +22,11 @@ export const ChallengeListItem = (props) => {
   }
 
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'slategrey', margin: 5, padding: 5 }}>
+    <View style={{ flexDirection: 'row', backgroundColor: 'slategrey', margin: 2, padding: 2 }}>
       <PlayerPortrait name={otherPlayer.name} pictureUrl={otherPlayer.pictureUrl} />
-      <View style={{ flexDirection: 'row', padding: 5, margin: 5, alignItems: 'center', justifyContent: 'center', }}>
-        <ChallengeSummary challenge={props.challenge} />
+      <ChallengeSummary challenge={props.challenge} />
+      <View style={{ alignItems: 'center', justifyContent: 'center', }}>
         <View>
-          <View style={{ padding: 20 }}>
-            <Currency amount={props.challenge.pot} />
-          </View>
           <Button 
             title="Details" 
             onPress={() => 

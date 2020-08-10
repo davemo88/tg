@@ -16,12 +16,9 @@ import { SignatureSwitch } from '../signature-switch.tsx';
 export const RequestPayout = ({ route, navigation }) => {
   const { challengeId } = route.params;
   const challenge = challengeSelectors.selectById(store.getState(), challengeId);
-  console.log("request payout challenge id: ", challengeId);
-  console.log("request payout challenge", challenge);
-  console.log("request payout challenge", store.getState());
+  const playerOne = playerSelectors.selectById(store.getState(), challenge.playerOneId)
   const playerTwo = playerSelectors.selectById(store.getState(), challenge.playerTwoId)
   const selectedLocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
-  const selectedPlayer = playerSelectors.selectById(store.getState(), selectedLocalPlayer.playerId);
   const [playerOnePayout, setPlayerOnePayout] = React.useState(challenge.pot);
   const [playerTwoPayout, setPlayerTwoPayout] = React.useState(0);
   const [isArbitratedPayout, setIsArbitratedPayout] = React.useState(false);
@@ -49,7 +46,7 @@ export const RequestPayout = ({ route, navigation }) => {
           </View>
           <View style={{ flexDirection: 'row', justifyContent: 'flex-start', padding: 10 }}>
             <View style={{ alignItems: 'center', padding: 5 }}>
-              <PlayerPortrait name={selectedPlayer.name} pictureUrl={selectedPlayer.pictureUrl} />
+              <PlayerPortrait name={playerOne.name} pictureUrl={playerOne.pictureUrl} />
               <Currency amount={ playerOnePayout } />
             </View>
             <View style={{ alignItems: 'center', padding: 5 }}>
@@ -79,7 +76,7 @@ export const RequestPayout = ({ route, navigation }) => {
         <View style={{ alignItems: 'center' }}>
           <Text style={{ padding: 2 }}>Arbiter</Text>
           <View>
-            <Arbiter name='Gordon Blue' pictureUrl='https://static-cdn.jtvnw.net/emoticons/v1/28/1.0' />
+            <Arbiter />
           </View>
           <Text style={{ padding: 2 }}>Token</Text>
           <TextInput
@@ -96,10 +93,17 @@ export const RequestPayout = ({ route, navigation }) => {
             disabled={!valid()}
             title="Send" 
             onPress={() => {
-              store.dispatch(localPlayerSlice.actions.localPlayerUpdated({ 
-                id: selectedLocalPlayer.id,
-                changes: { balance: selectedLocalPlayer.balance + playerOnePayout }
-              }))
+              if (selectedLocalPlayer.playerId === challenge.playerOneId) {
+                store.dispatch(localPlayerSlice.actions.localPlayerUpdated({ 
+                  id: selectedLocalPlayer.id,
+                  changes: { balance: selectedLocalPlayer.balance + playerOnePayout }
+                }))
+              } else if (selectedLocalPlayer.playerId === challenge.playerTwoId) {
+                store.dispatch(localPlayerSlice.actions.localPlayerUpdated({ 
+                  id: selectedLocalPlayer.id,
+                  changes: { balance: selectedLocalPlayer.balance + playerTwoPayout }
+                }))
+              }
 // TODO: can only tell if challenge is resolved by looking for txs that spend from fundingTx appropriately. suppose there are inappapropriate ones - then we refuse all payout requests?
               store.dispatch(challengeSlice.actions.challengeUpdated({ 
                 id: challenge.id,

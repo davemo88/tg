@@ -35,6 +35,10 @@ export const styles = StyleSheet.create({
   arbitration: {
     margin: 10,
   },
+  tinyEmote: {
+    width: 14,
+    height: 14,
+  },
   smallEmote: {
     width: 28,
     height: 28,
@@ -71,5 +75,9 @@ export const styles = StyleSheet.create({
     backgroundColor: 'grey',
     alignItems: 'center',
     justifyContent: 'center',
-  }
+  },
+  sigPortrait: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
