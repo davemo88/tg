@@ -15,7 +15,7 @@ export interface Challenge {
   playerOneId:      string;
   PlayerTwoId:      string;
   pot:              number;
-  funding_tx:       bool;
+  fundingTx:       bool;
   playerOneSig:     bool;
   playerTwoSig:     bool;
   arbiterSig:       bool;
@@ -32,6 +32,7 @@ export const isSignedBy = (challenge: Challenge, player: Player): bool => {
 export enum ChallengeStatus {
   Unsigned,
   Issued,
+  Received,
   Accepted,
   Certified,
   Live,
@@ -39,8 +40,17 @@ export enum ChallengeStatus {
   Invalid,
 }
 
-export const getChallengeStatus = (challenge: Challenge): ChallengeStatus => {
-  if (challenge.playerOneSig && challenge.playerTwoSig && challenge.arbiterSig && challenge.funding_tx) {
+// TODO: this function checks the blockchain for the expected payout transactions for the challenge
+// if they aren't found then it isn't resolved. if they are invalid then the challenge is invalid
+const isResolved = (challenge: Challenge) => {
+  return false;
+}
+
+export const getChallengeStatus = (selectedPlayerId: string, challenge: Challenge): ChallengeStatus => {
+  if (challenge.playerOneSig && challenge.playerTwoSig && challenge.arbiterSig && challenge.fundingTx && isResolved(challenge) ) {
+    return ChallengeStatus.Resolved;
+  }
+  if (challenge.playerOneSig && challenge.playerTwoSig && challenge.arbiterSig && challenge.fundingTx) {
     return ChallengeStatus.Live;
   }
   else if (challenge.playerOneSig && challenge.playerTwoSig && challenge.arbiterSig) {
@@ -49,10 +59,15 @@ export const getChallengeStatus = (challenge: Challenge): ChallengeStatus => {
   else if (challenge.playerOneSig && challenge.playerTwoSig) {
     return ChallengeStatus.Accepted;
   }
-  else if ((challenge.playerOneSig || challenge.playerTwoSig) && !challenge.arbiterSig) {
-    return ChallengeStatus.Issued;
+  else if (challenge.playerOneSig && !challenge.arbiterSig) {
+    if ((selectedPlayerId === challenge.playerOneId)) {
+      return ChallengeStatus.Issued;
+    }
+    if (selectedPlayerId === challenge.playerTwoId) {
+      return ChallengeStatus.Received;
+    }
   }
-  else if (challenge.arbiterSig) {
+  else if (challenge.playerTwoSig || challenge.arbiterSig) {
     return ChallengeStatus.Invalid;
   }
   else {
