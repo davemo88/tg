@@ -5,9 +5,9 @@ export interface Player {
 }
 
 export interface LocalPlayer {
-  id:               string,
-  playerId:         string,
-  balance:          number,
+  id:               string;
+  playerId:         string;
+  balance:          number;
 }
 
 export interface Challenge {
@@ -19,6 +19,13 @@ export interface Challenge {
   playerOneSig:     bool;
   playerTwoSig:     bool;
   arbiterSig:       bool;
+}
+
+export interface PayoutRequest {
+  id:               string;
+  challengeId:      string;
+  payoutTx:         string;
+  payoutTokenSig:   string;
 }
 
 export const isSignedBy = (challenge: Challenge, player: Player): bool => {
@@ -74,3 +81,4 @@ export const getChallengeStatus = (selectedPlayerId: string, challenge: Challeng
     return ChallengeStatus.Unsigned;
   }
 }
+

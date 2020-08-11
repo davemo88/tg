@@ -22,74 +22,127 @@ export const ChallengeAction = (props) => {
     <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
     {
       {
-        [ChallengeStatus.Unsigned]:
-          <View>
-            <SignatureSwitch isSigned={isSigned} setIsSigned={setIsSigned} />
-            <Button 
-              disabled={!isSigned} 
-              title="Sign Challenge" 
-              onPress={() => {
-                props.navigation.push('Challenge Details', {challengeId: props.challenge.id })
-              } }
-            />
-          </View>,
-        [ChallengeStatus.Issued]:
-          <View>
-            <Text>Waiting for Opponent</Text>
-          </View>,
-        [ChallengeStatus.Received]:
-          <View>
-            <SignatureSwitch isSigned={isSigned} setIsSigned={setIsSigned} />
-            <Button 
-              disabled={!isSigned} 
-              title="Accept Challenge" 
-              onPress={() => {
-                store.dispatch(challengeSlice.actions.challengeUpdated({ 
-                  id: props.challenge.id,
-                  changes: { playerTwoSig: true }
-                }))
-                props.navigation.push('Challenge Details', {challengeId: props.challenge.id })
-              } }
-            />
-          </View>,
-        [ChallengeStatus.Accepted]:
-          <Button 
-            title="Send to Arbiter" 
-            onPress={() => {
-              store.dispatch(challengeSlice.actions.challengeUpdated({ 
-                id: props.challenge.id,
-                changes: { arbiterSig: true }
-              }))
-              props.navigation.push('Challenge Details', {challengeId: props.challenge.id })
-            } }
-          />,
-        [ChallengeStatus.Certified]:
-          <Button 
-            title="Broadcast Funding Tx" 
-            onPress={() => {
-              store.dispatch(challengeSlice.actions.challengeUpdated({ 
-                id: props.challenge.id,
-                changes: { fundingTx: true }
-              }))
-              props.navigation.push('Challenge Details', {challengeId: props.challenge.id })
-            } }
-          />,
-        [ChallengeStatus.Live]:
-          <Button 
-            title="Request Payout" 
-            onPress={() => props.navigation.push('Request Payout', { challengeId: props.challenge.id }) }
-          />,
-        [ChallengeStatus.Resolved]:
-          <View>
-            <Text>Resolved Challenge</Text>
-          </View>,
-        [ChallengeStatus.Invalid]:
-          <View>
-            <Text>Invalid Challenge</Text>
-          </View>,
+        [ChallengeStatus.Unsigned]: <ActionUnsigned navigation={props.navigation} isSigned={isSigned} setIsSigned={setIsSigned} />,
+        [ChallengeStatus.Issued]: <ActionIssued />,
+        [ChallengeStatus.Received]: <ActionRecieved navigation={props.navigation} isSigned={isSigned} setIsSigned={setIsSigned} />,
+        [ChallengeStatus.Accepted]: <ActionAccepted navigation={props.navigation} />,
+        [ChallengeStatus.Certified]: <ActionCertified navigation={props.navigation} />,
+        [ChallengeStatus.Live]: <ActionLive navigation={props.navigation} />,
+        [ChallengeStatus.Resolved]: <ActionResolved />,
+        [ChallengeStatus.Invalid]: <ActionInvalid />,
       }[getChallengeStatus(selectedLocalPlayer.playerId, props.challenge)]
     }
     </View>
   )
 }
 
+const ActionUnsigned = (props) => {
+  return (
+    <View>
+      <SignatureSwitch isSigned={props.isSigned} setIsSigned={props.setIsSigned} />
+      <Button 
+        disabled={!props.isSigned} 
+        title="Issue Challenge" 
+        onPress={() => {
+          props.navigation.push('Challenge Details', {challengeId: props.challenge.id })
+        } }
+      />
+    </View>
+  )
+}
+
+const ActionIssued = (props) => {
+  return (
+    <View>
+      <Text>Waiting for Opponent</Text>
+    </View>
+  )
+}
+
+const ActionRecieved = (props) => {
+  return (
+    <View>
+      <SignatureSwitch isSigned={props.isSigned} setIsSigned={props.setIsSigned} />
+      <Button 
+        disabled={!props.isSigned} 
+        title="Accept Challenge" 
+        onPress={() => {
+          store.dispatch(challengeSlice.actions.challengeUpdated({ 
+            id: props.challenge.id,
+            changes: { playerTwoSig: true }
+          }))
+          props.navigation.push('Challenge Details', {challengeId: props.challenge.id })
+        } }
+      />
+    </View>
+  )
+}
+
+const ActionAccepted = (props) => {
+  return (
+    <View>
+      <Button 
+        title="Send to Arbiter" 
+        onPress={() => {
+          store.dispatch(challengeSlice.actions.challengeUpdated({ 
+            id: props.challenge.id,
+            changes: { arbiterSig: true }
+          }))
+          props.navigation.push('Challenge Details', {challengeId: props.challenge.id })
+        } }
+      />
+    </View>
+  )
+}
+
+const ActionCertified = (props) => {
+  return (
+    <View>
+      <Button 
+        title="Broadcast Funding Tx" 
+        onPress={() => {
+          store.dispatch(challengeSlice.actions.challengeUpdated({ 
+            id: props.challenge.id,
+            changes: { fundingTx: true }
+          }))
+          props.navigation.push('Challenge Details', {challengeId: props.challenge.id })
+        } }
+      />
+    </View>
+  )
+}
+
+const ActionLive = (props) => {
+  return (
+    <View>
+      <Button 
+        title="Request Payout" 
+        onPress={() => props.navigation.push('Request Payout', { challengeId: props.challenge.id }) }
+      />
+    </View>
+  )
+}
+
+const ActionPayoutRequest = (props) => {
+  return (
+    <View>
+      <Text>Payout Request</Text>
+    </View>
+  )
+}
+
+const ActionResolved = (props) => {
+  return (
+    <View>
+      <Text>Resolved Challenge</Text>
+    </View>
+  )
+}
+
+const ActionInvalid = (props) => {
+  return (
+    <View>
+      <Text>Invalid Challenge</Text>
+    </View>
+  )
+}
