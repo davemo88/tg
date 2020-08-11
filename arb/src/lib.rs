@@ -629,6 +629,7 @@ buyin: {:?}
         assert!(validation_result.is_ok());
 
 // TODO add invalid payout requests for both players
+// thanks, past me
 
     }
 }

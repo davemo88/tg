@@ -15,7 +15,7 @@ export interface Challenge {
   playerOneId:      string;
   PlayerTwoId:      string;
   pot:              number;
-  fundingTx:       bool;
+  fundingTx:        bool;
   playerOneSig:     bool;
   playerTwoSig:     bool;
   arbiterSig:       bool;

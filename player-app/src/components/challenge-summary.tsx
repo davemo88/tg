@@ -15,7 +15,6 @@ export const ChallengeSummary = (props) => {
   const playerOne = playerSelectors.selectById(store.getState(), props.challenge.playerOneId);
   const playerTwo = playerSelectors.selectById(store.getState(), props.challenge.playerTwoId);
 
-
   return(
     <View style={{ flex: 1 }}>
       <View style={{ alignItems: 'center', padding: 5 }}>

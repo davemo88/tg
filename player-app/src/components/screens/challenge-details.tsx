@@ -39,7 +39,7 @@ export const ChallengeDetails = ({ route, navigation }) => {
           <Arbiter />
         </View>
       </View>
-      <View style={{ flex: 1,  }}>
+      <View style={{ flex: 1 }}>
         <ChallengeAction challenge={challenge} navigation={navigation} />
       </View>
     </View>
