@@ -40,7 +40,7 @@ export const NewLocalPlayer = ({ navigation }) => {
             const newPlayerId = nanoid();
             store.dispatch(playerSlice.actions.playerAdded({ id: newPlayerId, name: playerName, pictureUrl: pictureUrl }));
             store.dispatch(localPlayerSlice.actions.localPlayerAdded({ id: nanoid(), playerId: newPlayerId, balance: 0 }));
-            navigation.push('Player Select')
+            navigation.reset({ index:0, routes: [{ name: 'Player Select' }] })
           } }
         />
       </View>

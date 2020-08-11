@@ -32,7 +32,7 @@ export const AddPlayer = ({ navigation }) => {
               const newPlayerId = nanoid();
               store.dispatch(playerSlice.actions.playerAdded({ id: newPlayerId, name: playerName, pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/30259/2.0' }));
               setPlayerName('');
-              navigation.push('New Challenge')
+              navigation.reset({ index:0, routes: [{ name: 'Home' }, { name: 'New Challenge' }] })
             } }
           />
        </View>
