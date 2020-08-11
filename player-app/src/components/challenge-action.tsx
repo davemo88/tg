@@ -35,6 +35,7 @@ export const ChallengeAction = (props) => {
           </View>,
         [ChallengeStatus.Issued]:
           <View>
+            <Text>Waiting for Opponent</Text>
           </View>,
         [ChallengeStatus.Received]:
           <View>

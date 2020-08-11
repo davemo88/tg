@@ -1,4 +1,5 @@
 import React from 'react';
+import { StackActions } from '@react-navigation/native'
 import { nanoid } from '@reduxjs/toolkit'
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
@@ -13,6 +14,7 @@ import { ChallengeListItem } from '../challenge-list-item.tsx';
 
 
 export const Home = ({ navigation }) => {
+  
   const selectedLocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
   const selectedPlayer = playerSelectors.selectById(store.getState(), selectedLocalPlayer.playerId);
 
@@ -33,7 +35,7 @@ export const Home = ({ navigation }) => {
             </View>
             <Button 
               title="Change Player"
-              onPress={() => navigation.navigate("Player Select") }
+              onPress={() => navigation.reset({ index:0, routes: [{ name: 'Player Select' }] })}
             />
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, margin: 5, backgroundColor: 'slategrey', }}>

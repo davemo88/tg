@@ -109,7 +109,8 @@ export const RequestPayout = ({ route, navigation }) => {
                 id: challenge.id,
                 changes: { status: 'Resolved' }
               }))
-              navigation.push('Home')
+              //              navigation.push('Home')
+              navigation.reset({ index:0, routes: [{ name: 'Home' }] })
             } }
           />
         </View>

@@ -70,8 +70,8 @@ export const NewChallenge = ({ navigation }) => {
                 playerOneSig: true,
                 playerTwoSig: false,
                 arbiterSig: false,
-              }))
-              navigation.push('Home') 
+              }));
+              navigation.reset({ index:0, routes: [{ name: 'Home' }] })
             } }
           />
         </View>

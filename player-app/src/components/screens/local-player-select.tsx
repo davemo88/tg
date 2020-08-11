@@ -26,7 +26,7 @@ export const LocalPlayerSelect = ({ navigation }) => {
           onPress={() => {
             const selectedLocalPlayer = localPlayers.find(l => l.playerId === selectedPlayerId);
             store.dispatch(selectedLocalPlayerIdSlice.actions.setSelectedLocalPlayerId(selectedLocalPlayer.id));
-            navigation.navigate('Home')
+            navigation.reset({ index:0,   routes: [{ name: 'Home' }] })
           } }
         />
       </View>
