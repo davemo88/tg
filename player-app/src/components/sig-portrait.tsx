@@ -12,7 +12,6 @@ export interface SigPortraitProps {
 export const SigPortrait: React.FC<SigPortraitProps> = (props) => {
     const imageStyle = props.isSigned ? styles.smallEmote : { width: 28, height: 28, opacity: 0.5, tintColor: 'lightcoral' };
   //  const imageStyle = props.isSigned ? styles.smallEmote : { ...styles.smallEmote, opacity: 0.5, tintColor: 'lightcoral' };
-  console.log(imageStyle);
 
   return (
     <View style={styles.sigPortrait}>

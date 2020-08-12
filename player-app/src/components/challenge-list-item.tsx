@@ -2,6 +2,7 @@ import React from 'react';
 import { nanoid } from '@reduxjs/toolkit'
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
+import { getOtherPlayerId } from '../dump.ts';
 import { styles } from '../styles.ts';
 
 import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, selectedLocalPlayerIdSlice, } from '../redux.ts';
@@ -13,13 +14,7 @@ import { ChallengeSummary } from './challenge-summary.tsx';
 
 export const ChallengeListItem = (props) => {
   const selectedLocalPlayer: LocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
-  let otherPlayer: Player;
-  if (props.challenge.playerOneId === selectedLocalPlayer.playerId) {
-    otherPlayer = playerSelectors.selectById(store.getState(), props.challenge.playerTwoId);
-  }
-  else {
-    otherPlayer = playerSelectors.selectById(store.getState(), props.challenge.playerOneId);
-  }
+  const otherPlayer = playerSelectors.selectById(store.getState(), getOtherPlayerId(selectedLocalPlayer.playerId, props.challenge));
 
   return (
     <View style={{ flexDirection: 'row', backgroundColor: 'slategrey', margin: 2, padding: 2 }}>

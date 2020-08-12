@@ -4,7 +4,8 @@ import { Text, View, } from 'react-native';
 import { styles } from '../styles.ts';
 
 import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, selectedLocalPlayerIdSlice, } from '../redux.ts';
-import { Player, LocalPlayer, Challenge, ChallengeStatus, getChallengeStatus } from '../datatypes.ts'
+import { Player, LocalPlayer, Challenge, ChallengeStatus, } from '../datatypes.ts'
+import { getChallengeStatus } from '../dump.ts';
 
 import { Currency } from './currency.tsx';
 import { SigPortrait } from './sig-portrait.tsx';

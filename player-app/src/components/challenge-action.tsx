@@ -5,7 +5,8 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 import { styles } from '../styles.ts';
 
 import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, selectedLocalPlayerIdSlice, } from '../redux.ts';
-import { Player, LocalPlayer, Challenge, ChallengeStatus, getChallengeStatus } from '../datatypes.ts';
+import { Player, LocalPlayer, Challenge, ChallengeStatus, } from '../datatypes.ts';
+import { getChallengeStatus } from '../dump.ts';
 
 import { Currency } from './currency.tsx';
 import { PlayerPortrait } from './player-portrait.tsx';
@@ -15,8 +16,6 @@ export const ChallengeAction = (props) => {
   const selectedLocalPlayer: LocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
 
   const [isSigned, setIsSigned] = React.useState(false);
-
-  console.log("challenge", props.challenge);
 // TODO: components!
   return(
     <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
@@ -27,7 +26,7 @@ export const ChallengeAction = (props) => {
         [ChallengeStatus.Received]: <ActionRecieved navigation={props.navigation} isSigned={isSigned} setIsSigned={setIsSigned} />,
         [ChallengeStatus.Accepted]: <ActionAccepted navigation={props.navigation} />,
         [ChallengeStatus.Certified]: <ActionCertified navigation={props.navigation} />,
-        [ChallengeStatus.Live]: <ActionLive navigation={props.navigation} />,
+        [ChallengeStatus.Live]: <ActionLive navigation={props.navigation} challenge={props.challenge} />,
         [ChallengeStatus.Resolved]: <ActionResolved />,
         [ChallengeStatus.Invalid]: <ActionInvalid />,
       }[getChallengeStatus(selectedLocalPlayer.playerId, props.challenge)]

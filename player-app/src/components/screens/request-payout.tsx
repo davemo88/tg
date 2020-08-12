@@ -5,8 +5,8 @@ import Slider from '@react-native-community/slider';
 
 import { styles } from '../../styles.ts';
 
-import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, selectedLocalPlayerIdSlice, } from '../../redux.ts';
-import { Player, LocalPlayer, Challenge, ChallengeStatus, getChallengeStatus } from '../../datatypes.ts';
+import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, selectedLocalPlayerIdSlice, payoutRequestSlice, } from '../../redux.ts';
+import { Player, LocalPlayer, Challenge, PayoutRequest, ChallengeStatus, getChallengeStatus } from '../../datatypes.ts';
 
 import { Arbiter } from '../arbiter.tsx';
 import { Currency } from '../currency.tsx';
@@ -93,23 +93,27 @@ export const RequestPayout = ({ route, navigation }) => {
             disabled={!valid()}
             title="Send" 
             onPress={() => {
-              if (selectedLocalPlayer.playerId === challenge.playerOneId) {
-                store.dispatch(localPlayerSlice.actions.localPlayerUpdated({ 
-                  id: selectedLocalPlayer.id,
-                  changes: { balance: selectedLocalPlayer.balance + playerOnePayout }
-                }))
-              } else if (selectedLocalPlayer.playerId === challenge.playerTwoId) {
-                store.dispatch(localPlayerSlice.actions.localPlayerUpdated({ 
-                  id: selectedLocalPlayer.id,
-                  changes: { balance: selectedLocalPlayer.balance + playerTwoPayout }
-                }))
-              }
-// TODO: can only tell if challenge is resolved by looking for txs that spend from fundingTx appropriately. suppose there are inappapropriate ones - then we refuse all payout requests?
-              store.dispatch(challengeSlice.actions.challengeUpdated({ 
-                id: challenge.id,
-                changes: { status: 'Resolved' }
+              //if (selectedLocalPlayer.playerId === challenge.playerOneId) {
+              //  store.dispatch(localPlayerSlice.actions.localPlayerUpdated({ 
+              //    id: selectedLocalPlayer.id,
+              //    changes: { balance: selectedLocalPlayer.balance + playerOnePayout }
+              //  }))
+              //} else if (selectedLocalPlayer.playerId === challenge.playerTwoId) {
+              //  store.dispatch(localPlayerSlice.actions.localPlayerUpdated({ 
+              //    id: selectedLocalPlayer.id,
+              //    changes: { balance: selectedLocalPlayer.balance + playerTwoPayout }
+              //  }))
+              //}
+              store.dispatch(payoutRequestSlice.actions.payoutRequestAdded({
+                id: nanoid(),
+                challengeId: challenge.id,
+                payoutTx: false,
+                playerOneSig: (challenge.playerOneId === selectedLocalPlayer.playerId) ? true : false,
+                playerTwoSig: (challenge.playerTwoId === selectedLocalPlayer.playerId) ? true : false,
+                arbiterSig: isArbitratedPayout ? true : false,
+                payoutScriptSig: isArbitratedPayout ? true : false,
               }))
-              //              navigation.push('Home')
+              console.log(store.getState().payoutRequests);
               navigation.reset({ index:0, routes: [{ name: 'Home' }] })
             } }
           />

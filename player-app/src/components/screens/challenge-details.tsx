@@ -16,27 +16,24 @@ export const ChallengeDetails = ({ route, navigation }) => {
   const { challengeId } = route.params;
   const challenge = challengeSelectors.selectById(store.getState(), challengeId);
   const selectedLocalPlayer: LocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
-  let otherPlayer: Player;
-  if (challenge.playerOneId === selectedLocalPlayer.playerId) {
-    otherPlayer = playerSelectors.selectById(store.getState(), challenge.playerTwoId);
-  }
-  else {
-    otherPlayer = playerSelectors.selectById(store.getState(), challenge.playerOneId);
-  }
+  const playerOne = playerSelectors.selectById(store.getState(), challenge.playerOneId);
+  const playerTwo = playerSelectors.selectById(store.getState(), challenge.playerTwoId);
 
   return (
     <View style={styles.container}>
-      <View style={{ flex: 2, alignItems: 'center', justifyContent: 'space-around', }}>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'space-around', }}>
         <View style= {{flexDirection: 'row', justifyContent: 'space-between' }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 20 }}>Opponent</Text>
-            <PlayerPortrait name={otherPlayer.name} pictureUrl={otherPlayer.pictureUrl} />
+            <Text style={{ fontSize: 20 }}>Player One</Text>
+            <PlayerPortrait name={playerOne.name} pictureUrl={playerOne.pictureUrl} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 20 }}>Player Two</Text>
+            <PlayerPortrait name={playerTwo.name} pictureUrl={playerTwo.pictureUrl} />
           </View>
         </View>
-        <ChallengeSummary challenge={challenge} />
-        <View>
-          <Text style={{ fontSize: 20 }}>Arbiter</Text>
-          <Arbiter />
+        <View style={{ justifyContent: 'center' }}>
+          <ChallengeSummary challenge={challenge} />
         </View>
       </View>
       <View style={{ flex: 1 }}>
