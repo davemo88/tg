@@ -23,7 +23,7 @@ export const ChallengeSummary = (props) => {
       </View>
       <View style={{ alignItems: 'center' }}>
         <Text>Status</Text>
-        <Text style={{ fontSize: 15 }}>{ChallengeStatus[getChallengeStatus(selectedLocalPlayer.playerId, props.challenge)]}</Text>
+        <Text style={{ fontSize: 15 }}>{ChallengeStatus[getChallengeStatus(props.challenge)]}</Text>
       </View>
       <View style={{ flex: 1, alignItems: 'center' }}>
         <Text>Signatures</Text>

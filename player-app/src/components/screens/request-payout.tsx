@@ -108,12 +108,11 @@ export const RequestPayout = ({ route, navigation }) => {
                 id: nanoid(),
                 challengeId: challenge.id,
                 payoutTx: false,
-                playerOneSig: (challenge.playerOneId === selectedLocalPlayer.playerId) ? true : false,
-                playerTwoSig: (challenge.playerTwoId === selectedLocalPlayer.playerId) ? true : false,
+                playerOneSig: (challenge.playerOneId === selectedLocalPlayer.playerId),
+                playerTwoSig: (challenge.playerTwoId === selectedLocalPlayer.playerId),
                 arbiterSig: isArbitratedPayout ? true : false,
                 payoutScriptSig: isArbitratedPayout ? true : false,
               }))
-              console.log(store.getState().payoutRequests);
               navigation.reset({ index:0, routes: [{ name: 'Home' }] })
             } }
           />

@@ -5,6 +5,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
 import { store } from './src/redux.ts';
+import { populateTestStore }  from './src/mock.ts';
 
 import { LocalPlayerSelect } from './src/components/screens/local-player-select.tsx';
 import { Home } from './src/components/screens/home.tsx';
@@ -13,6 +14,10 @@ import { NewLocalPlayer } from './src/components/screens/new-local-player.tsx';
 import { AddPlayer } from './src/components/screens/add-player.tsx';
 import { NewChallenge } from './src/components/screens/new-challenge.tsx';
 import { RequestPayout } from './src/components/screens/request-payout.tsx';
+
+//TODO: remove this
+// how to do better redux testing?
+populateTestStore();
 
 const Stack = createStackNavigator();
 

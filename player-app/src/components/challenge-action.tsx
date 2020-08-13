@@ -1,5 +1,5 @@
 import React from 'react';
-import { nanoid } from '@reduxjs/toolkit'
+import { nanoid } from '@reduxjs/toolkit';
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
 import { styles } from '../styles.ts';
@@ -16,7 +16,6 @@ export const ChallengeAction = (props) => {
   const selectedLocalPlayer: LocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
 
   const [isSigned, setIsSigned] = React.useState(false);
-// TODO: components!
   return(
     <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
     {
@@ -27,9 +26,12 @@ export const ChallengeAction = (props) => {
         [ChallengeStatus.Accepted]: <ActionAccepted navigation={props.navigation} />,
         [ChallengeStatus.Certified]: <ActionCertified navigation={props.navigation} />,
         [ChallengeStatus.Live]: <ActionLive navigation={props.navigation} challenge={props.challenge} />,
+        [ChallengeStatus.PayoutRequestIssued]: <ActionLive navigation={props.navigation} challenge={props.challenge} />,
+        [ChallengeStatus.PayoutRequestReceived]: <ActionLive navigation={props.navigation} challenge={props.challenge} />,
+        [ChallengeStatus.PayoutRequestLive]: <ActionLive navigation={props.navigation} challenge={props.challenge} />,
         [ChallengeStatus.Resolved]: <ActionResolved />,
         [ChallengeStatus.Invalid]: <ActionInvalid />,
-      }[getChallengeStatus(selectedLocalPlayer.playerId, props.challenge)]
+      }[getChallengeStatus(props.challenge)]
     }
     </View>
   )
@@ -122,10 +124,26 @@ const ActionLive = (props) => {
   )
 }
 
-const ActionPayoutRequest = (props) => {
+const ActionPayoutRequestIssued = (props) => {
   return (
     <View>
-      <Text>Payout Request</Text>
+      <Text>Payout Request Issued</Text>
+    </View>
+  )
+}
+
+const ActionPayoutRequestReceived = (props) => {
+  return (
+    <View>
+      <Text>Payout Request Received</Text>
+    </View>
+  )
+}
+
+const ActionPayoutRequestLive = (props) => {
+  return (
+    <View>
+      <Text>Payout Request Live</Text>
     </View>
   )
 }

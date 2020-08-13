@@ -38,25 +38,36 @@ export interface PayoutRequest {
 }
 
 export enum ChallengeStatus {
+// following, funding tx may or may not be mined and only players signing
   Unsigned,
   Issued,
   Received,
   Accepted,
+// arbiter signed and funding tx not in chain
   Certified,
+// arbiter signed and funding tx is in chain
   Live,
+// local player submitted signed payout request
   PayoutRequestIssued,
+// opponent submitted signed payout request
   PayoutRequestReceived,
+// both players signed payout request
   PayoutRequestLive,
+// payout request broadcast
   Resolved,
   Invalid,
 }
 
 export enum PayoutRequestStatus {
+// the following assume the payout tx has not been mined
   Unsigned,
-  Issued,
-  Received,
+  LocalPlayerSigned,
+  OtherPlayerSigned,
+// 2/3 sigs provided
+// the payout request only requires 2/3 sigs instead of 3/3 like a challenge
   Live,
+// payout tx mined
   Resolved,
+// if only the arbiter has signed, invalid
   Invalid,
 }
-

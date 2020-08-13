@@ -1,6 +1,6 @@
 import { LocalPlayer, Player, Challenge, ChallengeStatus, PayoutRequest, PayoutRequestStatus, } from './datatypes.ts';
 
-import { store, payoutRequestSelectors } from './redux.ts';
+import { store, localPlayerSelectors, challengeSelectors, payoutRequestSelectors } from './redux.ts';
 
 // TODO: this function checks the blockchain for the expected payout transactions for the challenge
 // if they aren't found then it isn't resolved. if they are invalid then the challenge is invalid
@@ -10,90 +10,105 @@ const isResolved = (challenge: Challenge) => {
 }
 
 // TODO: S is whatever the store type is, idk how to get it atm
-export const getChallengeStatus = (selectedPlayerId: string, challenge: Challenge ): ChallengeStatus => {
-  if (challenge.playerOneSig && challenge.playerTwoSig && challenge.arbiterSig && challenge.fundingTx) {
+export const getChallengeStatus = (challenge: Challenge ): ChallengeStatus => {
+  const selectedPlayerId = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId).playerId;
+
+  const allSigned: bool = (challenge.playerOneSig && challenge.playerTwoSig && challenge.arbiterSig);
+
+  if (allSigned && challenge.fundingTx) {
 
     const payoutRequest = payoutRequestSelectors.selectAll(store.getState())
-      .filter((pr, i, a) => pr.challengeId === challenge.id );
+      .filter((pr, i, a) => pr.challengeId === challenge.id ).pop();
 
     if (payoutRequest) {
-      const payoutRequestStatus = getPayoutRequestStatus(selectedPlayerId, payoutRequest);
+      const payoutRequestStatus = getPayoutRequestStatus(payoutRequest);
+      console.log("get payout request status: ", PayoutRequestStatus[payoutRequestStatus]);
       switch (+payoutRequestStatus) {
         case PayoutRequestStatus.Unsigned:
           break;
-        case PayoutRequestStatus.Issued:
+        case PayoutRequestStatus.LocalPlayerSigned:
           return ChallengeStatus.PayoutRequestIssued;
-        case PayoutRequestStatus.Received:
+        case PayoutRequestStatus.OtherPlayerSigned:
           return ChallengeStatus.PayoutRequestReceived;
         case PayoutRequestStatus.Live:
           return ChallengeStatus.PayoutRequestLive;
         case PayoutRequestStatus.Resolved:
           return ChallengeStatus.Resolved;
         case PayoutRequestStatus.Invalid:
-          return ChallengeStatus.Invalid;
+          return ChallengeStatus.Live;
       }
     }
     else {
       return ChallengeStatus.Live;
     }
   }
-  else if (challenge.playerOneSig && challenge.playerTwoSig && challenge.arbiterSig) {
+  else if (allSigned) {
     return ChallengeStatus.Certified;
   }
   else if (challenge.playerOneSig && challenge.playerTwoSig) {
     return ChallengeStatus.Accepted;
   }
   else if ((challenge.playerOneSig || challenge.playerTwoSig) && !challenge.arbiterSig) {
-    if ((selectedPlayerId === challenge.playerOneId)) {
-      return ChallengeStatus.Issued;
-    }
-    if (selectedPlayerId === challenge.playerTwoId) {
-      return ChallengeStatus.Received;
-    }
-  }
-  else if (challenge.arbiterSig) {
-    return ChallengeStatus.Invalid;
+    return isChallengeSignedBy(challenge, selectedPlayerId) ? ChallengeStatus.Issued : ChallengeStatus.Received;
   }
   else {
-    return ChallengeStatus.Unsigned;
+    return isUnsigned(challenge) ? Challenge.Unsigned : Challenge.Invalid;
   }
 }
 
-export const getPayoutRequestStatus = (selectedPlayerId: string, payoutRequest: PayoutRequest ): PayoutRequestStatus => {
-  if ((
-      payoutRequest.playerOneSig && payoutRequest.playerTwoSig 
-      ||
-      ((payoutRequest.playerOneSig || payoutRequest.playerTwoSig) && payoutRequest.arbiterSig)
-  )) {
-    return payoutRequest.payoutTx ? PayoutRequestStatus.Resolved : PayoutRequestReceived.Live;
+export const getPayoutRequestStatus = (payoutRequest: PayoutRequest ): PayoutRequestStatus => {
+  const selectedPlayerId = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId).playerId;
+  const challenge = challengeSelectors.selectById(store.getState(), payoutRequest.challengeId);
+  console.log("get payout request status: ", payoutRequest);
+  if (payoutRequest.payoutTx) {
+    return PayoutRequestStatus.Resolved;
   }
-  else if (isSignedBy(payoutRequest, selectedPlayerId)) {
-    return PayoutRequestStatus.Issued;
+  else if (
+    ((payoutRequest.playerOneSig && payoutRequest.playerTwoSig))
+    || 
+    ((payoutRequest.playerOneSig || payoutRequest.playerTwoSig) && payoutRequest.arbiterSig) 
+  ) {
+    return PayoutRequestStatus.Live;
   }
-  else if (isSignedBy(payoutRequest, getOtherPlayerId(selectedPlayerId, payoutRequest))) {
-    return PayoutRequestStatus.Received;
+  else if (isPayoutRequestSignedBy(payoutRequest, selectedPlayerId)) {
+    console.log("signed by the local player");
+    return PayoutRequestStatus.LocalPlayerSigned; 
   }
-  else if (!(payoutRequest.playerOneSig || payoutRequest.playerTwoSig || payoutRequest.arbiterSig)) {
-    return PayoutRequestStatus.Unsigned;
+  else if (isPayoutRequestSignedBy(payoutRequest, getOtherPlayerId(selectedPlayerId, challenge))) {
+    console.log("signed by the other player");
+    return PayoutRequestStatus.OtherPlayerSigned; 
   }
   else {
-    return PayoutRequestStatus.Invalid;
+    return isUnsigned(payoutRequest) ? PayoutRequestStatus.Unsigned : PayoutRequestStatus.Invalid;
   }
 }
 
-export const isSignedBy = (signable: Challenge | PayoutRequest, playerId: PlayerId): bool => {
+export const isChallengeSignedBy = (challenge: Challenge | PayoutRequest, playerId: PlayerId): bool => {
   return (
-    ((signable.playerOneId === playerId) && signable.playerOneSig)
+    ((challenge.playerOneId === playerId) && challenge.playerOneSig)
     ||
-    ((signable.playerTwoId === playerId) && signable.playerTwoSig)
+    ((challenge.playerTwoId === playerId) && challenge.playerTwoSig)
   )
 }
 
-export const getOtherPlayerId = (playerId: string, twoPlayers: Challenge | PayoutRequest) => {
-  if (twoPlayers.playerOneId === playerId) {
-    return twoPlayers.playerTwoId;
+export const isPayoutRequestSignedBy = (payoutRequest:  PayoutRequest, playerId: PlayerId): bool => {
+  const challenge = challengeSelectors.selectById(store.getState(), payoutRequest.challengeId);
+  return (
+    ((challenge.playerOneId === playerId) && payoutRequest.playerOneSig)
+    ||
+    ((challenge.playerTwoId === playerId) && payoutRequest.playerTwoSig)
+  )
+}
+
+export const isUnsigned = (signable: Challenge | PayoutRequest): bool => {
+  return !(signable.playerOneSig || signable.playerTwoSig || signable.arbiterSig)
+}
+
+export const getOtherPlayerId = (playerId: PlayerId, challenge: Challenge) => {
+  if (challenge.playerOneId === playerId) {
+    return challenge.playerTwoId;
   }
-  else if (twoPlayers.playerTwoId === playerId) {
-    return twoPlayers.playerOneId;
+  else if (challenge.playerTwoId === playerId) {
+    return challenge.playerOneId;
   }
 }
