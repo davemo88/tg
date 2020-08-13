@@ -6,7 +6,8 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 import { styles } from '../../styles.ts';
 
 import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, selectedLocalPlayerIdSlice, } from '../../redux.ts';
-import { Player, LocalPlayer, Challenge, ChallengeStatus, getChallengeStatus } from '../../datatypes.ts';
+import { Player, LocalPlayer, Challenge, ChallengeStatus} from '../../datatypes.ts';
+import { getChallengeStatus } from '../../dump.ts';
 
 import { Currency } from '../currency.tsx';
 import { PlayerPortrait } from '../player-portrait.tsx';
@@ -20,9 +21,8 @@ export const Home = ({ navigation }) => {
 
   const challenges = challengeSelectors.selectAll(store.getState())
   .filter((challenge, i, a) =>{ return (
-    (challenge.playerOneId === selectedLocalPlayer.playerId || challenge.playerTwoId === selectedLocalPlayer.playerId)
+    (challenge.playerOneId === selectedLocalPlayer.playerId || challenge.playerTwoId === selectedLocalPlayer.playerId) && (getChallengeStatus(challenge) != ChallengeStatus.Resolved)
   )})
-  .filter((challenge, i, a) =>{ return challenge.status != 'Resolved' });
 
   return (
     <View style={styles.home}>
@@ -56,7 +56,7 @@ export const Home = ({ navigation }) => {
               <Button 
                 title="New"
                 onPress={() => 
-                  navigation.navigate('New Challenge')
+                  navigation.push('New Challenge')
                 }
               />
             </View>
