@@ -93,17 +93,6 @@ export const RequestPayout = ({ route, navigation }) => {
             disabled={!valid()}
             title="Send" 
             onPress={() => {
-              //if (selectedLocalPlayer.playerId === challenge.playerOneId) {
-              //  store.dispatch(localPlayerSlice.actions.localPlayerUpdated({ 
-              //    id: selectedLocalPlayer.id,
-              //    changes: { balance: selectedLocalPlayer.balance + playerOnePayout }
-              //  }))
-              //} else if (selectedLocalPlayer.playerId === challenge.playerTwoId) {
-              //  store.dispatch(localPlayerSlice.actions.localPlayerUpdated({ 
-              //    id: selectedLocalPlayer.id,
-              //    changes: { balance: selectedLocalPlayer.balance + playerTwoPayout }
-              //  }))
-              //}
               store.dispatch(payoutRequestSlice.actions.payoutRequestAdded({
                 id: nanoid(),
                 challengeId: challenge.id,
@@ -112,6 +101,8 @@ export const RequestPayout = ({ route, navigation }) => {
                 playerTwoSig: (challenge.playerTwoId === selectedLocalPlayer.playerId),
                 arbiterSig: isArbitratedPayout ? true : false,
                 payoutScriptSig: isArbitratedPayout ? true : false,
+                playerOneAmount: playerOnePayout,
+                playerTwoAmount: playerTwoPayout,
               }))
               navigation.reset({ index:0, routes: [{ name: 'Home' }] })
             } }

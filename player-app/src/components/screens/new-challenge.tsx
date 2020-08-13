@@ -6,6 +6,7 @@ import { styles } from '../../styles.ts';
 
 import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, selectedLocalPlayerIdSlice, } from '../../redux.ts';
 import { Player, LocalPlayer, Challenge, ChallengeStatus, getChallengeStatus } from '../../datatypes.ts';
+import { SignChallenge } from '../../mock.ts';
 
 import { Currency } from '../currency.tsx';
 import { SignatureSwitch } from '../signature-switch.tsx';

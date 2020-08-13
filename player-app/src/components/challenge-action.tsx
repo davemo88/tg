@@ -4,9 +4,10 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 
 import { styles } from '../styles.ts';
 
-import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, selectedLocalPlayerIdSlice, } from '../redux.ts';
+import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, payoutRequestSelectors, payoutRequestSlice, selectedLocalPlayerIdSlice, } from '../redux.ts';
 import { Player, LocalPlayer, Challenge, ChallengeStatus, } from '../datatypes.ts';
 import { getChallengeStatus } from '../dump.ts';
+import { broadcastPayoutTx, signPayoutRequest, signChallenge } from '../mock.ts';
 
 import { Currency } from './currency.tsx';
 import { PlayerPortrait } from './player-portrait.tsx';
@@ -26,9 +27,9 @@ export const ChallengeAction = (props) => {
         [ChallengeStatus.Accepted]: <ActionAccepted navigation={props.navigation} />,
         [ChallengeStatus.Certified]: <ActionCertified navigation={props.navigation} />,
         [ChallengeStatus.Live]: <ActionLive navigation={props.navigation} challenge={props.challenge} />,
-        [ChallengeStatus.PayoutRequestIssued]: <ActionLive navigation={props.navigation} challenge={props.challenge} />,
-        [ChallengeStatus.PayoutRequestReceived]: <ActionLive navigation={props.navigation} challenge={props.challenge} />,
-        [ChallengeStatus.PayoutRequestLive]: <ActionLive navigation={props.navigation} challenge={props.challenge} />,
+        [ChallengeStatus.PayoutRequestIssued]: <ActionPayoutRequestIssued navigation={props.navigation} challenge={props.challenge} />,
+        [ChallengeStatus.PayoutRequestReceived]: <ActionPayoutRequestReceived navigation={props.navigation} challenge={props.challenge} isSigned={isSigned} setIsSigned={setIsSigned} />,
+        [ChallengeStatus.PayoutRequestLive]: <ActionPayoutRequestLive navigation={props.navigation} challenge={props.challenge} />,
         [ChallengeStatus.Resolved]: <ActionResolved />,
         [ChallengeStatus.Invalid]: <ActionInvalid />,
       }[getChallengeStatus(props.challenge)]
@@ -133,17 +134,37 @@ const ActionPayoutRequestIssued = (props) => {
 }
 
 const ActionPayoutRequestReceived = (props) => {
+  const payoutRequest = payoutRequestSelectors.selectAll(store.getState())
+    .filter((pr, i, a) => pr.challengeId === props.challenge.id ).pop();
   return (
     <View>
       <Text>Payout Request Received</Text>
+      <SignatureSwitch isSigned={props.isSigned} setIsSigned={props.setIsSigned} />
+      <Button 
+        disabled={!props.isSigned} 
+        title="Sign Payout Request" 
+        onPress={() => {
+          signPayoutRequest(payoutRequest)
+          props.navigation.reset({ index:0, routes: [{ name: 'Challenge Details', params: {challengeId: props.challenge.id } }] });
+        } }
+      />
     </View>
   )
 }
 
 const ActionPayoutRequestLive = (props) => {
+  const payoutRequest = payoutRequestSelectors.selectAll(store.getState())
+    .filter((pr, i, a) => pr.challengeId === props.challenge.id ).pop();
   return (
     <View>
       <Text>Payout Request Live</Text>
+      <Button 
+        title="Broadcast Payout Tx" 
+        onPress={() => {
+          broadcastPayoutTx(payoutRequest);
+          props.navigation.reset({ index:0, routes: [{ name: 'Home' }] });
+        } }
+      />
     </View>
   )
 }

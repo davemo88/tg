@@ -1,5 +1,5 @@
 import { nanoid } from '@reduxjs/toolkit';
-import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, selectedLocalPlayerIdSlice, } from './redux.ts';
+import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, payoutRequestSelectors, payoutRequestSlice, selectedLocalPlayerIdSlice, } from './redux.ts';
 
 export const populateTestStore = () => {
   // players
@@ -15,7 +15,7 @@ export const populateTestStore = () => {
   
   // test challenges
   store.dispatch(challengeSlice.actions.challengeAdded({ 
-    id: nanoid(),
+    id: 'akin-v-betsy',
     playerOneId: 'akin',
     playerTwoId: 'betsy',
     pot: 256,
@@ -63,6 +63,60 @@ export const populateTestStore = () => {
     playerOneSig: true,
     playerTwoSig: true,
     arbiterSig: true,
-  }))
-  
+  }));
+// payout requests
+  store.dispatch(payoutRequestSlice.actions.payoutRequestAdded({
+    id: nanoid(),
+    challengeId: 'akin-v-betsy',
+    payoutTx: false,
+    playerOneSig: false,
+    playerTwoSig: true,
+    arbiterSig: false,
+    playerOneAmount: 0,
+    playerTwoAmount: 256,
+  }));
+}
+
+export const signChallenge = (challenge: Challenge) => {
+  const selectedPlayerId = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId).playerId;
+  let action = {id: challenge.id, changes: {}};
+  if (challenge.playerOneId === selectedPlayerId) {
+    action.changes.playerOneSig = true;
+  }
+  else if (challenge.playerTwoId === selectedPlayerId) {
+    action.changes.playerTwoSig = true;
+  }
+  store.dispatch(challengeSlice.actions.challengeUpdated(action));
+}
+
+export const signPayoutRequest = (payoutRequest: PayoutRequest) => {
+  const selectedPlayerId = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId).playerId;
+  const challenge = challengeSelectors.selectById(store.getState(), payoutRequest.challengeId);
+  let action = {id: payoutRequest.id, changes: {}};
+  if (challenge.playerOneId === selectedPlayerId) {
+    action.changes.playerOneSig = true;
+  }
+  else if (challenge.playerTwoId === selectedPlayerId) {
+    action.changes.playerTwoSig = true;
+  }
+  store.dispatch(payoutRequestSlice.actions.payoutRequestUpdated(action));
+}
+
+export const broadcastFundingTx = (challenge: Challenge) => {
+  store.dispatch(challengeSlice.actions.challengeUpdated({
+    id: challenge.id,
+    changes: {
+      fundingTx: true,
+    }
+  }));
+}
+
+export const broadcastPayoutTx = (payoutRequest: PayoutRequest) => {
+  store.dispatch(payoutRequestSlice.actions.payoutRequestUpdated({
+    id: payoutRequest.id,
+    changes: {
+      payoutTx: true,
+    }
+  }));
+
 }

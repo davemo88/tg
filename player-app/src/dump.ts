@@ -5,10 +5,6 @@ import { store, localPlayerSelectors, challengeSelectors, payoutRequestSelectors
 // TODO: this function checks the blockchain for the expected payout transactions for the challenge
 // if they aren't found then it isn't resolved. if they are invalid then the challenge is invalid
 // TODO: can only tell if challenge is resolved by looking for txs that spend from fundingTx appropriately. suppose there are inappapropriate ones - then we refuse all payout requests?
-const isResolved = (challenge: Challenge) => {
-  return false;
-}
-
 // TODO: S is whatever the store type is, idk how to get it atm
 export const getChallengeStatus = (challenge: Challenge ): ChallengeStatus => {
   const selectedPlayerId = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId).playerId;
@@ -100,7 +96,7 @@ export const isUnsigned = (signable: Challenge | PayoutRequest): bool => {
   return !(signable.playerOneSig || signable.playerTwoSig || signable.arbiterSig)
 }
 
-export const getOtherPlayerId = (playerId: PlayerId, challenge: Challenge) => {
+export const getOtherPlayerId = (playerId: PlayerId, challenge: Challenge): PlayerId | undefined => {
   if (challenge.playerOneId === playerId) {
     return challenge.playerTwoId;
   }

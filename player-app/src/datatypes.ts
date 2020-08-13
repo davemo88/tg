@@ -35,6 +35,8 @@ export interface PayoutRequest {
   playerTwoSig:     bool;
   arbiterSig:       bool;
   payoutToken:      bool;
+  playerOneAmount:  number;
+  playerTwoAmount:  number;
 }
 
 export enum ChallengeStatus {
