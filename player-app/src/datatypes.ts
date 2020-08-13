@@ -1,19 +1,25 @@
+export type PlayerId = string;
+export type LocalPlayerId = string;
+export type ChallengeId = string;
+export type PayoutRequestId = string;
+export type Url = string;
+
 export interface Player {
-  id:               string;
+  id:               PlayerId;
   name:             string;
-  pictureUrl:       string;
+  pictureUrl:       Url;
 }
 
 export interface LocalPlayer {
-  id:               string;
-  playerId:         string;
+  id:               LocalPlayerId;
+  playerId:         PlayerId;
   balance:          number;
 }
 
 export interface Challenge {
-  id:               string;
-  playerOneId:      string;
-  PlayerTwoId:      string;
+  id:               ChallengeId;
+  playerOneId:      PlayerId;
+  PlayerTwoId:      PlayerId;
   pot:              number;
   fundingTx:        bool;
   playerOneSig:     bool;
@@ -22,8 +28,8 @@ export interface Challenge {
 }
 
 export interface PayoutRequest {
-  id:               string;
-  challengeId:      string;
+  id:               PayoutRequestId;
+  challengeId:      ChallengeId;
   payoutTx:         bool;
   playerOneSig:     bool;
   playerTwoSig:     bool;
@@ -38,8 +44,19 @@ export enum ChallengeStatus {
   Accepted,
   Certified,
   Live,
-  PayoutRequested,
-  Resolved, 
+  PayoutRequestIssued,
+  PayoutRequestReceived,
+  PayoutRequestLive,
+  Resolved,
+  Invalid,
+}
+
+export enum PayoutRequestStatus {
+  Unsigned,
+  Issued,
+  Received,
+  Live,
+  Resolved,
   Invalid,
 }
 
