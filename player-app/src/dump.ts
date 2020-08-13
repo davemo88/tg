@@ -22,7 +22,6 @@ export const getChallengeStatus = (challenge: Challenge ): ChallengeStatus => {
 
     if (payoutRequest) {
       const payoutRequestStatus = getPayoutRequestStatus(payoutRequest);
-      console.log("get payout request status: ", PayoutRequestStatus[payoutRequestStatus]);
       switch (+payoutRequestStatus) {
         case PayoutRequestStatus.Unsigned:
           break;
@@ -59,7 +58,6 @@ export const getChallengeStatus = (challenge: Challenge ): ChallengeStatus => {
 export const getPayoutRequestStatus = (payoutRequest: PayoutRequest ): PayoutRequestStatus => {
   const selectedPlayerId = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId).playerId;
   const challenge = challengeSelectors.selectById(store.getState(), payoutRequest.challengeId);
-  console.log("get payout request status: ", payoutRequest);
   if (payoutRequest.payoutTx) {
     return PayoutRequestStatus.Resolved;
   }
@@ -71,11 +69,9 @@ export const getPayoutRequestStatus = (payoutRequest: PayoutRequest ): PayoutReq
     return PayoutRequestStatus.Live;
   }
   else if (isPayoutRequestSignedBy(payoutRequest, selectedPlayerId)) {
-    console.log("signed by the local player");
     return PayoutRequestStatus.LocalPlayerSigned; 
   }
   else if (isPayoutRequestSignedBy(payoutRequest, getOtherPlayerId(selectedPlayerId, challenge))) {
-    console.log("signed by the other player");
     return PayoutRequestStatus.OtherPlayerSigned; 
   }
   else {
