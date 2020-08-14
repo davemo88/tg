@@ -104,7 +104,7 @@ export const RequestPayout = ({ route, navigation }) => {
                 playerOneAmount: playerOnePayout,
                 playerTwoAmount: playerTwoPayout,
               }))
-              navigation.reset({ index:0, routes: [{ name: 'Home' }] })
+              navigation.reset({ index:0, routes: [{ name: 'Home' }, { name: 'Challenge Details', params: {challengeId: challenge.id } }] });
             } }
           />
         </View>

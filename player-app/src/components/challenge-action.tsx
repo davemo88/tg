@@ -23,9 +23,9 @@ export const ChallengeAction = (props) => {
       {
         [ChallengeStatus.Unsigned]: <ActionUnsigned navigation={props.navigation} isSigned={isSigned} setIsSigned={setIsSigned} />,
         [ChallengeStatus.Issued]: <ActionIssued />,
-        [ChallengeStatus.Received]: <ActionRecieved navigation={props.navigation} isSigned={isSigned} setIsSigned={setIsSigned} />,
-        [ChallengeStatus.Accepted]: <ActionAccepted navigation={props.navigation} />,
-        [ChallengeStatus.Certified]: <ActionCertified navigation={props.navigation} />,
+        [ChallengeStatus.Received]: <ActionRecieved navigation={props.navigation} isSigned={isSigned} setIsSigned={setIsSigned} challenge={props.challenge}/>,
+        [ChallengeStatus.Accepted]: <ActionAccepted navigation={props.navigation} challenge={props.challenge} />,
+        [ChallengeStatus.Certified]: <ActionCertified navigation={props.navigation} challenge={props.challenge} />,
         [ChallengeStatus.Live]: <ActionLive navigation={props.navigation} challenge={props.challenge} />,
         [ChallengeStatus.PayoutRequestIssued]: <ActionPayoutRequestIssued navigation={props.navigation} challenge={props.challenge} />,
         [ChallengeStatus.PayoutRequestReceived]: <ActionPayoutRequestReceived navigation={props.navigation} challenge={props.challenge} isSigned={isSigned} setIsSigned={setIsSigned} />,
@@ -84,7 +84,7 @@ const ActionAccepted = (props) => {
       <Button 
         title="Send to Arbiter" 
         onPress={() => {
-          arbiterSignChallenge(challenge);
+          arbiterSignChallenge(props.challenge);
           props.navigation.push('Challenge Details', {challengeId: props.challenge.id })
         } }
       />
@@ -117,6 +117,13 @@ const ActionLive = (props) => {
   )
 }
 
+// TODO: arbitrated payout request how
+// 3bools:
+// local or other
+// tx broadcast or not
+// arbiter or not
+// then signature state
+// pretty big state
 const ActionPayoutRequestIssued = (props) => {
   return (
     <View>
@@ -137,7 +144,7 @@ const ActionPayoutRequestReceived = (props) => {
         title="Sign Payout Request" 
         onPress={() => {
           signPayoutRequest(payoutRequest)
-          props.navigation.reset({ index:0, routes: [{ name: 'Challenge Details', params: {challengeId: props.challenge.id } }] });
+          props.navigation.reset({ index:0, routes: [{ name: 'Home', }, { name: 'Challenge Details', params: {challengeId: props.challenge.id } }] });
         } }
       />
     </View>
