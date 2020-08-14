@@ -2,6 +2,10 @@ import { nanoid } from '@reduxjs/toolkit';
 import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, payoutRequestSelectors, payoutRequestSlice, selectedLocalPlayerIdSlice, } from './redux.ts';
 
 export const NETWORK: string = 'Test';
+export const STATIC_CONTENT_HOST: string = 'https://whatchadoinhere.s3.amazonaws.com/';
+export const TITLE_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'cc.png'; 
+export const TEST_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'test.png'; 
+export const LIVE_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'live.png'; 
 
 export const loadLocalData = () => {
   // players

@@ -6,7 +6,7 @@ import { styles } from '../../styles.ts';
 
 import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, selectedLocalPlayerIdSlice, } from '../../redux.ts';
 import { Player, LocalPlayer, Challenge, ChallengeStatus, getChallengeStatus } from '../../datatypes.ts';
-import { NETWORK } from '../../mock.ts';
+import { NETWORK, TITLE_IMAGE_SOURCE, TEST_IMAGE_SOURCE, LIVE_IMAGE_SOURCE, } from '../../mock.ts';
 
 import { PlayerSelector } from '../player-selector.tsx';
 
@@ -14,16 +14,17 @@ export const LocalPlayerSelect = ({ navigation }) => {
   const localPlayers = localPlayerSelectors.selectAll(store.getState());
   const [selectedPlayerId, setSelectedPlayerId] = React.useState(localPlayers[0].playerId)
 
+// TODO: move Test / Live images to navigation header
   return (
     <View style={styles.container}>
       <View style={{ flex: 1 }}>
         <View style={{ flex: 2, padding: 5, alignItems: 'center' }}>
-          <Image style={{ width: 256, height: 126 }} source='https://whatchadoinhere.s3.amazonaws.com/cc.png' />
+          <Image style={{ width: 256, height: 126 }} source={TITLE_IMAGE_SOURCE} />
           { NETWORK === 'Test' &&
-            <Image style={{ width: 133, height: 45 }} source='https://whatchadoinhere.s3.amazonaws.com/test.png' />
+            <Image style={{ width: 133, height: 45 }} source={TEST_IMAGE_SOURCE} />
           }
           { NETWORK === 'Live' &&
-            <Image style={{ width: 133, height: 45 }} source='https://whatchadoinhere.s3.amazonaws.com/live.png' />
+            <Image style={{ width: 133, height: 45 }} source={LIVE_IMAGE_SOURCE} />
           }
         </View>
         <View style = {{ flex: 1, justifyContent: 'flex-end' }}>
