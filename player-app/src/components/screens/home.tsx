@@ -21,7 +21,9 @@ export const Home = ({ navigation }) => {
 
   const challenges = challengeSelectors.selectAll(store.getState())
   .filter((challenge, i, a) =>{ return (
-    (challenge.playerOneId === selectedLocalPlayer.playerId || challenge.playerTwoId === selectedLocalPlayer.playerId) && (getChallengeStatus(challenge) != ChallengeStatus.Resolved)
+    (challenge.playerOneId === selectedLocalPlayer.playerId || challenge.playerTwoId === selectedLocalPlayer.playerId) 
+    && 
+    (getChallengeStatus(challenge) != ChallengeStatus.Resolved)
   )})
 
   return (

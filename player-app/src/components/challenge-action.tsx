@@ -7,7 +7,7 @@ import { styles } from '../styles.ts';
 import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, payoutRequestSelectors, payoutRequestSlice, selectedLocalPlayerIdSlice, } from '../redux.ts';
 import { Player, LocalPlayer, Challenge, ChallengeStatus, } from '../datatypes.ts';
 import { getChallengeStatus } from '../dump.ts';
-import { broadcastPayoutTx, signPayoutRequest, signChallenge } from '../mock.ts';
+import { broadcastFundingTx, broadcastPayoutTx, signPayoutRequest, signChallenge, arbiterSignChallenge, } from '../mock.ts';
 
 import { Currency } from './currency.tsx';
 import { PlayerPortrait } from './player-portrait.tsx';
@@ -46,6 +46,7 @@ const ActionUnsigned = (props) => {
         disabled={!props.isSigned} 
         title="Issue Challenge" 
         onPress={() => {
+          signChallenge(props.challenge);
           props.navigation.push('Challenge Details', {challengeId: props.challenge.id })
         } }
       />
@@ -69,10 +70,7 @@ const ActionRecieved = (props) => {
         disabled={!props.isSigned} 
         title="Accept Challenge" 
         onPress={() => {
-          store.dispatch(challengeSlice.actions.challengeUpdated({ 
-            id: props.challenge.id,
-            changes: { playerTwoSig: true }
-          }))
+          signChallenge(props.challenge);
           props.navigation.push('Challenge Details', {challengeId: props.challenge.id })
         } }
       />
@@ -86,10 +84,7 @@ const ActionAccepted = (props) => {
       <Button 
         title="Send to Arbiter" 
         onPress={() => {
-          store.dispatch(challengeSlice.actions.challengeUpdated({ 
-            id: props.challenge.id,
-            changes: { arbiterSig: true }
-          }))
+          arbiterSignChallenge(challenge);
           props.navigation.push('Challenge Details', {challengeId: props.challenge.id })
         } }
       />
@@ -103,10 +98,7 @@ const ActionCertified = (props) => {
       <Button 
         title="Broadcast Funding Tx" 
         onPress={() => {
-          store.dispatch(challengeSlice.actions.challengeUpdated({ 
-            id: props.challenge.id,
-            changes: { fundingTx: true }
-          }))
+          broadcastFundingTx(challenge);
           props.navigation.push('Challenge Details', {challengeId: props.challenge.id })
         } }
       />

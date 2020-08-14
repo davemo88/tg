@@ -77,6 +77,14 @@ export const populateTestStore = () => {
   }));
 }
 
+export const createChallenge = (challenge: Challenge) => {
+  store.dispatch
+}
+
+export const createPayoutRequest = (challenge: Challenge) => {
+  store.dispatch
+}
+
 export const signChallenge = (challenge: Challenge) => {
   const selectedPlayerId = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId).playerId;
   let action = {id: challenge.id, changes: {}};
@@ -119,4 +127,21 @@ export const broadcastPayoutTx = (payoutRequest: PayoutRequest) => {
     }
   }));
 
+}
+
+export const arbiterSignChallenge = (challenge: Challenge) => {
+// TODO: validation
+  store.dispatch(challengeSlice.actions.challengeUpdated({
+    id: challenge.id,
+    changes: { arbiterSig: true },
+  }));
+}
+
+export const arbiterSignPayoutRequest = (payoutRequest: PayoutRequest) => {
+  if (payoutRequest.payoutToken) {
+    store.dispatch(payoutRequestSlice.actions.payoutRequestUpdated({
+      id: payoutRequest.id,
+      changes: { arbiterSig: true },
+    }));
+  }
 }
