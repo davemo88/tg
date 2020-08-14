@@ -200,12 +200,6 @@ const ActionResolved = (props) => {
           <Text>Player Two Payout: </Text><Currency amount={payoutRequest.playerTwoAmount} />
         </View>
       </View>
-      <View style={{ alignItems: 'center' }}>
-        <Button 
-          title="Home" 
-          onPress={() => props.navigation.reset({ index:0, routes: [{ name: 'Home' }] }) } 
-        />
-      </View>
     </View>
   )
 }
