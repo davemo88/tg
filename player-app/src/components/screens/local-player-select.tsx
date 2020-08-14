@@ -15,28 +15,37 @@ export const LocalPlayerSelect = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <PlayerSelector 
-        selectedPlayerId={selectedPlayerId}
-        setSelectedPlayerId={setSelectedPlayerId}
-        playerIds={localPlayers.map(l => l.playerId)}
-      />
-      <View style={{ padding: 10 }}>
-        <Button 
-          title="Ok" 
-          onPress={() => {
-            const selectedLocalPlayer = localPlayers.find(l => l.playerId === selectedPlayerId);
-            store.dispatch(selectedLocalPlayerIdSlice.actions.setSelectedLocalPlayerId(selectedLocalPlayer.id));
-            navigation.reset({ index:0,   routes: [{ name: 'Home' }] })
-          } }
-        />
+      <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, justifyContent: 'space-around' }}>
+          <Image style={{ width: 256, height: 126 }} source='https://whatchadoinhere.s3.amazonaws.com/cc.png' />
+        </View>
+        <View style = {{ flex: 1, justifyContent: 'flex-end' }}>
+          <PlayerSelector 
+            selectedPlayerId={selectedPlayerId}
+            setSelectedPlayerId={setSelectedPlayerId}
+            playerIds={localPlayers.map(l => l.playerId)}
+          />
+        </View>
       </View>
-      <View style={{ padding: 40 }}>
-        <Button 
-          title="New Local Player" 
-          onPress={() => {
-            navigation.navigate('New Local Player')
-          } }
-        />
+      <View style={{ flex: 1 }}>
+        <View style={{ flex: 2 }}>
+          <Button 
+            title="Ok" 
+            onPress={() => {
+              const selectedLocalPlayer = localPlayers.find(l => l.playerId === selectedPlayerId);
+              store.dispatch(selectedLocalPlayerIdSlice.actions.setSelectedLocalPlayerId(selectedLocalPlayer.id));
+              navigation.reset({ index:0,   routes: [{ name: 'Home' }] })
+            } }
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Button 
+            title="New Local Player" 
+            onPress={() => {
+              navigation.navigate('New Local Player')
+            } }
+          />
+        </View>
       </View>
     </View>
   );
