@@ -30,7 +30,7 @@ export const ChallengeAction = (props) => {
         [ChallengeStatus.PayoutRequestIssued]: <ActionPayoutRequestIssued navigation={props.navigation} challenge={props.challenge} />,
         [ChallengeStatus.PayoutRequestReceived]: <ActionPayoutRequestReceived navigation={props.navigation} challenge={props.challenge} isSigned={isSigned} setIsSigned={setIsSigned} />,
         [ChallengeStatus.PayoutRequestLive]: <ActionPayoutRequestLive navigation={props.navigation} challenge={props.challenge} />,
-        [ChallengeStatus.Resolved]: <ActionResolved />,
+        [ChallengeStatus.Resolved]: <ActionResolved navigation={props.navigation} challenge={props.challenge}/>,
         [ChallengeStatus.Invalid]: <ActionInvalid />,
       }[getChallengeStatus(props.challenge)]
     }
@@ -151,7 +151,7 @@ const ActionPayoutRequestReceived = (props) => {
         <SignatureSwitch isSigned={props.isSigned} setIsSigned={props.setIsSigned} />
         <Button 
           disabled={!props.isSigned} 
-          title='Sign Payout Request'
+          title='Accept Payout Request'
           onPress={() => {
             signPayoutRequest(payoutRequest)
             resetDetails(props.navigation, props.challenge.id);
@@ -187,9 +187,25 @@ const ActionPayoutRequestLive = (props) => {
 }
 
 const ActionResolved = (props) => {
+  const payoutRequest = payoutRequestSelectors.selectAll(store.getState())
+    .filter((pr, i, a) => pr.challengeId === props.challenge.id ).pop();
   return (
     <View>
       <Text>Resolved Challenge</Text>
+      <View style={{ flexDirection: 'row' }}>
+        <View>
+          <Text>Player One Payout: </Text><Currency amount={payoutRequest.playerOneAmount} />
+        </View>
+        <View>
+          <Text>Player Two Payout: </Text><Currency amount={payoutRequest.playerTwoAmount} />
+        </View>
+      </View>
+      <View style={{ alignItems: 'center' }}>
+        <Button 
+          title="Home" 
+          onPress={() => props.navigation.reset({ index:0, routes: [{ name: 'Home' }] }) } 
+        />
+      </View>
     </View>
   )
 }

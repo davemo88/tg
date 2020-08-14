@@ -1,7 +1,7 @@
 import { nanoid } from '@reduxjs/toolkit';
 import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, payoutRequestSelectors, payoutRequestSlice, selectedLocalPlayerIdSlice, } from './redux.ts';
 
-export const populateTestStore = () => {
+export const loadLocalData = () => {
   // players
   store.dispatch(playerSlice.actions.playerAdded({ id: 'akin', name: 'Akin Toulouse', pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0', balance: 9999 }));
   store.dispatch(playerSlice.actions.playerAdded({ id: 'duncan', name: 'Duncan Hoops', pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/111700/2.0', balance: 1111 }));
@@ -77,6 +77,7 @@ export const populateTestStore = () => {
   }));
 }
 
+// this is 
 export const createChallenge = (challenge: Challenge) => {
   store.dispatch
 }
@@ -129,6 +130,7 @@ export const broadcastPayoutTx = (payoutRequest: PayoutRequest) => {
 
 }
 
+// these arbiter prefixed functions require calls to the arbiter service to resolve
 export const arbiterSignChallenge = (challenge: Challenge) => {
 // TODO: validation
   store.dispatch(challengeSlice.actions.challengeUpdated({

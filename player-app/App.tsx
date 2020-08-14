@@ -14,10 +14,8 @@ import { AddPlayer } from './src/components/screens/add-player.tsx';
 import { NewChallenge } from './src/components/screens/new-challenge.tsx';
 import { RequestPayout } from './src/components/screens/request-payout.tsx';
 
-//TODO: remove this
-// how to do better redux testing?
-import { populateTestStore }  from './src/mock.ts';
-populateTestStore();
+import { loadLocalData }  from './src/mock.ts';
+loadLocalData();
 
 const Stack = createStackNavigator();
 
