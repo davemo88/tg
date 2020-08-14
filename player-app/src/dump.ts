@@ -48,7 +48,7 @@ export const getChallengeStatus = (challenge: Challenge ): ChallengeStatus => {
     return isChallengeSignedBy(challenge, selectedPlayerId) ? ChallengeStatus.Issued : ChallengeStatus.Received;
   }
   else {
-    return isUnsigned(challenge) ? Challenge.Unsigned : Challenge.Invalid;
+    return isUnsigned(challenge) ? ChallengeStatus.Unsigned : ChallengeStatus.Invalid;
   }
 }
 

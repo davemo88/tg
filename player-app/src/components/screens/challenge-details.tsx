@@ -1,10 +1,11 @@
 import React from 'react';
-import { Text, View, } from 'react-native';
+import { Text, Button, View, } from 'react-native';
 
 import { styles } from '../../styles.ts';
 
 import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, selectedLocalPlayerIdSlice, } from '../../redux.ts';
 import { Player, LocalPlayer, Challenge, ChallengeStatus, getChallengeStatus } from '../../datatypes.ts'
+import { dismissChallenge } from '../../mock.ts';
 
 import { ChallengeSummary } from '../challenge-summary.tsx';
 import { ChallengeAction } from '../challenge-action.tsx';
@@ -37,7 +38,18 @@ export const ChallengeDetails = ({ route, navigation }) => {
         </View>
       </View>
       <View style={{ flex: 1 }}>
-        <ChallengeAction challenge={challenge} navigation={navigation} />
+        <View style={{ flex: 3, }}>
+          <ChallengeAction challenge={challenge} navigation={navigation} />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', }}>
+          <Button 
+            title="Dismiss Challenge" 
+            onPress={() => {
+              dismissChallenge(challenge.id);
+              navigation.reset({ index:0, routes: [{ name: 'Home', },] });
+            } }
+          />
+        </View>
       </View>
     </View>
   );

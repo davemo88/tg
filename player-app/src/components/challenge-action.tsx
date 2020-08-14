@@ -7,7 +7,7 @@ import { styles } from '../styles.ts';
 import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, payoutRequestSelectors, payoutRequestSlice, selectedLocalPlayerIdSlice, } from '../redux.ts';
 import { Player, LocalPlayer, Challenge, ChallengeStatus, } from '../datatypes.ts';
 import { getChallengeStatus } from '../dump.ts';
-import { broadcastFundingTx, broadcastPayoutTx, signPayoutRequest, signChallenge, arbiterSignChallenge, declineChallenge, denyPayoutRequest, } from '../mock.ts';
+import { broadcastFundingTx, broadcastPayoutTx, signPayoutRequest, signChallenge, arbiterSignChallenge, declineChallenge, dismissChallenge, denyPayoutRequest, } from '../mock.ts';
 
 import { Currency } from './currency.tsx';
 import { PlayerPortrait } from './player-portrait.tsx';
@@ -30,8 +30,8 @@ export const ChallengeAction = (props) => {
         [ChallengeStatus.PayoutRequestIssued]: <ActionPayoutRequestIssued navigation={props.navigation} challenge={props.challenge} />,
         [ChallengeStatus.PayoutRequestReceived]: <ActionPayoutRequestReceived navigation={props.navigation} challenge={props.challenge} isSigned={isSigned} setIsSigned={setIsSigned} />,
         [ChallengeStatus.PayoutRequestLive]: <ActionPayoutRequestLive navigation={props.navigation} challenge={props.challenge} />,
-        [ChallengeStatus.Resolved]: <ActionResolved navigation={props.navigation} challenge={props.challenge}/>,
-        [ChallengeStatus.Invalid]: <ActionInvalid />,
+        [ChallengeStatus.Resolved]: <ActionResolved navigation={props.navigation} challenge={props.challenge} />,
+        [ChallengeStatus.Invalid]: <ActionInvalid navigation={props.navigation} challenge={props.challenge} />,
       }[getChallengeStatus(props.challenge)]
     }
     </View>
@@ -206,8 +206,9 @@ const ActionResolved = (props) => {
 
 const ActionInvalid = (props) => {
   return (
-    <View>
+    <View style={{ alignItems: 'center' }}>
       <Text>Invalid Challenge</Text>
+      <Image style={styles.mediumEmote} source={'https://static-cdn.jtvnw.net/emoticons/v1/22998/2.0'} />
     </View>
   )
 }
