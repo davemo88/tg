@@ -16,8 +16,9 @@ export const LocalPlayerSelect = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={{ flex: 1 }}>
-        <View style={{ flex: 1, justifyContent: 'space-around' }}>
+        <View style={{ flex: 2, padding: 5, alignItems: 'center' }}>
           <Image style={{ width: 256, height: 126 }} source='https://whatchadoinhere.s3.amazonaws.com/cc.png' />
+          <Image style={{ width: 133, height: 45 }} source='https://whatchadoinhere.s3.amazonaws.com/test.png' />
         </View>
         <View style = {{ flex: 1, justifyContent: 'flex-end' }}>
           <PlayerSelector 
@@ -28,7 +29,7 @@ export const LocalPlayerSelect = ({ navigation }) => {
         </View>
       </View>
       <View style={{ flex: 1 }}>
-        <View style={{ flex: 2 }}>
+        <View style={{ flex: 1 }}>
           <Button 
             title="Ok" 
             onPress={() => {
