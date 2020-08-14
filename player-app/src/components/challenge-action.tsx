@@ -7,7 +7,7 @@ import { styles } from '../styles.ts';
 import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, payoutRequestSelectors, payoutRequestSlice, selectedLocalPlayerIdSlice, } from '../redux.ts';
 import { Player, LocalPlayer, Challenge, ChallengeStatus, } from '../datatypes.ts';
 import { getChallengeStatus } from '../dump.ts';
-import { broadcastFundingTx, broadcastPayoutTx, signPayoutRequest, signChallenge, arbiterSignChallenge, } from '../mock.ts';
+import { broadcastFundingTx, broadcastPayoutTx, signPayoutRequest, signChallenge, arbiterSignChallenge, declineChallenge, denyPayoutRequest, } from '../mock.ts';
 
 import { Currency } from './currency.tsx';
 import { PlayerPortrait } from './player-portrait.tsx';
@@ -23,7 +23,7 @@ export const ChallengeAction = (props) => {
       {
         [ChallengeStatus.Unsigned]: <ActionUnsigned navigation={props.navigation} isSigned={isSigned} setIsSigned={setIsSigned} />,
         [ChallengeStatus.Issued]: <ActionIssued />,
-        [ChallengeStatus.Received]: <ActionRecieved navigation={props.navigation} isSigned={isSigned} setIsSigned={setIsSigned} challenge={props.challenge}/>,
+        [ChallengeStatus.Received]: <ActionReceived navigation={props.navigation} isSigned={isSigned} setIsSigned={setIsSigned} challenge={props.challenge}/>,
         [ChallengeStatus.Accepted]: <ActionAccepted navigation={props.navigation} challenge={props.challenge} />,
         [ChallengeStatus.Certified]: <ActionCertified navigation={props.navigation} challenge={props.challenge} />,
         [ChallengeStatus.Live]: <ActionLive navigation={props.navigation} challenge={props.challenge} />,
@@ -47,7 +47,7 @@ const ActionUnsigned = (props) => {
         title="Issue Challenge" 
         onPress={() => {
           signChallenge(props.challenge);
-          props.navigation.push('Challenge Details', {challengeId: props.challenge.id })
+          resetDetails(props.navigation, props.challenge.id);
         } }
       />
     </View>
@@ -62,7 +62,7 @@ const ActionIssued = (props) => {
   )
 }
 
-const ActionRecieved = (props) => {
+const ActionReceived = (props) => {
   return (
     <View>
       <SignatureSwitch isSigned={props.isSigned} setIsSigned={props.setIsSigned} />
@@ -71,7 +71,14 @@ const ActionRecieved = (props) => {
         title="Accept Challenge" 
         onPress={() => {
           signChallenge(props.challenge);
-          props.navigation.push('Challenge Details', {challengeId: props.challenge.id })
+          resetDetails(props.navigation, props.challenge.id);
+        } }
+      />
+      <Button 
+        title="Decline Challenge" 
+        onPress={() => {
+          declineChallenge(props.challenge.id);
+          props.navigation.reset({ index:0, routes: [{ name: 'Home', },] });
         } }
       />
     </View>
@@ -85,7 +92,7 @@ const ActionAccepted = (props) => {
         title="Send to Arbiter" 
         onPress={() => {
           arbiterSignChallenge(props.challenge);
-          props.navigation.push('Challenge Details', {challengeId: props.challenge.id })
+          resetDetails(props.navigation, props.challenge.id);
         } }
       />
     </View>
@@ -99,7 +106,7 @@ const ActionCertified = (props) => {
         title="Broadcast Funding Tx" 
         onPress={() => {
           broadcastFundingTx(props.challenge);
-          props.navigation.push('Challenge Details', {challengeId: props.challenge.id })
+          resetDetails(props.navigation, props.challenge.id);
         } }
       />
     </View>
@@ -138,15 +145,26 @@ const ActionPayoutRequestReceived = (props) => {
   return (
     <View>
       <Text>Payout Request Received</Text>
-      <SignatureSwitch isSigned={props.isSigned} setIsSigned={props.setIsSigned} />
-      <Button 
-        disabled={!props.isSigned} 
-        title="Sign Payout Request" 
-        onPress={() => {
-          signPayoutRequest(payoutRequest)
-          props.navigation.reset({ index:0, routes: [{ name: 'Home', }, { name: 'Challenge Details', params: {challengeId: props.challenge.id } }] });
-        } }
-      />
+      <View>
+        <Text>Player One Payout: </Text><Currency amount={payoutRequest.playerOneAmount} />
+        <Text>Player Two Payout: </Text><Currency amount={payoutRequest.playerTwoAmount} />
+        <SignatureSwitch isSigned={props.isSigned} setIsSigned={props.setIsSigned} />
+        <Button 
+          disabled={!props.isSigned} 
+          title='Sign Payout Request'
+          onPress={() => {
+            signPayoutRequest(payoutRequest)
+            resetDetails(props.navigation, props.challenge.id);
+          } }
+        />
+        <Button
+          title='Deny Payout Request'
+          onPress={() => {
+            denyPayoutRequest(payoutRequest.id)
+            resetDetails(props.navigation, props.challenge.id);
+          } } 
+        />
+      </View>
     </View>
   )
 }
@@ -161,7 +179,7 @@ const ActionPayoutRequestLive = (props) => {
         title="Broadcast Payout Tx" 
         onPress={() => {
           broadcastPayoutTx(payoutRequest);
-          props.navigation.reset({ index:0, routes: [{ name: 'Home' }] });
+          resetDetails(props.navigation, props.challenge.id);
         } }
       />
     </View>
@@ -182,4 +200,8 @@ const ActionInvalid = (props) => {
       <Text>Invalid Challenge</Text>
     </View>
   )
+}
+
+const resetDetails = (navigation, challengeId: ChallengeId) => {
+  navigation.reset({ index:0, routes: [{ name: 'Home', }, { name: 'Challenge Details', params: {challengeId: challengeId } }] });
 }

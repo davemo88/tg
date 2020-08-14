@@ -1,6 +1,7 @@
+import { store, localPlayerSelectors, challengeSelectors, payoutRequestSelectors } from './redux.ts';
+
 import { LocalPlayer, Player, Challenge, ChallengeStatus, PayoutRequest, PayoutRequestStatus, } from './datatypes.ts';
 
-import { store, localPlayerSelectors, challengeSelectors, payoutRequestSelectors } from './redux.ts';
 
 // TODO: this function checks the blockchain for the expected payout transactions for the challenge
 // if they aren't found then it isn't resolved. if they are invalid then the challenge is invalid

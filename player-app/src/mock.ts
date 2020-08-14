@@ -145,3 +145,11 @@ export const arbiterSignPayoutRequest = (payoutRequest: PayoutRequest) => {
     }));
   }
 }
+
+export const declineChallenge = (challengeId: ChallengeId) => {
+  store.dispatch(challengeSlice.actions.challengeRemoved(challengeId));
+}
+
+export const denyPayoutRequest = (payoutRequestId: PayoutRequestId) => {
+  store.dispatch(payoutRequestSlice.actions.payoutRequestRemoved(payoutRequestId));
+}

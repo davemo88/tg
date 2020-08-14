@@ -31,6 +31,7 @@ export const challengeSlice = createSlice({
   reducers: {
     challengeAdded: challengeAdapter.addOne,
     challengeUpdated: challengeAdapter.updateOne,
+    challengeRemoved: challengeAdapter.removeOne,
   }
 })
 
@@ -42,6 +43,7 @@ export const payoutRequestSlice = createSlice({
   reducers: {
     payoutRequestAdded: payoutRequestAdapter.addOne,
     payoutRequestUpdated: payoutRequestAdapter.updateOne,
+    payoutRequestRemoved: payoutRequestAdapter.removeOne,
   }
 })
 
