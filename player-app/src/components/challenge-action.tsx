@@ -98,7 +98,7 @@ const ActionCertified = (props) => {
       <Button 
         title="Broadcast Funding Tx" 
         onPress={() => {
-          broadcastFundingTx(challenge);
+          broadcastFundingTx(props.challenge);
           props.navigation.push('Challenge Details', {challengeId: props.challenge.id })
         } }
       />
