@@ -6,6 +6,7 @@ import { styles } from '../../styles.ts';
 
 import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, selectedLocalPlayerIdSlice, } from '../../redux.ts';
 import { Player, LocalPlayer, Challenge, ChallengeStatus, getChallengeStatus } from '../../datatypes.ts';
+import { NETWORK } from '../../mock.ts';
 
 import { PlayerSelector } from '../player-selector.tsx';
 
@@ -18,7 +19,12 @@ export const LocalPlayerSelect = ({ navigation }) => {
       <View style={{ flex: 1 }}>
         <View style={{ flex: 2, padding: 5, alignItems: 'center' }}>
           <Image style={{ width: 256, height: 126 }} source='https://whatchadoinhere.s3.amazonaws.com/cc.png' />
-          <Image style={{ width: 133, height: 45 }} source='https://whatchadoinhere.s3.amazonaws.com/test.png' />
+          { NETWORK === 'Test' &&
+            <Image style={{ width: 133, height: 45 }} source='https://whatchadoinhere.s3.amazonaws.com/test.png' />
+          }
+          { NETWORK === 'Live' &&
+            <Image style={{ width: 133, height: 45 }} source='https://whatchadoinhere.s3.amazonaws.com/live.png' />
+          }
         </View>
         <View style = {{ flex: 1, justifyContent: 'flex-end' }}>
           <PlayerSelector 
