@@ -1,12 +1,15 @@
 import { nanoid } from '@reduxjs/toolkit';
 import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, payoutRequestSelectors, payoutRequestSlice, selectedLocalPlayerIdSlice, } from './redux.ts';
 
-export const NETWORK: string = 'Test';
+// probably still s3 somewhere
 export const STATIC_CONTENT_HOST: string = 'https://whatchadoinhere.s3.amazonaws.com/';
 export const TITLE_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'cc.png'; 
 export const TEST_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'test.png'; 
 export const LIVE_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'live.png'; 
 
+
+// this is appdata
+export const NETWORK: string = 'Test';
 export const loadLocalData = () => {
   // players
   store.dispatch(playerSlice.actions.playerAdded({ id: 'akin', name: 'Akin Toulouse', pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0', balance: 9999 }));
@@ -93,7 +96,41 @@ export const loadLocalData = () => {
   }));
 }
 
-// this is 
+// delete some local data? set local flag more likely
+export const declineChallenge = (challengeId: ChallengeId) => {
+  store.dispatch(challengeSlice.actions.challengeRemoved(challengeId));
+}
+
+export const dismissChallenge = (challengeId: ChallengeId) => {
+  store.dispatch(challengeSlice.actions.challengeRemoved(challengeId));
+}
+
+export const denyPayoutRequest = (payoutRequestId: PayoutRequestId) => {
+  store.dispatch(payoutRequestSlice.actions.payoutRequestRemoved(payoutRequestId));
+}
+
+// arbiter prefixed functions require calls to the arbiter service
+export const arbiterSignChallenge = (challenge: Challenge) => {
+// TODO: validation
+  store.dispatch(challengeSlice.actions.challengeUpdated({
+    id: challenge.id,
+    changes: { arbiterSig: true },
+  }));
+}
+
+export const arbiterSignPayoutRequest = (payoutRequest: PayoutRequest) => {
+  if (payoutRequest.payoutToken) {
+    store.dispatch(payoutRequestSlice.actions.payoutRequestUpdated({
+      id: payoutRequest.id,
+      changes: { arbiterSig: true },
+    }));
+  }
+}
+
+//
+// below functions need crypto wallet functions
+//
+
 export const createChallenge = (challenge: Challenge) => {
   store.dispatch
 }
@@ -144,34 +181,4 @@ export const broadcastPayoutTx = (payoutRequest: PayoutRequest) => {
     }
   }));
 
-}
-
-// these arbiter prefixed functions require calls to the arbiter service to resolve
-export const arbiterSignChallenge = (challenge: Challenge) => {
-// TODO: validation
-  store.dispatch(challengeSlice.actions.challengeUpdated({
-    id: challenge.id,
-    changes: { arbiterSig: true },
-  }));
-}
-
-export const arbiterSignPayoutRequest = (payoutRequest: PayoutRequest) => {
-  if (payoutRequest.payoutToken) {
-    store.dispatch(payoutRequestSlice.actions.payoutRequestUpdated({
-      id: payoutRequest.id,
-      changes: { arbiterSig: true },
-    }));
-  }
-}
-
-export const declineChallenge = (challengeId: ChallengeId) => {
-  store.dispatch(challengeSlice.actions.challengeRemoved(challengeId));
-}
-
-export const dismissChallenge = (challengeId: ChallengeId) => {
-  store.dispatch(challengeSlice.actions.challengeRemoved(challengeId));
-}
-
-export const denyPayoutRequest = (payoutRequestId: PayoutRequestId) => {
-  store.dispatch(payoutRequestSlice.actions.payoutRequestRemoved(payoutRequestId));
 }
