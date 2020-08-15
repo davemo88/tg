@@ -1,5 +1,6 @@
 import { nanoid } from '@reduxjs/toolkit';
 import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, payoutRequestSelectors, payoutRequestSlice, selectedLocalPlayerIdSlice, } from './redux.ts';
+import { LocalPlayer, Player, Url, Challenge, PayoutRequest, }
 
 // probably still s3 somewhere
 export const STATIC_CONTENT_HOST: string = 'https://whatchadoinhere.s3.amazonaws.com/';
@@ -130,6 +131,12 @@ export const arbiterSignPayoutRequest = (payoutRequest: PayoutRequest) => {
 //
 // below functions need crypto wallet functions
 //
+
+export const newLocalPlayer = (playerName: string, pictureUrl: Url) => {
+  const newPlayerId = nanoid();
+  store.dispatch(playerSlice.actions.playerAdded({ id: newPlayerId, name: playerName, pictureUrl: pictureUrl }));
+  store.dispatch(localPlayerSlice.actions.localPlayerAdded({ id: nanoid(), playerId: newPlayerId, balance: 0 }));
+}
 
 export const createChallenge = (challenge: Challenge) => {
   store.dispatch

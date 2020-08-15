@@ -6,6 +6,7 @@ import { styles } from '../../styles.ts';
 
 import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, selectedLocalPlayerIdSlice, } from '../../redux.ts';
 import { Player, LocalPlayer, Challenge, ChallengeStatus, getChallengeStatus } from '../../datatypes.ts';
+import { newLocalPlayer } from '../../mock.ts';
 
 import { PlayerPortrait } from '../player-portrait.tsx';
 
@@ -37,9 +38,7 @@ export const NewLocalPlayer = ({ navigation }) => {
         <Button 
           title="Ok" 
           onPress={() => {
-            const newPlayerId = nanoid();
-            store.dispatch(playerSlice.actions.playerAdded({ id: newPlayerId, name: playerName, pictureUrl: pictureUrl }));
-            store.dispatch(localPlayerSlice.actions.localPlayerAdded({ id: nanoid(), playerId: newPlayerId, balance: 0 }));
+            newLocalPlayer(playerName, pictureUrl);
             navigation.reset({ index:0, routes: [{ name: 'Player Select' }] })
           } }
         />
