@@ -18,17 +18,19 @@ export const ChallengeListItem = (props) => {
 
   return (
     <View style={{ flexDirection: 'row', backgroundColor: 'slategrey', margin: 2, padding: 2 }}>
-      <PlayerPortrait name={otherPlayer.name} pictureUrl={otherPlayer.pictureUrl} />
-      <ChallengeSummary challenge={props.challenge} />
-      <View style={{ alignItems: 'center', justifyContent: 'center', }}>
-        <View>
-          <Button 
-            title="Details" 
-            onPress={() => 
-              props.navigation.push('Challenge Details', { challengeId: props.challenge.id })
-            }
-          />
-        </View>
+      <View>
+        <PlayerPortrait name={otherPlayer.name} pictureUrl={otherPlayer.pictureUrl} />
+      </View>
+      <View style={{ flex: 2 }}>
+        <ChallengeSummary challenge={props.challenge} />
+      </View>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', }}>
+        <Button 
+          title="Details" 
+          onPress={() => 
+            props.navigation.push('Challenge Details', { challengeId: props.challenge.id })
+          }
+        />
       </View>
     </View>
   );
