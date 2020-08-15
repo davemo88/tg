@@ -1,6 +1,10 @@
 *.swp
 /arb/target
 /arb/Cargo.lock
+/tglib/target
+/tglib/Cargo.lock
+/wallet/target
+/wallet/Cargo.lock
 player-app/node_modules/**/*
 player-app/.expo/*
 player-app/npm-debug.*
