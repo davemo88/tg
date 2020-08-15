@@ -1,6 +1,6 @@
 import { nanoid } from '@reduxjs/toolkit';
 import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, payoutRequestSelectors, payoutRequestSlice, selectedLocalPlayerIdSlice, } from './redux.ts';
-import { LocalPlayer, Player, Url, Challenge, PayoutRequest, }
+import { LocalPlayer, Player, Url, Challenge, PayoutRequest, } from './datatypes.ts';
 
 // probably still s3 somewhere
 export const STATIC_CONTENT_HOST: string = 'https://whatchadoinhere.s3.amazonaws.com/';
