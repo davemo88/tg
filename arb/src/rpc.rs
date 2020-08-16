@@ -19,7 +19,7 @@ use bitcoincore_rpc::{
 
 use crate::{
     MultisigEscrow,
-    Challenge,
+    Contract,
     Result,
     TgError,
     NETWORK,
@@ -29,16 +29,16 @@ use crate::{
 pub struct TgRpcClient(pub Client);
 
 pub trait TgRpcClientApi {
-    fn create_challenge_funding_transaction(&self, escrow: &MultisigEscrow, pot: Amount) -> Result<Transaction>;
-    fn create_challenge_payout_transaction(&self, escrow: &MultisigEscrow, funding_tx: &Transaction, player: &PublicKey) -> Result<Transaction>;
+    fn create_contract_funding_transaction(&self, escrow: &MultisigEscrow, pot: Amount) -> Result<Transaction>;
+    fn create_contract_payout_transaction(&self, escrow: &MultisigEscrow, funding_tx: &Transaction, player: &PublicKey) -> Result<Transaction>;
     fn get_inputs_for_address(&self, address: &Address, amount: Amount) -> (Vec<CreateRawTransactionInput>, Amount,);
 // TODO: make sure secp contexts are correctly set up, they shouldn't all be able to sign
 // TODO: this function might not belong here because it requires access to a private key
-    fn sign_challenge_tx(&self, key: PrivateKey, challenge: &mut Challenge);
+    fn sign_contract_tx(&self, key: PrivateKey, contract: &mut Contract);
 }
 
 impl TgRpcClientApi for TgRpcClient {
-    fn create_challenge_funding_transaction(&self, escrow: &MultisigEscrow, pot: Amount) -> Result<Transaction> {
+    fn create_contract_funding_transaction(&self, escrow: &MultisigEscrow, pot: Amount) -> Result<Transaction> {
         let p1_address = Address::p2wpkh(&escrow.players[0], NETWORK);
         let p2_address = Address::p2wpkh(&escrow.players[1], NETWORK);
         let arbiter_address = Address::p2wpkh(&escrow.arbiters[0], NETWORK);
@@ -77,7 +77,7 @@ impl TgRpcClientApi for TgRpcClient {
         let _total_out: Amount = Amount::ONE_SAT * tx.output.iter().map(|txout| txout.value).sum();
 
 //        println!("
-//challenge funding tx:
+//contract funding tx:
 //        p1 total in: {:?}
 //        p2 total in: {:?}
 //        total in: {:?}
@@ -103,7 +103,7 @@ impl TgRpcClientApi for TgRpcClient {
         Ok(tx)
     }
 
-    fn create_challenge_payout_transaction(&self, escrow: &MultisigEscrow, funding_tx: &Transaction, player: &PublicKey) -> Result<Transaction> {
+    fn create_contract_payout_transaction(&self, escrow: &MultisigEscrow, funding_tx: &Transaction, player: &PublicKey) -> Result<Transaction> {
 // TODO: should check if the funding tx is in the blockchain since it probably shouldn't be
         let escrow_script_pubkey = escrow.address.script_pubkey();
         let mut vout: Option<(u32, Amount)> = None;
@@ -173,15 +173,15 @@ impl TgRpcClientApi for TgRpcClient {
 
     } 
 
-    fn sign_challenge_tx(&self, key: PrivateKey, challenge: &mut Challenge) {
+    fn sign_contract_tx(&self, key: PrivateKey, contract: &mut Contract) {
         let result = self.0.sign_raw_transaction_with_key(
-            challenge.funding_tx_hex.clone(),
+            contract.funding_tx_hex.clone(),
             &[key],
             None,
             None,
         );
 //        println!("sign tx result: {:?}", result);
-        challenge.funding_tx_hex = result.unwrap().hex.raw_hex();
+        contract.funding_tx_hex = result.unwrap().hex.raw_hex();
     }
 }
 

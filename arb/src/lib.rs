@@ -89,25 +89,25 @@ impl Arbiter {
 }
 
 #[derive(Clone)]
-pub struct Challenge {
+pub struct Contract {
     pub escrow: MultisigEscrow,
 // this tx needs to be mined before the payout script can be signed
 // because we need to create txs that spend from it in the payout script
 // there is no problem with this for the following reasons:
 // 1. the arbiter doesn't need to sign the funding tx since they don't contribute coins
 // 2. in a 2/3 multisig, the players can recover their funds at any time, e.g.
-// if the challenge doesn't proceed for some reason
+// if the contract doesn't proceed for some reason
 // above is only the case if don't use segwit, but no reason not to
 // segwit makes it possible to create transaction that spend from unmined txs
 // because the txid will not change
 //    pub funding_tx_hex: Vec<u8>,
 //    maybe this should be a Transaction
     pub funding_tx_hex: String,
-// must include data unique to this challenge e.g. funding tx id, so old signatures for similar
+// must include data unique to this contract e.g. funding tx id, so old signatures for similar
 // payouts (e.g. rematches) can't be used, since its hash is signed and use for later verification
 // including specific payout transactions in the payout script might be sufficient for uniqueness
 // if they are spending from the funding tx utxos
-// just put other bitcoin transactions here which uses the multisig's utxo from the challenge
+// just put other bitcoin transactions here which uses the multisig's utxo from the contract
 // that are the only ones which can be approved in case of a payout request
 // this could just be its hash
     pub payout_script: script::TgScript,
@@ -117,23 +117,23 @@ pub struct Challenge {
 // because this contains the funding tx id, it will be unique
 //
 // signed hash of the payout script 
-// this value is unique to this challenge because it includes the funding txid
+// this value is unique to this contract because it includes the funding txid
 //    pub payout_script_hash_sig: Option<Signature>,
 // TODO: probably better for serialization to make this a list
 // TODO: needs to sign more than just payout script.
-// can a signed payout script be paired with the wrong / a fraudulent challenge. is any reference
-// made to the challenge during payout request validation? or simply the script? is that secure?
+// can a signed payout script be paired with the wrong / a fraudulent contract. is any reference
+// made to the contract during payout request validation? or simply the script? is that secure?
     pub payout_script_hash_sigs: HashMap<PublicKey, Signature>,
 
-// need to add challenge id a la tx id (hash of challenge data) and sign that instead of just the
+// need to add contract id a la tx id (hash of contract data) and sign that instead of just the
 // payout script
 }
 
-pub trait ChallengeApi {
+pub trait ContractApi {
     fn payout_script_hash(&self) -> Vec<u8>;
 }
 
-impl ChallengeApi for Challenge {
+impl ContractApi for Contract {
     fn payout_script_hash(&self) -> Vec<u8> {
         let mut hash_engine = Sha2Engine::default();
         hash_engine.input(&Vec::from(self.payout_script.clone()));
@@ -143,7 +143,7 @@ impl ChallengeApi for Challenge {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum ChallengeState {
+pub enum ContractState {
 // unsigned
     Unsigned,
 // signed by one player 
@@ -157,7 +157,7 @@ pub enum ChallengeState {
 }
 
 //NOTE: could use dummy tx requiring signing by arbiter to embed info in tx
-impl Challenge {
+impl Contract {
 
     #[allow(dead_code)]
     fn sign_payout_script(&mut self, key: PrivateKey) {
@@ -168,13 +168,13 @@ impl Challenge {
     }
 
     #[allow(dead_code)]
-    fn verify_player_sigs(&self, player: PublicKey,  challenge: &Challenge) -> bool {
+    fn verify_player_sigs(&self, player: PublicKey,  contract: &Contract) -> bool {
 //TODO: check funding tx sig too
-        if challenge.escrow.players.contains(&player) {
+        if contract.escrow.players.contains(&player) {
             let secp = Secp256k1::new();        
             return secp.verify(
-                &Message::from_slice(&challenge.payout_script_hash()).unwrap(),
-                &challenge.payout_script_hash_sigs[&player],
+                &Message::from_slice(&contract.payout_script_hash()).unwrap(),
+                &contract.payout_script_hash_sigs[&player],
                 &player.key
             ).is_ok()
         }
@@ -197,7 +197,7 @@ impl Challenge {
         false
     }
 
-    fn state(&self) -> ChallengeState {
+    fn state(&self) -> ContractState {
 
         let mut hash_engine = Sha2Engine::default();
         hash_engine.input(&Vec::from(self.payout_script.clone()));
@@ -222,15 +222,15 @@ impl Challenge {
         match arbiter_sig {
             true => {
                 match num_player_sigs {
-                    NUM_PLAYERS => ChallengeState::Certified,
-                    _ => ChallengeState::Invalid,
+                    NUM_PLAYERS => ContractState::Certified,
+                    _ => ContractState::Invalid,
                 }
             },
             false => {
                 match num_player_sigs {
-                    NUM_PLAYERS => ChallengeState::Accepted,
-                    0 => ChallengeState::Unsigned,
-                    _ => ChallengeState::Issued,
+                    NUM_PLAYERS => ContractState::Accepted,
+                    0 => ContractState::Unsigned,
+                    _ => ContractState::Issued,
                 }
             }
         }
@@ -239,7 +239,7 @@ impl Challenge {
 
 #[derive(Clone)]
 pub struct PayoutRequest {
-    pub challenge: Challenge,
+    pub contract: Contract,
 // in bitcoin, a script is always invaluated in the context of a transaction
 // therefore the tx data, e.g. txid doesn't need to be pushed to the stack
 // explicitly by the script since it is guaranteed to be available in the context
@@ -443,7 +443,7 @@ mod tests {
         }
     }
 
-    fn create_challenge(client: &TgRpcClient) -> Challenge {
+    fn create_contract(client: &TgRpcClient) -> Contract {
 
         let p1_address = client.0.get_new_address(Some(PLAYER_1_ADDRESS_LABEL), Some(AddressType::Bech32)).unwrap();
         let p2_address = client.0.get_new_address(Some(PLAYER_2_ADDRESS_LABEL), Some(AddressType::Bech32)).unwrap();
@@ -458,7 +458,7 @@ mod tests {
         println!("{:?} balance: {:?}", p1_address.to_string(), p1_balance);
         println!("{:?} balance: {:?}", p2_address.to_string(), p2_balance);
 
-        println!("creating challenge:
+        println!("creating contract:
 
 players:
 {:?} 
@@ -492,12 +492,12 @@ buyin: {:?}
         );
         println!("escrow {:?} created", escrow.address.to_string());
 
-        let funding_tx = client.create_challenge_funding_transaction(&escrow, POT_AMOUNT).unwrap();
+        let funding_tx = client.create_contract_funding_transaction(&escrow, POT_AMOUNT).unwrap();
         println!("funding tx {:?} created", funding_tx.txid());
 
-        let payout_tx_p1 = client.create_challenge_payout_transaction(&escrow, &funding_tx, &p1_pubkey).unwrap();
+        let payout_tx_p1 = client.create_contract_payout_transaction(&escrow, &funding_tx, &p1_pubkey).unwrap();
         println!("payout tx for_p1 {:?} created", payout_tx_p1.txid());
-        let payout_tx_p2 = client.create_challenge_payout_transaction(&escrow, &funding_tx, &p2_pubkey).unwrap();
+        let payout_tx_p2 = client.create_contract_payout_transaction(&escrow, &funding_tx, &p2_pubkey).unwrap();
         println!("payout tx for p2 {:?} created", payout_tx_p2.txid());
 
         let payout_script = create_tx_fork_script(&arbiter_pubkey, &payout_tx_p1, &payout_tx_p2);
@@ -506,7 +506,7 @@ buyin: {:?}
         let payout_script_hash: &[u8] = &Sha2Hash::from_engine(hash_engine);
         println!("payout script {:?} created", payout_script_hash.to_hex());
 
-        Challenge {
+        Contract {
             escrow,
             funding_tx_hex: funding_tx.raw_hex(),
             payout_script,
@@ -514,60 +514,60 @@ buyin: {:?}
         }
     }
 
-    fn sign_challenge(client: &TgRpcClient, mut challenge: &mut Challenge) {
+    fn sign_contract(client: &TgRpcClient, mut contract: &mut Contract) {
 
-        let p1_address = Address::p2wpkh(&challenge.escrow.players[0], NETWORK);   
-        let p2_address = Address::p2wpkh(&challenge.escrow.players[1], NETWORK);   
-        let arbiter_address = Address::p2wpkh(&challenge.escrow.arbiters[0], NETWORK);   
+        let p1_address = Address::p2wpkh(&contract.escrow.players[0], NETWORK);   
+        let p2_address = Address::p2wpkh(&contract.escrow.players[1], NETWORK);   
+        let arbiter_address = Address::p2wpkh(&contract.escrow.arbiters[0], NETWORK);   
 
-        println!("challenge state: {:?}", challenge.state());
+        println!("contract state: {:?}", contract.state());
         println!("p1 signing");
         let p1_key = client.0.dump_private_key(&p1_address).unwrap();
-        client.sign_challenge_tx(p1_key, &mut challenge);
-        sign_challenge_payout_script(p1_key, &mut challenge);
-        println!("challenge state: {:?}", challenge.state());
+        client.sign_contract_tx(p1_key, &mut contract);
+        sign_contract_payout_script(p1_key, &mut contract);
+        println!("contract state: {:?}", contract.state());
 
         println!("p2 signing");
         let p2_key = client.0.dump_private_key(&p2_address).unwrap();
-        client.sign_challenge_tx(p2_key, &mut challenge);
-        sign_challenge_payout_script(p2_key, &mut challenge);
-        println!("challenge state: {:?}", challenge.state());
+        client.sign_contract_tx(p2_key, &mut contract);
+        sign_contract_payout_script(p2_key, &mut contract);
+        println!("contract state: {:?}", contract.state());
 
         println!("arbiter signing");
         let arbiter_key = client.0.dump_private_key(&arbiter_address).unwrap();
-        sign_challenge_payout_script(arbiter_key, &mut challenge);
-        println!("challenge state: {:?}", challenge.state());
+        sign_contract_payout_script(arbiter_key, &mut contract);
+        println!("contract state: {:?}", contract.state());
     }
 
-    fn sign_challenge_payout_script(key: PrivateKey, challenge: &mut Challenge) {
+    fn sign_contract_payout_script(key: PrivateKey, contract: &mut Contract) {
 // if it were sequential dependent then different protocol:
 // if there is a sig there already, verify it and then add ours on top
 // but here it's sequential and independent, we add each sig by itself
         let secp = Secp256k1::new();
-        let payout_script_hash = challenge.payout_script_hash();
-        challenge.payout_script_hash_sigs.insert(key.public_key(&secp),secp.sign(&Message::from_slice(&payout_script_hash).unwrap(), &key.key));
+        let payout_script_hash = contract.payout_script_hash();
+        contract.payout_script_hash_sigs.insert(key.public_key(&secp),secp.sign(&Message::from_slice(&payout_script_hash).unwrap(), &key.key));
     }
 
-    fn broadcast_challenge_tx(client: &TgRpcClient, challenge: &Challenge) {
+    fn broadcast_contract_tx(client: &TgRpcClient, contract: &Contract) {
 
-        println!("broadcasting signed challenge funding transaction");
-        let arbiter_address = Address::p2wpkh(&challenge.escrow.arbiters[0], NETWORK);   
+        println!("broadcasting signed contract funding transaction");
+        let arbiter_address = Address::p2wpkh(&contract.escrow.arbiters[0], NETWORK);   
 
-        let _result = client.0.send_raw_transaction(challenge.funding_tx_hex.clone());
+        let _result = client.0.send_raw_transaction(contract.funding_tx_hex.clone());
 
         let _address = client.0.get_new_address(None, Some(AddressType::Legacy)).unwrap();
         let _result = client.0.generate_to_address(10, &_address);
 
         let arbiter_balance = client.0.get_received_by_address(&arbiter_address, None).unwrap();
         println!("arbiter {:?} balance: {:?}", arbiter_address.to_string(), arbiter_balance);
-        let arbiter_balance = client.0.get_received_by_address(&challenge.escrow.address, None).unwrap();
-        println!("multsig {:?} balance: {:?}", &challenge.escrow.address.to_string(), arbiter_balance);
+        let arbiter_balance = client.0.get_received_by_address(&contract.escrow.address, None).unwrap();
+        println!("multsig {:?} balance: {:?}", &contract.escrow.address.to_string(), arbiter_balance);
 
     }
     
-    fn create_signed_payout_request(client: &TgRpcClient, challenge: &Challenge, player: &PublicKey, arbiter: &PublicKey) -> PayoutRequest {
-        let funding_tx: bitcoin::Transaction = encode::deserialize(&Vec::<u8>::from_hex(&challenge.funding_tx_hex).unwrap()).unwrap();
-        let payout_tx = client.create_challenge_payout_transaction(&challenge.escrow, &funding_tx, &player).unwrap();
+    fn create_signed_payout_request(client: &TgRpcClient, contract: &Contract, player: &PublicKey, arbiter: &PublicKey) -> PayoutRequest {
+        let funding_tx: bitcoin::Transaction = encode::deserialize(&Vec::<u8>::from_hex(&contract.funding_tx_hex).unwrap()).unwrap();
+        let payout_tx = client.create_contract_payout_transaction(&contract.escrow, &funding_tx, &player).unwrap();
         let key = client.0.dump_private_key(&Address::p2wpkh(&player, NETWORK)).unwrap();
         let payout_tx = client.0.sign_raw_transaction_with_key(
             payout_tx.raw_hex(),
@@ -585,7 +585,7 @@ buyin: {:?}
         let payout_script_sig: Vec<Vec<u8>> = vec!(sig); 
 
         PayoutRequest {
-            challenge: challenge.clone(),
+            contract: contract.clone(),
             payout_tx,
             payout_script_sig,
         }
@@ -599,7 +599,7 @@ buyin: {:?}
     }
 
     #[test]
-    fn challenge_with_tx_fork_script() {
+    fn contract_with_tx_fork_script() {
 
         let bitcoind_rpc_config = BitcoindRpcConfig::default();
 
@@ -614,17 +614,17 @@ buyin: {:?}
             )
         ).unwrap());
         
-        let mut challenge = create_challenge(&client);
-        sign_challenge(&client, &mut challenge);
-        broadcast_challenge_tx(&client, &challenge);
+        let mut contract = create_contract(&client);
+        sign_contract(&client, &mut contract);
+        broadcast_contract_tx(&client, &contract);
 
         println!("\np1 payout request");
-        let payout_request_p1 = create_signed_payout_request(&client, &challenge, &challenge.escrow.players[0], &challenge.escrow.arbiters[0]);
+        let payout_request_p1 = create_signed_payout_request(&client, &contract, &contract.escrow.players[0], &contract.escrow.arbiters[0]);
         let validation_result = validate_payout_request(payout_request_p1);
         assert!(validation_result.is_ok());
 
         println!("\np2 payout request");
-        let payout_request_p2 = create_signed_payout_request(&client, &challenge, &challenge.escrow.players[1], &challenge.escrow.arbiters[0]);
+        let payout_request_p2 = create_signed_payout_request(&client, &contract, &contract.escrow.players[1], &contract.escrow.arbiters[0]);
         let validation_result = validate_payout_request(payout_request_p2);
         assert!(validation_result.is_ok());
 
