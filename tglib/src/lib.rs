@@ -24,7 +24,7 @@ use secp256k1::{
     Signature,
 };
 
-mod script;
+pub mod script;
 
 #[derive(Debug)]
 pub struct TgError(pub &'static str);
@@ -54,25 +54,25 @@ impl Arbiter {
 }
 
 #[derive(Clone)]
-pub struct Challenge {
+pub struct Contract {
     pub escrow: MultisigEscrow,
 // this tx needs to be mined before the payout script can be signed
 // because we need to create txs that spend from it in the payout script
 // there is no problem with this for the following reasons:
 // 1. the arbiter doesn't need to sign the funding tx since they don't contribute coins
 // 2. in a 2/3 multisig, the players can recover their funds at any time, e.g.
-// if the challenge doesn't proceed for some reason
+// if the contract doesn't proceed for some reason
 // above is only the case if don't use segwit, but no reason not to
 // segwit makes it possible to create transaction that spend from unmined txs
 // because the txid will not change
 //    pub funding_tx_hex: Vec<u8>,
 //    maybe this should be a Transaction
     pub funding_tx_hex: String,
-// must include data unique to this challenge e.g. funding tx id, so old signatures for similar
+// must include data unique to this contract e.g. funding tx id, so old signatures for similar
 // payouts (e.g. rematches) can't be used, since its hash is signed and use for later verification
 // including specific payout transactions in the payout script might be sufficient for uniqueness
 // if they are spending from the funding tx utxos
-// just put other bitcoin transactions here which uses the multisig's utxo from the challenge
+// just put other bitcoin transactions here which uses the multisig's utxo from the contract
 // that are the only ones which can be approved in case of a payout request
 // this could just be its hash
     pub payout_script: script::TgScript,
@@ -82,23 +82,23 @@ pub struct Challenge {
 // because this contains the funding tx id, it will be unique
 //
 // signed hash of the payout script 
-// this value is unique to this challenge because it includes the funding txid
+// this value is unique to this contract because it includes the funding txid
 //    pub payout_script_hash_sig: Option<Signature>,
 // TODO: probably better for serialization to make this a list
 // TODO: needs to sign more than just payout script.
-// can a signed payout script be paired with the wrong / a fraudulent challenge. is any reference
-// made to the challenge during payout request validation? or simply the script? is that secure?
+// can a signed payout script be paired with the wrong / a fraudulent contract. is any reference
+// made to the contract during payout request validation? or simply the script? is that secure?
     pub payout_script_hash_sigs: HashMap<PublicKey, Signature>,
 
-// need to add challenge id a la tx id (hash of challenge data) and sign that instead of just the
+// need to add contract id a la tx id (hash of contract data) and sign that instead of just the
 // payout script
 }
 
-pub trait ChallengeApi {
+pub trait ContractApi {
     fn payout_script_hash(&self) -> Vec<u8>;
 }
 
-impl ChallengeApi for Challenge {
+impl ContractApi for Contract {
     fn payout_script_hash(&self) -> Vec<u8> {
         let mut hash_engine = Sha2Engine::default();
         hash_engine.input(&Vec::from(self.payout_script.clone()));
@@ -108,7 +108,7 @@ impl ChallengeApi for Challenge {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum ChallengeState {
+pub enum ContractState {
 // unsigned
     Unsigned,
 // signed by one player 
@@ -122,7 +122,7 @@ pub enum ChallengeState {
 }
 
 //NOTE: could use dummy tx requiring signing by arbiter to embed info in tx
-impl Challenge {
+impl Contract {
 
     #[allow(dead_code)]
     fn sign_payout_script(&mut self, key: PrivateKey) {
@@ -133,13 +133,13 @@ impl Challenge {
     }
 
     #[allow(dead_code)]
-    fn verify_player_sigs(&self, player: PublicKey,  challenge: &Challenge) -> bool {
+    fn verify_player_sigs(&self, player: PublicKey,  contract: &Contract) -> bool {
 //TODO: check funding tx sig too
-        if challenge.escrow.players.contains(&player) {
+        if contract.escrow.players.contains(&player) {
             let secp = Secp256k1::new();        
             return secp.verify(
-                &Message::from_slice(&challenge.payout_script_hash()).unwrap(),
-                &challenge.payout_script_hash_sigs[&player],
+                &Message::from_slice(&contract.payout_script_hash()).unwrap(),
+                &contract.payout_script_hash_sigs[&player],
                 &player.key
             ).is_ok()
         }
@@ -162,7 +162,7 @@ impl Challenge {
         false
     }
 
-    fn state(&self) -> ChallengeState {
+    fn state(&self) -> ContractState {
 
         let mut hash_engine = Sha2Engine::default();
         hash_engine.input(&Vec::from(self.payout_script.clone()));
@@ -187,15 +187,15 @@ impl Challenge {
         match arbiter_sig {
             true => {
                 match num_player_sigs {
-                    NUM_PLAYERS => ChallengeState::Certified,
-                    _ => ChallengeState::Invalid,
+                    NUM_PLAYERS => ContractState::Certified,
+                    _ => ContractState::Invalid,
                 }
             },
             false => {
                 match num_player_sigs {
-                    NUM_PLAYERS => ChallengeState::Accepted,
-                    0 => ChallengeState::Unsigned,
-                    _ => ChallengeState::Issued,
+                    NUM_PLAYERS => ContractState::Accepted,
+                    0 => ContractState::Unsigned,
+                    _ => ContractState::Issued,
                 }
             }
         }
@@ -204,7 +204,7 @@ impl Challenge {
 
 #[derive(Clone)]
 pub struct PayoutRequest {
-    pub challenge: Challenge,
+    pub contract: Contract,
 // in bitcoin, a script is always invaluated in the context of a transaction
 // therefore the tx data, e.g. txid doesn't need to be pushed to the stack
 // explicitly by the script since it is guaranteed to be available in the context

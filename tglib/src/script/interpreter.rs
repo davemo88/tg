@@ -15,7 +15,7 @@ use crate::{
         },
     },
     Result,
-    ChallengeState,
+    ContractState,
     TgError,
     PayoutRequest,
 };
@@ -53,17 +53,17 @@ impl TgScriptEnv {
 // TODO: ensure payout_tx is not already in the blockchain (but then who cares?)
 
         let payout_request = self.payout_request.as_ref().unwrap().clone();
-//confirm payout script hash sigs on challenge
+//confirm payout script hash sigs on contract
 // TODO: check funding_tx is signed by the correct parties and in the blockchain
-        if payout_request.challenge.state() != ChallengeState::Certified {
-            return Err(TgError("invalid payout request - challenge is uncertified"))
+        if payout_request.contract.state() != ContractState::Certified {
+            return Err(TgError("invalid payout request - contract is uncertified"))
         }
 //push script sig to stack then evaluate the payout script
         for script_sig_item in payout_request.payout_script_sig {
             self.stack.push(script_sig_item);    
         }
 
-        let _result = self.eval(payout_request.challenge.payout_script);
+        let _result = self.eval(payout_request.contract.payout_script);
 
         match self.validity {
             None | Some(false)  => Err(TgError("invalid payout request")),

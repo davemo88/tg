@@ -28,8 +28,11 @@ use bitcoin::{
     },
 };
 
+use tglib::{
+    script,
+};
+
 mod key;
-mod script;
 mod rpc;
 
 use script::{
