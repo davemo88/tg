@@ -11,6 +11,7 @@ because signatures from only 2 of the 3 keyholders are required to spend from th
 
 An Escrow Contract requires signatures from both players as well as the arbiter.
 
+```
 Escrow Contract data stucture:
 p1_pkh: player one's pubkey hash 
 p2_pkh: player two's pubkey hash
@@ -18,20 +19,24 @@ arbiter_pkh: arbiter's pubkey hash
 funding_tx: the transaction which will fund the escrow account 
 payout_script: the script used by the arbiter to determine if payout requests are valid
 signatures: signed hash of the other attributes. this hash is called the contract id or cxid
+```
 //TODO: look up how txid is computed for bitcoin transactions
 
 p1 signs both the funding_tx as well as the contract (cxid). p2 verifies these signatures, then signs thefunding_tx and puts his signature the contract on top of p1's. at this point the funding tx is valid because both players have signed. however the funding tx cannot already be mined for a contract to be approved by the arbiter. the arbiter confirms that the funding tx is valid (i.e. signed by both players but not in the blockchain) and that both player signatures are on the contract before signing on top.
 
 now the players can broadcast the funding tx. to pay out the contract, the players may simply sign a payout request together or use the arbiter service to resolve a dispute.
 
-to use the arbiter, one player prepares a payout tx and a script signature as well as the original contract including all the contract signatures. the arbiter uses the contract signatures to verify that the contract is certified by the arbiter and then uses the contract's script to determine the validity of the payout request, passing the script signature as input and using the payout tx as context.
+```
+Payout Request data stucture:
+contract: corresponding contract
+payout_tx: the transaction which will pay out the escrow account. must spend from the funding transaction of the corresponding contract 
+script_signature: the data to be provided as input to the contract payout script, most likely a digital signature
+```
+
+to use the arbiter, one player prepares a payout tx and a script signature as well as the original contract including all the contract signatures. This bundle of data is called a Payout Request. the arbiter uses the contract signatures to verify that the contract is certified by the arbiter and then uses the contract's script to determine the validity of the payout request, passing the script signature as input and using the payout tx as context.
 
 in the standard case, the contract script will require the payout tx to spend from the funding tx in a specific way given the value of the script sig
 
-
-```
-
-```
 
 * Payout Request - a request to spend money from the escrow account. The players may pay out the account themselves by cooperating. Otherwise they send a Payout Request to the arbiter. 
 * Script - an bitcoin-script inspired scripting language. instead of validating bitcoin transaction, the script is used to validate Payout Requests.
