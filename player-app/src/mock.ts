@@ -1,6 +1,6 @@
 import { nanoid } from '@reduxjs/toolkit';
-import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, payoutRequestSelectors, payoutRequestSlice, selectedLocalPlayerIdSlice, } from './redux.ts';
-import { LocalPlayer, Player, Url, Challenge, PayoutRequest, } from './datatypes.ts';
+import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, contractSelectors, contractSlice, payoutRequestSelectors, payoutRequestSlice, selectedLocalPlayerIdSlice, } from './redux.ts';
+import { LocalPlayer, Player, Url, Contract, PayoutRequest, } from './datatypes.ts';
 
 // probably still s3 somewhere
 export const STATIC_CONTENT_HOST: string = 'https://whatchadoinhere.s3.amazonaws.com/';
@@ -23,8 +23,8 @@ export const loadLocalData = () => {
   store.dispatch(localPlayerSlice.actions.localPlayerAdded({ id: 'local-duncan', playerId: 'duncan', balance: 101, }));
   store.dispatch(localPlayerSlice.actions.localPlayerAdded({ id: 'local-lesley', playerId: 'lesley', balance: 2727}));
   
-  // test challenges
-  store.dispatch(challengeSlice.actions.challengeAdded({ 
+  // test contracts
+  store.dispatch(contractSlice.actions.contractAdded({ 
     id: 'akin-v-betsy',
     playerOneId: 'akin',
     playerTwoId: 'betsy',
@@ -34,7 +34,7 @@ export const loadLocalData = () => {
     playerTwoSig: true,
     arbiterSig: true,
   }));
-  store.dispatch(challengeSlice.actions.challengeAdded({ 
+  store.dispatch(contractSlice.actions.contractAdded({ 
     id: 'akin-v-betsy-invalid',
     playerOneId: 'akin',
     playerTwoId: 'betsy',
@@ -44,7 +44,7 @@ export const loadLocalData = () => {
     playerTwoSig: false,
     arbiterSig: true,
   }));
-  store.dispatch(challengeSlice.actions.challengeAdded({ 
+  store.dispatch(contractSlice.actions.contractAdded({ 
     id: nanoid(),
     playerOneId: 'akin',
     playerTwoId: 'stan',
@@ -54,7 +54,7 @@ export const loadLocalData = () => {
     playerTwoSig: true,
     arbiterSig: true,
   }));
-  store.dispatch(challengeSlice.actions.challengeAdded({ 
+  store.dispatch(contractSlice.actions.contractAdded({ 
     id: nanoid(),
     playerOneId: 'lesley',
     playerTwoId: 'akin',
@@ -64,7 +64,7 @@ export const loadLocalData = () => {
     playerTwoSig: false,
     arbiterSig: false,
   }));
-  store.dispatch(challengeSlice.actions.challengeAdded({ 
+  store.dispatch(contractSlice.actions.contractAdded({ 
     id: nanoid(),
     playerOneId: 'duncan',
     playerTwoId: 'betsy',
@@ -74,7 +74,7 @@ export const loadLocalData = () => {
     playerTwoSig: false,
     arbiterSig: false,
   }));
-  store.dispatch(challengeSlice.actions.challengeAdded({ 
+  store.dispatch(contractSlice.actions.contractAdded({ 
     id: nanoid(),
     playerOneId: 'lesley',
     playerTwoId: 'stan',
@@ -87,7 +87,7 @@ export const loadLocalData = () => {
 // payout requests
   store.dispatch(payoutRequestSlice.actions.payoutRequestAdded({
     id: nanoid(),
-    challengeId: 'akin-v-betsy',
+    contractId: 'akin-v-betsy',
     payoutTx: false,
     playerOneSig: false,
     playerTwoSig: true,
@@ -98,12 +98,12 @@ export const loadLocalData = () => {
 }
 
 // delete some local data? set local flag more likely
-export const declineChallenge = (challengeId: ChallengeId) => {
-  store.dispatch(challengeSlice.actions.challengeRemoved(challengeId));
+export const declineContract = (contractId: ContractId) => {
+  store.dispatch(contractSlice.actions.contractRemoved(contractId));
 }
 
-export const dismissChallenge = (challengeId: ChallengeId) => {
-  store.dispatch(challengeSlice.actions.challengeRemoved(challengeId));
+export const dismissContract = (contractId: ContractId) => {
+  store.dispatch(contractSlice.actions.contractRemoved(contractId));
 }
 
 export const denyPayoutRequest = (payoutRequestId: PayoutRequestId) => {
@@ -111,10 +111,10 @@ export const denyPayoutRequest = (payoutRequestId: PayoutRequestId) => {
 }
 
 // arbiter prefixed functions require calls to the arbiter service
-export const arbiterSignChallenge = (challenge: Challenge) => {
+export const arbiterSignContract = (contract: Contract) => {
 // TODO: validation
-  store.dispatch(challengeSlice.actions.challengeUpdated({
-    id: challenge.id,
+  store.dispatch(contractSlice.actions.contractUpdated({
+    id: contract.id,
     changes: { arbiterSig: true },
   }));
 }
@@ -138,42 +138,42 @@ export const newLocalPlayer = (playerName: string, pictureUrl: Url) => {
   store.dispatch(localPlayerSlice.actions.localPlayerAdded({ id: nanoid(), playerId: newPlayerId, balance: 0 }));
 }
 
-export const createChallenge = (challenge: Challenge) => {
+export const createContract = (contract: Contract) => {
   store.dispatch
 }
 
-export const createPayoutRequest = (challenge: Challenge) => {
+export const createPayoutRequest = (contract: Contract) => {
   store.dispatch
 }
 
-export const signChallenge = (challenge: Challenge) => {
+export const signContract = (contract: Contract) => {
   const selectedPlayerId = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId).playerId;
-  let action = {id: challenge.id, changes: {}};
-  if (challenge.playerOneId === selectedPlayerId) {
+  let action = {id: contract.id, changes: {}};
+  if (contract.playerOneId === selectedPlayerId) {
     action.changes.playerOneSig = true;
   }
-  else if (challenge.playerTwoId === selectedPlayerId) {
+  else if (contract.playerTwoId === selectedPlayerId) {
     action.changes.playerTwoSig = true;
   }
-  store.dispatch(challengeSlice.actions.challengeUpdated(action));
+  store.dispatch(contractSlice.actions.contractUpdated(action));
 }
 
 export const signPayoutRequest = (payoutRequest: PayoutRequest) => {
   const selectedPlayerId = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId).playerId;
-  const challenge = challengeSelectors.selectById(store.getState(), payoutRequest.challengeId);
+  const contract = contractSelectors.selectById(store.getState(), payoutRequest.contractId);
   let action = {id: payoutRequest.id, changes: {}};
-  if (challenge.playerOneId === selectedPlayerId) {
+  if (contract.playerOneId === selectedPlayerId) {
     action.changes.playerOneSig = true;
   }
-  else if (challenge.playerTwoId === selectedPlayerId) {
+  else if (contract.playerTwoId === selectedPlayerId) {
     action.changes.playerTwoSig = true;
   }
   store.dispatch(payoutRequestSlice.actions.payoutRequestUpdated(action));
 }
 
-export const broadcastFundingTx = (challenge: Challenge) => {
-  store.dispatch(challengeSlice.actions.challengeUpdated({
-    id: challenge.id,
+export const broadcastFundingTx = (contract: Contract) => {
+  store.dispatch(contractSlice.actions.contractUpdated({
+    id: contract.id,
     changes: {
       fundingTx: true,
     }

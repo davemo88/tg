@@ -4,26 +4,26 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 
 import { styles } from '../../styles.ts';
 
-import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, selectedLocalPlayerIdSlice, } from '../../redux.ts';
-import { Player, LocalPlayer, Challenge, ChallengeStatus, getChallengeStatus } from '../../datatypes.ts';
-import { SignChallenge } from '../../mock.ts';
+import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, contractSelectors, contractSlice, selectedLocalPlayerIdSlice, } from '../../redux.ts';
+import { Player, LocalPlayer, Contract, ContractStatus, getContractStatus } from '../../datatypes.ts';
+import { SignContract } from '../../mock.ts';
 
 import { Currency } from '../currency.tsx';
 import { SignatureSwitch } from '../signature-switch.tsx';
 import { PlayerPortrait } from '../player-portrait.tsx';
 import { PlayerSelector } from '../player-selector.tsx';
 
-export const NewChallenge = ({ navigation }) => {
+export const NewContract = ({ navigation }) => {
   const selectedLocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
   const playerTwos = playerSelectors
     .selectAll(store.getState())
     .filter((player, i, a) => player.id != selectedLocalPlayer.playerId);
-  const [challengeAmount, onChangeChallengeAmount] = React.useState('0');
+  const [contractAmount, onChangeContractAmount] = React.useState('0');
   const [playerTwoId, setPlayerTwoId] = React.useState(playerTwos[0].id);
   const [isSigned, setIsSigned] = React.useState(false);
 
   const valid = () => {
-    if ((parseInt(challengeAmount) > 0) && isSigned) {
+    if ((parseInt(contractAmount) > 0) && isSigned) {
       return true
     }
     return false
@@ -43,9 +43,9 @@ export const NewChallenge = ({ navigation }) => {
         <Text style={{ fontSize: 16 }}>Amount</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'lightslategrey', }}>
           <TextInput
-            onChangeText={text => onChangeChallengeAmount(text)}
-            onBlur={() => {if (Number.isNaN(parseInt(challengeAmount))) { onChangeChallengeAmount('0')}}}
-            value={challengeAmount}
+            onChangeText={text => onChangeContractAmount(text)}
+            onBlur={() => {if (Number.isNaN(parseInt(contractAmount))) { onChangeContractAmount('0')}}}
+            value={contractAmount}
             style={{ borderWidth: 1, width: 100, margin: 10, padding: 4, textAlign: 'right' }}
           />     
         </View>
@@ -59,14 +59,14 @@ export const NewChallenge = ({ navigation }) => {
             onPress={() => {
               store.dispatch(localPlayerSlice.actions.localPlayerUpdated({ 
                 id: selectedLocalPlayer.id,
-                changes: { balance: selectedLocalPlayer.balance - Math.ceil(challengeAmount/2) }
+                changes: { balance: selectedLocalPlayer.balance - Math.ceil(contractAmount/2) }
               }))
 // native code here
-              store.dispatch(challengeSlice.actions.challengeAdded({ 
+              store.dispatch(contractSlice.actions.contractAdded({ 
                 id: nanoid(),
                 playerOneId: selectedLocalPlayer.playerId,
                 playerTwoId: playerTwoId,
-                pot: challengeAmount,
+                pot: contractAmount,
                 fundingTx: false,
                 playerOneSig: true,
                 playerTwoSig: false,

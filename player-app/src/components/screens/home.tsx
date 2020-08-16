@@ -5,13 +5,13 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 
 import { styles } from '../../styles.ts';
 
-import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, selectedLocalPlayerIdSlice, } from '../../redux.ts';
-import { Player, LocalPlayer, Challenge, ChallengeStatus} from '../../datatypes.ts';
-import { getChallengeStatus } from '../../dump.ts';
+import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, contractSelectors, contractSlice, selectedLocalPlayerIdSlice, } from '../../redux.ts';
+import { Player, LocalPlayer, Contract, ContractStatus} from '../../datatypes.ts';
+import { getContractStatus } from '../../dump.ts';
 
 import { Currency } from '../currency.tsx';
 import { PlayerPortrait } from '../player-portrait.tsx';
-import { ChallengeListItem } from '../challenge-list-item.tsx';
+import { ContractListItem } from '../contract-list-item.tsx';
 
 
 export const Home = ({ navigation }) => {
@@ -19,11 +19,11 @@ export const Home = ({ navigation }) => {
   const selectedLocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
   const selectedPlayer = playerSelectors.selectById(store.getState(), selectedLocalPlayer.playerId);
 
-  const challenges = challengeSelectors.selectAll(store.getState())
-  .filter((challenge, i, a) =>{ return (
-    (challenge.playerOneId === selectedLocalPlayer.playerId || challenge.playerTwoId === selectedLocalPlayer.playerId) 
+  const contracts = contractSelectors.selectAll(store.getState())
+  .filter((contract, i, a) =>{ return (
+    (contract.playerOneId === selectedLocalPlayer.playerId || contract.playerTwoId === selectedLocalPlayer.playerId) 
     && 
-    (getChallengeStatus(challenge) != ChallengeStatus.Resolved)
+    (getContractStatus(contract) != ContractStatus.Resolved)
   )})
 
   return (
@@ -52,21 +52,21 @@ export const Home = ({ navigation }) => {
         <View style={{ flex: 3, }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, backgroundColor: 'white', padding: 5, margin: 5, height: 42, }}>
             <View>
-              <Text style={{ fontSize: 20, }}>Challenges</Text>
+              <Text style={{ fontSize: 20, }}>Contracts</Text>
             </View>
             <View>
               <Button 
                 title="New"
                 onPress={() => 
-                  navigation.push('New Challenge')
+                  navigation.push('New Contract')
                 }
               />
             </View>
           </View>
           <View style={{ padding: 5, }}>
             <FlatList
-              data={challenges}
-              renderItem={({item}) => <ChallengeListItem navigation={navigation} challenge={item} />}
+              data={contracts}
+              renderItem={({item}) => <ContractListItem navigation={navigation} contract={item} />}
             />
           </View>
         </View>

@@ -4,16 +4,16 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 
 import { styles } from '../styles.ts';
 
-import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, payoutRequestSelectors, payoutRequestSlice, selectedLocalPlayerIdSlice, } from '../redux.ts';
-import { Player, LocalPlayer, Challenge, ChallengeStatus, } from '../datatypes.ts';
-import { getChallengeStatus } from '../dump.ts';
-import { broadcastFundingTx, broadcastPayoutTx, signPayoutRequest, signChallenge, arbiterSignChallenge, declineChallenge, dismissChallenge, denyPayoutRequest, } from '../mock.ts';
+import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, contractSelectors, contractSlice, payoutRequestSelectors, payoutRequestSlice, selectedLocalPlayerIdSlice, } from '../redux.ts';
+import { Player, LocalPlayer, Contract, ContractStatus, } from '../datatypes.ts';
+import { getContractStatus } from '../dump.ts';
+import { broadcastFundingTx, broadcastPayoutTx, signPayoutRequest, signContract, arbiterSignContract, declineContract, dismissContract, denyPayoutRequest, } from '../mock.ts';
 
 import { Currency } from './currency.tsx';
 import { PlayerPortrait } from './player-portrait.tsx';
 import { SignatureSwitch } from './signature-switch.tsx';
 
-export const ChallengeAction = (props) => {
+export const ContractAction = (props) => {
   const selectedLocalPlayer: LocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
 
   const [isSigned, setIsSigned] = React.useState(false);
@@ -21,18 +21,18 @@ export const ChallengeAction = (props) => {
     <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
     {
       {
-        [ChallengeStatus.Unsigned]: <ActionUnsigned navigation={props.navigation} isSigned={isSigned} setIsSigned={setIsSigned} />,
-        [ChallengeStatus.Issued]: <ActionIssued />,
-        [ChallengeStatus.Received]: <ActionReceived navigation={props.navigation} isSigned={isSigned} setIsSigned={setIsSigned} challenge={props.challenge}/>,
-        [ChallengeStatus.Accepted]: <ActionAccepted navigation={props.navigation} challenge={props.challenge} />,
-        [ChallengeStatus.Certified]: <ActionCertified navigation={props.navigation} challenge={props.challenge} />,
-        [ChallengeStatus.Live]: <ActionLive navigation={props.navigation} challenge={props.challenge} />,
-        [ChallengeStatus.PayoutRequestIssued]: <ActionPayoutRequestIssued navigation={props.navigation} challenge={props.challenge} />,
-        [ChallengeStatus.PayoutRequestReceived]: <ActionPayoutRequestReceived navigation={props.navigation} challenge={props.challenge} isSigned={isSigned} setIsSigned={setIsSigned} />,
-        [ChallengeStatus.PayoutRequestLive]: <ActionPayoutRequestLive navigation={props.navigation} challenge={props.challenge} />,
-        [ChallengeStatus.Resolved]: <ActionResolved navigation={props.navigation} challenge={props.challenge} />,
-        [ChallengeStatus.Invalid]: <ActionInvalid navigation={props.navigation} challenge={props.challenge} />,
-      }[getChallengeStatus(props.challenge)]
+        [ContractStatus.Unsigned]: <ActionUnsigned navigation={props.navigation} isSigned={isSigned} setIsSigned={setIsSigned} />,
+        [ContractStatus.Issued]: <ActionIssued />,
+        [ContractStatus.Received]: <ActionReceived navigation={props.navigation} isSigned={isSigned} setIsSigned={setIsSigned} contract={props.contract}/>,
+        [ContractStatus.Accepted]: <ActionAccepted navigation={props.navigation} contract={props.contract} />,
+        [ContractStatus.Certified]: <ActionCertified navigation={props.navigation} contract={props.contract} />,
+        [ContractStatus.Live]: <ActionLive navigation={props.navigation} contract={props.contract} />,
+        [ContractStatus.PayoutRequestIssued]: <ActionPayoutRequestIssued navigation={props.navigation} contract={props.contract} />,
+        [ContractStatus.PayoutRequestReceived]: <ActionPayoutRequestReceived navigation={props.navigation} contract={props.contract} isSigned={isSigned} setIsSigned={setIsSigned} />,
+        [ContractStatus.PayoutRequestLive]: <ActionPayoutRequestLive navigation={props.navigation} contract={props.contract} />,
+        [ContractStatus.Resolved]: <ActionResolved navigation={props.navigation} contract={props.contract} />,
+        [ContractStatus.Invalid]: <ActionInvalid navigation={props.navigation} contract={props.contract} />,
+      }[getContractStatus(props.contract)]
     }
     </View>
   )
@@ -44,10 +44,10 @@ const ActionUnsigned = (props) => {
       <SignatureSwitch isSigned={props.isSigned} setIsSigned={props.setIsSigned} />
       <Button 
         disabled={!props.isSigned} 
-        title="Issue Challenge" 
+        title="Issue Contract" 
         onPress={() => {
-          signChallenge(props.challenge);
-          resetDetails(props.navigation, props.challenge.id);
+          signContract(props.contract);
+          resetDetails(props.navigation, props.contract.id);
         } }
       />
     </View>
@@ -68,16 +68,16 @@ const ActionReceived = (props) => {
       <SignatureSwitch isSigned={props.isSigned} setIsSigned={props.setIsSigned} />
       <Button 
         disabled={!props.isSigned} 
-        title="Accept Challenge" 
+        title="Accept Contract" 
         onPress={() => {
-          signChallenge(props.challenge);
-          resetDetails(props.navigation, props.challenge.id);
+          signContract(props.contract);
+          resetDetails(props.navigation, props.contract.id);
         } }
       />
       <Button 
-        title="Decline Challenge" 
+        title="Decline Contract" 
         onPress={() => {
-          declineChallenge(props.challenge.id);
+          declineContract(props.contract.id);
           props.navigation.reset({ index:0, routes: [{ name: 'Home', },] });
         } }
       />
@@ -91,8 +91,8 @@ const ActionAccepted = (props) => {
       <Button 
         title="Send to Arbiter" 
         onPress={() => {
-          arbiterSignChallenge(props.challenge);
-          resetDetails(props.navigation, props.challenge.id);
+          arbiterSignContract(props.contract);
+          resetDetails(props.navigation, props.contract.id);
         } }
       />
     </View>
@@ -105,8 +105,8 @@ const ActionCertified = (props) => {
       <Button 
         title="Broadcast Funding Tx" 
         onPress={() => {
-          broadcastFundingTx(props.challenge);
-          resetDetails(props.navigation, props.challenge.id);
+          broadcastFundingTx(props.contract);
+          resetDetails(props.navigation, props.contract.id);
         } }
       />
     </View>
@@ -118,7 +118,7 @@ const ActionLive = (props) => {
     <View>
       <Button 
         title="Request Payout" 
-        onPress={() => props.navigation.push('Request Payout', { challengeId: props.challenge.id }) }
+        onPress={() => props.navigation.push('Request Payout', { contractId: props.contract.id }) }
       />
     </View>
   )
@@ -141,7 +141,7 @@ const ActionPayoutRequestIssued = (props) => {
 
 const ActionPayoutRequestReceived = (props) => {
   const payoutRequest = payoutRequestSelectors.selectAll(store.getState())
-    .filter((pr, i, a) => pr.challengeId === props.challenge.id ).pop();
+    .filter((pr, i, a) => pr.contractId === props.contract.id ).pop();
   return (
     <View>
       <Text>Payout Request Received</Text>
@@ -154,14 +154,14 @@ const ActionPayoutRequestReceived = (props) => {
           title='Accept Payout Request'
           onPress={() => {
             signPayoutRequest(payoutRequest)
-            resetDetails(props.navigation, props.challenge.id);
+            resetDetails(props.navigation, props.contract.id);
           } }
         />
         <Button
           title='Deny Payout Request'
           onPress={() => {
             denyPayoutRequest(payoutRequest.id)
-            resetDetails(props.navigation, props.challenge.id);
+            resetDetails(props.navigation, props.contract.id);
           } } 
         />
       </View>
@@ -171,7 +171,7 @@ const ActionPayoutRequestReceived = (props) => {
 
 const ActionPayoutRequestLive = (props) => {
   const payoutRequest = payoutRequestSelectors.selectAll(store.getState())
-    .filter((pr, i, a) => pr.challengeId === props.challenge.id ).pop();
+    .filter((pr, i, a) => pr.contractId === props.contract.id ).pop();
   return (
     <View>
       <Text>Payout Request Live</Text>
@@ -179,7 +179,7 @@ const ActionPayoutRequestLive = (props) => {
         title="Broadcast Payout Tx" 
         onPress={() => {
           broadcastPayoutTx(payoutRequest);
-          resetDetails(props.navigation, props.challenge.id);
+          resetDetails(props.navigation, props.contract.id);
         } }
       />
     </View>
@@ -188,10 +188,10 @@ const ActionPayoutRequestLive = (props) => {
 
 const ActionResolved = (props) => {
   const payoutRequest = payoutRequestSelectors.selectAll(store.getState())
-    .filter((pr, i, a) => pr.challengeId === props.challenge.id ).pop();
+    .filter((pr, i, a) => pr.contractId === props.contract.id ).pop();
   return (
     <View>
-      <Text>Resolved Challenge</Text>
+      <Text>Resolved Contract</Text>
       <View style={{ flexDirection: 'row' }}>
         <View>
           <Text>Player One Payout: </Text><Currency amount={payoutRequest.playerOneAmount} />
@@ -207,12 +207,12 @@ const ActionResolved = (props) => {
 const ActionInvalid = (props) => {
   return (
     <View style={{ alignItems: 'center' }}>
-      <Text>Invalid Challenge</Text>
+      <Text>Invalid Contract</Text>
       <Image style={styles.mediumEmote} source={'https://static-cdn.jtvnw.net/emoticons/v1/22998/2.0'} />
     </View>
   )
 }
 
-const resetDetails = (navigation, challengeId: ChallengeId) => {
-  navigation.reset({ index:0, routes: [{ name: 'Home', }, { name: 'Challenge Details', params: {challengeId: challengeId } }] });
+const resetDetails = (navigation, contractId: ContractId) => {
+  navigation.reset({ index:0, routes: [{ name: 'Home', }, { name: 'Contract Details', params: {contractId: contractId } }] });
 }

@@ -3,22 +3,22 @@ import { Text, Button, View, } from 'react-native';
 
 import { styles } from '../../styles.ts';
 
-import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, selectedLocalPlayerIdSlice, } from '../../redux.ts';
-import { Player, LocalPlayer, Challenge, ChallengeStatus, getChallengeStatus } from '../../datatypes.ts'
-import { dismissChallenge } from '../../mock.ts';
+import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, contractSelectors, contractSlice, selectedLocalPlayerIdSlice, } from '../../redux.ts';
+import { Player, LocalPlayer, Contract, ContractStatus, getContractStatus } from '../../datatypes.ts'
+import { dismissContract } from '../../mock.ts';
 
-import { ChallengeSummary } from '../challenge-summary.tsx';
-import { ChallengeAction } from '../challenge-action.tsx';
+import { ContractSummary } from '../contract-summary.tsx';
+import { ContractAction } from '../contract-action.tsx';
 import { PlayerPortrait } from '../player-portrait.tsx';
 import { Arbiter } from '../arbiter.tsx';
 import { Currency } from '../currency.tsx';
 
-export const ChallengeDetails = ({ route, navigation }) => {
-  const { challengeId } = route.params;
-  const challenge = challengeSelectors.selectById(store.getState(), challengeId);
+export const ContractDetails = ({ route, navigation }) => {
+  const { contractId } = route.params;
+  const contract = contractSelectors.selectById(store.getState(), contractId);
   const selectedLocalPlayer: LocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
-  const playerOne = playerSelectors.selectById(store.getState(), challenge.playerOneId);
-  const playerTwo = playerSelectors.selectById(store.getState(), challenge.playerTwoId);
+  const playerOne = playerSelectors.selectById(store.getState(), contract.playerOneId);
+  const playerTwo = playerSelectors.selectById(store.getState(), contract.playerTwoId);
 
   return (
     <View style={styles.container}>
@@ -34,18 +34,18 @@ export const ChallengeDetails = ({ route, navigation }) => {
           </View>
         </View>
         <View style={{ justifyContent: 'center' }}>
-          <ChallengeSummary challenge={challenge} />
+          <ContractSummary contract={contract} />
         </View>
       </View>
       <View style={{ flex: 1 }}>
         <View style={{ flex: 3, }}>
-          <ChallengeAction challenge={challenge} navigation={navigation} />
+          <ContractAction contract={contract} navigation={navigation} />
         </View>
         <View style={{ flex: 1, justifyContent: 'center', }}>
           <Button 
-            title="Dismiss Challenge" 
+            title="Dismiss Contract" 
             onPress={() => {
-              dismissChallenge(challenge.id);
+              dismissContract(contract.id);
               navigation.reset({ index:0, routes: [{ name: 'Home', },] });
             } }
           />

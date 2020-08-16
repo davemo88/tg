@@ -1,6 +1,6 @@
 export type PlayerId = string;
 export type LocalPlayerId = string;
-export type ChallengeId = string;
+export type ContractId = string;
 export type PayoutRequestId = string;
 export type Url = string;
 
@@ -16,8 +16,8 @@ export interface LocalPlayer {
   balance:          number;
 }
 
-export interface Challenge {
-  id:               ChallengeId;
+export interface Contract {
+  id:               ContractId;
   playerOneId:      PlayerId;
   PlayerTwoId:      PlayerId;
   pot:              number;
@@ -29,7 +29,7 @@ export interface Challenge {
 
 export interface PayoutRequest {
   id:               PayoutRequestId;
-  challengeId:      ChallengeId;
+  contractId:      ContractId;
   payoutTx:         bool;
   playerOneSig:     bool;
   playerTwoSig:     bool;
@@ -39,7 +39,7 @@ export interface PayoutRequest {
   playerTwoAmount:  number;
 }
 
-export enum ChallengeStatus {
+export enum ContractStatus {
 // following, funding tx may or may not be mined and only players signing
   Unsigned,
   Issued,
@@ -66,7 +66,7 @@ export enum PayoutRequestStatus {
   LocalPlayerSigned,
   OtherPlayerSigned,
 // 2/3 sigs provided
-// the payout request only requires 2/3 sigs instead of 3/3 like a challenge
+// the payout request only requires 2/3 sigs instead of 3/3 like a contract
   Live,
 // payout tx mined
   Resolved,

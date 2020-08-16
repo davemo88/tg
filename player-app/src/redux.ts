@@ -1,6 +1,6 @@
 import { createStore } from 'redux';
 import { nanoid, createEntityAdapter, createSlice, createReducer, createAction, configureStore } from '@reduxjs/toolkit'
-import { Player, LocalPlayer, Challenge, PayoutRequest, } from './datatypes.ts'
+import { Player, LocalPlayer, Contract, PayoutRequest, } from './datatypes.ts'
 
 const playerAdapter = createEntityAdapter<Player>({});
 
@@ -23,15 +23,15 @@ export const localPlayerSlice = createSlice({
   }
 })
 
-const challengeAdapter = createEntityAdapter<Challenge>({});
+const contractAdapter = createEntityAdapter<Contract>({});
 
-export const challengeSlice = createSlice({
-  name: 'challenges',
-  initialState: challengeAdapter.getInitialState(),
+export const contractSlice = createSlice({
+  name: 'contracts',
+  initialState: contractAdapter.getInitialState(),
   reducers: {
-    challengeAdded: challengeAdapter.addOne,
-    challengeUpdated: challengeAdapter.updateOne,
-    challengeRemoved: challengeAdapter.removeOne,
+    contractAdded: contractAdapter.addOne,
+    contractUpdated: contractAdapter.updateOne,
+    contractRemoved: contractAdapter.removeOne,
   }
 })
 
@@ -47,7 +47,7 @@ export const payoutRequestSlice = createSlice({
   }
 })
 
-// the selected player is the current local player which the user is managing challenges for
+// the selected player is the current local player which the user is managing contracts for
 export const selectedLocalPlayerIdSlice = createSlice({
   name: 'selectedLocalPlayerId',
   initialState: 'bogus selected player id',
@@ -60,7 +60,7 @@ export const store = configureStore({
   reducer: {
     players: playerSlice.reducer,
     localPlayers: localPlayerSlice.reducer,
-    challenges: challengeSlice.reducer,
+    contracts: contractSlice.reducer,
     payoutRequests: payoutRequestSlice.reducer,
     selectedLocalPlayerId: selectedLocalPlayerIdSlice.reducer,
   }
@@ -70,5 +70,5 @@ type RootState = ReturnType<typeof store.getState>
 
 export const playerSelectors = playerAdapter.getSelectors<RootState>( state => state.players );
 export const localPlayerSelectors = localPlayerAdapter.getSelectors<RootState>( state => state.localPlayers );
-export const challengeSelectors = challengeAdapter.getSelectors<RootState>( state => state.challenges );
+export const contractSelectors = contractAdapter.getSelectors<RootState>( state => state.contracts );
 export const payoutRequestSelectors = payoutRequestAdapter.getSelectors<RootState>( state => state.payoutRequests );

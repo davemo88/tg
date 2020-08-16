@@ -5,8 +5,8 @@ import Slider from '@react-native-community/slider';
 
 import { styles } from '../../styles.ts';
 
-import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, challengeSelectors, challengeSlice, selectedLocalPlayerIdSlice, payoutRequestSlice, } from '../../redux.ts';
-import { Player, LocalPlayer, Challenge, PayoutRequest, ChallengeStatus, getChallengeStatus } from '../../datatypes.ts';
+import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, contractSelectors, contractSlice, selectedLocalPlayerIdSlice, payoutRequestSlice, } from '../../redux.ts';
+import { Player, LocalPlayer, Contract, PayoutRequest, ContractStatus, getContractStatus } from '../../datatypes.ts';
 
 import { Arbiter } from '../arbiter.tsx';
 import { Currency } from '../currency.tsx';
@@ -14,12 +14,12 @@ import { PlayerPortrait } from '../player-portrait.tsx';
 import { SignatureSwitch } from '../signature-switch.tsx';
 
 export const RequestPayout = ({ route, navigation }) => {
-  const { challengeId } = route.params;
-  const challenge = challengeSelectors.selectById(store.getState(), challengeId);
-  const playerOne = playerSelectors.selectById(store.getState(), challenge.playerOneId)
-  const playerTwo = playerSelectors.selectById(store.getState(), challenge.playerTwoId)
+  const { contractId } = route.params;
+  const contract = contractSelectors.selectById(store.getState(), contractId);
+  const playerOne = playerSelectors.selectById(store.getState(), contract.playerOneId)
+  const playerTwo = playerSelectors.selectById(store.getState(), contract.playerTwoId)
   const selectedLocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
-  const [playerOnePayout, setPlayerOnePayout] = React.useState(challenge.pot);
+  const [playerOnePayout, setPlayerOnePayout] = React.useState(contract.pot);
   const [playerTwoPayout, setPlayerTwoPayout] = React.useState(0);
   const [isArbitratedPayout, setIsArbitratedPayout] = React.useState(false);
   const toggleArbitration = () => setIsArbitratedPayout(previousState => !previousState);
@@ -39,7 +39,7 @@ export const RequestPayout = ({ route, navigation }) => {
         <View style={{ alignItems: 'center' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={{ fontSize: 16 }}>Total Pot: </Text>
-            <Currency amount={challenge.pot} />
+            <Currency amount={contract.pot} />
           </View>
           <Text style={{ fontSize: 16 }}>Distribute Pot</Text>
           <View style={{ flexDirection: 'row', }}>
@@ -58,9 +58,9 @@ export const RequestPayout = ({ route, navigation }) => {
             style={{ width: 200, height: 40, padding: 5, margin: 5, }}
             value="0"
             onValueChange={ (value) => {
-              const newPLayerOnePayout = Math.floor((1-value) * challenge.pot);
+              const newPLayerOnePayout = Math.floor((1-value) * contract.pot);
               setPlayerOnePayout(newPLayerOnePayout);
-              setPlayerTwoPayout(challenge.pot - newPLayerOnePayout);
+              setPlayerTwoPayout(contract.pot - newPLayerOnePayout);
             }}
           />
         </View>
@@ -95,16 +95,16 @@ export const RequestPayout = ({ route, navigation }) => {
             onPress={() => {
               store.dispatch(payoutRequestSlice.actions.payoutRequestAdded({
                 id: nanoid(),
-                challengeId: challenge.id,
+                contractId: contract.id,
                 payoutTx: false,
-                playerOneSig: (challenge.playerOneId === selectedLocalPlayer.playerId),
-                playerTwoSig: (challenge.playerTwoId === selectedLocalPlayer.playerId),
+                playerOneSig: (contract.playerOneId === selectedLocalPlayer.playerId),
+                playerTwoSig: (contract.playerTwoId === selectedLocalPlayer.playerId),
                 arbiterSig: isArbitratedPayout ? true : false,
                 payoutScriptSig: isArbitratedPayout ? true : false,
                 playerOneAmount: playerOnePayout,
                 playerTwoAmount: playerTwoPayout,
               }))
-              navigation.reset({ index:0, routes: [{ name: 'Home' }, { name: 'Challenge Details', params: {challengeId: challenge.id } }] });
+              navigation.reset({ index:0, routes: [{ name: 'Home' }, { name: 'Contract Details', params: {contractId: contract.id } }] });
             } }
           />
         </View>
