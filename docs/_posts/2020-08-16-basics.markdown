@@ -5,7 +5,7 @@ date:   2020-08-16 18:36:18 -0400
 categories: jekyll update
 ---
 
-Crypto Escrow is a service that facilitates cryptographically-secured contracts concerning the distribution of funds based on specified contingencies. In heads-up gameplay, the contracts are between the two players and an arbiter about how to release funds from a 2-of-3 multisignature account. The arbiter enforces these agreements when the players won't cooperate.
+Crypto Escrow is a service that facilitates cryptographically-secured contracts concerning the distribution of funds based on specified contingencies. In heads-up gameplay, the contracts are between the two players and an arbiter about how to release funds from a 2-of-3 multisignature account. The arbiter enforces the terms when the players won't cooperate.
 ```
 // pseudo contract
 {
@@ -20,9 +20,9 @@ Crypto Escrow is a service that facilitates cryptographically-secured contracts 
 }
 ```
 
-Many people play games for money but don't trust each other. These players use a trusted third party to enforce the terms of their money match. The third party holds the money for the duration of the match and resolves disputes related to the match itself, i.e. enforces game rules.
+Many people play games for money but don't trust their opponents. These players use a trusted third party to enforce the terms of their money match. The third party holds the money for the duration of the match and resolves disputes, e.g. enforces rules.
 
-Holding the money ensures the players can pay if they lose and that the money will be appropriately distributed upon the outcome of the match. This requires that the third party be able to determine the outcome of the match if the players do not agree. 
+Holding the money ensures the players have the requisite amount and that the money will be correctly distributed upon the outcome of the match. This requires that the third party be able to determine the outcome of the match if the players do not agree. 
 
 This setup is unfortunate for a few reasons. First, the third party takes possession of the players' money but is only necessary to settle cases in which the players do not cooperate. Since it takes possession, it must also provide secure storage for the funds.
 
@@ -30,18 +30,18 @@ In contrast, a multisig account allows the players to maintain possession of the
 
 Second, the third party must provide game-domain expertise in order to resolve disputes. This task is of arbitrary complexity depending on the game and can be handled separately from the storage and management of funds. It warrants its own dedicated service. 
 
-Crypto Escrow makes it possible to designate another service as a game-domain expertise delegate in the escrow contracts terms. The arbiter then requires signatures from the delegate whenever its expertise is required to resolve a dispute, i.e. to confirm that Player 1 wins. 
+Crypto Escrow makes it possible to designate another service as a game-domain expertise delegate in the escrow contract terms. The arbiter then requires signatures from the delegate whenever its expertise is required to resolve a dispute, i.e. to confirm that Player 1 wins. 
 
 #### Primary Use Case Summary
 
-1. player creates contract and sends it to other player
-2. other player accepts or declines it. if they accept, send contract to arbiter
-3. arbiter certifies the contract and sends it back to players
+1. player one creates and signs contract and sends it to player two
+2. player two signs contract and sends it to the arbiter
+3. arbiter signs the contract and sends it back to the players
 4. players broadcast the funding tx
 5. players play their match
-6. after the match, either:
-    * the players pay out the account cooperatively
-    * one player sends a payout request to the arbiter
+6. players resolve the contract
+    * both players sign payout
+    * one player and arbiter sign payout
 
 ## Concepts
 
@@ -61,14 +61,15 @@ p1_pkh: player one's pubkey hash
 p2_pkh: player two's pubkey hash
 arbiter_pkh: arbiter's pubkey hash
 funding_tx: the transaction which will fund the escrow account
-payout_script: the script used by the arbiter to determine payout request validity
-contract_sigs: signed hash of the other attributes. this hash is called the contract id or cxid
+    * must be only funded by players
+payout_script: script used by the arbiter to determine payout request validity
+contract_sigs: signatures from players and arbiter
 ```
 
 ### Payout Request
 A request to spend money from the escrow account. 
 
-Because signatures from only 2 of the 3 keyholders are required to spend from the account, the players may pay out the account at any time if they cooperate. In case of a dispute, the payout script allows the players to obtain a signature from the arbiter if the conditions of the payout script can be satisfied. Standard script templates are defined but players can create their own.
+Because signatures from only 2 of the 3 keyholders are required to spend from the account, the players may cooperate to pay out the account at any time. In case of a dispute, the payout script allows the players to obtain a signature from the arbiter if the conditions of the payout script can be satisfied. Standard script templates are defined but players can create their own.
 
 #### Payout Request data stucture
 ```
@@ -79,18 +80,21 @@ payout_tx: the transaction which will pay out the escrow account.
 script_signature: input for the payout script, most likely a digital signature
 ```
 
-## Contract Implementation Steps
+## Contract Setup Steps
+1. p1 creates the contract.
 1. p1 signs both the funding_tx as well as the contract (cxid). 
-2. p2 verifies these signatures, then signs the funding_tx and signs on top of p1's contract sig.
+    * the funding tx is some cryptocurrency tx and is signed normally
+    * the contract sigs are placed on top of each other and are required to be in the order of p1 first, p2 second, and the arbiter third and last
+1. p2 verifies the contract including p1's signatures, then signs the funding_tx and signs on top of p1's contract sig.
     * at this point the funding tx is valid because both players have signed. however the funding tx cannot already be mined for a contract to be approved by the arbiter.
-3. the arbiter confirms that the funding tx is valid (i.e. signed by both players but not in the blockchain) and both player contract sigs before signing the contract on top. 
+1. the arbiter confirms that the funding tx is valid (i.e. signed by both players but not in the blockchain) and both player contract sigs before signing the contract on top. 
 
 Now the players can broadcast the funding tx. Once it is mined, the contract is considered `Live`.
 
 
-to use the arbiter, one player assembles a payout tx and a script signature as well as the original contract including all the contract signatures. This bundle of data is called a Payout Request. the arbiter uses the contract signatures to verify that the contract is authentic and certified by the arbiter and then uses the contract's script to determine the validity of the payout request, passing the script signature as input and using the payout tx as context.
+To use the arbiter, one player assembles a payout tx and a script signature as well as the original contract including the contract signatures. This bundle of data is called a Payout Request. The arbiter uses the contract signatures to verify that the contract is authentic and certified by the arbiter and then uses the contract's script to determine the validity of the payout request, passing the script signature as input and using the bundled payout tx as context.
 
-* Payout Script - script which defines valid script signature values for payout requests. in the standard case, this will effectively be "if there is a signature from key K_1, sign transaction T_1"
+* Payout Script - script which defines valid script signature values for payout requests. in the standard case, this will effectively be "if key k_i signed message m_i, sign transaction t_i"
 
 * Script - an bitcoin-script inspired scripting language. instead of validating bitcoin transaction signatures, it validates Payout Request signatures.
 
