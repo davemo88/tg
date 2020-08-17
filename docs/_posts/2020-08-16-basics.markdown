@@ -5,21 +5,19 @@ date:   2020-08-16 18:36:18 -0400
 categories: jekyll update
 ---
 
-This escrow service allows players to form cryptographically-secured contracts about the distribution of funds based on game events. The contracts in question are agreements between two players and an arbiter about how to release funds from a 2-of-3 multisignature account. The arbiter enforces these agreements, e.g. if player 1 wins, pay player 1; if player 2 wins, pay player 2. This system is called Crypto Escrow.
+Crypto Escrow is a service which facilitates cryptographically-secured contracts concerning the distribution of funds based on specified contingencies. The contracts in question are agreements between two game players and an arbiter about how to release funds from a 2-of-3 multisignature account. The arbiter enforces these agreements, e.g. if player 1 wins, pay player 1; if player 2 wins, pay player 2.
 
-Many people play games for money but don't know or trust each other. These players often use a trusted third party to enforce the terms of their money match. The third party usually holds the money for the duration of the match as well as resolves disputes related to the match itself, i.e. enforcing game rules. This third party is usually called the Tournament Organizer.
+Many people play games for money but don't know or trust each other. These players often use a trusted third party to enforce the terms of their money match. The third party holds the money for the duration of the match and resolves disputes related to the match itself, i.e. enforces game rules.
 
 Holding the money ensures the players have the requisite amount as well as that the money will be correctly distributed upon the outcome of the match. This requires that the third party be able to determine the outcome of the match if the players do not agree. 
 
 This setup is unfortunate for a few reasons. First, the third party takes possession of the players' money but is only necessary to settle cases in which the players do not cooperate. Since it takes possession, it must also provide secure storage for the funds.
 
-In contrast, a multisig account allows the players to maintain possession of their money and only use the arbiter when necessary. Both players must still commit the requisite amount, any distribution of funds will require approval by both players or one player and the arbiter, and secure underlying storage is provided by the blockchain.
+In contrast, a multisig account allows the players to maintain possession of their money and only use the arbiter when necessary. Both players must still commit the requisite amount, any distribution of funds requires approval by both players or by one player and the arbiter, and secure underlying storage is provided by the blockchain.
 
-Second, the third party must provide game-domain expertise in order to resolve disputes. This task is of arbitrary complexity depending on the game at hand and can be handled separately from the storage and management of funds. It warrants its own dedicated service.
+Second, the third party must provide game-domain expertise in order to resolve disputes. This task is of arbitrary complexity depending on the game and can be handled separately from the storage and management of funds. It warrants its own dedicated service. 
 
-For example, today the service must take any gamestate and decide how some payments should be made. Instead, one service ought to take gamestate and extract certain features, e.g. which player won. It can then certify the presence of those features via digital signatures. Crypto Escrow then simply accepts those signatures and thereby delegates all game-domain expertise.
-
-Crypto Escrow is good for TOs because it simplifies their job and it's good for players because it enhances financial security and transparency. 
+Crypto Escrow makes it possible to designate another service as a game-domain expertise delegate in the escrow contracts terms. The arbiter then requires signatures from the delegate whenever its expertise is required to resolve a dispute, i.e. to confirm that Player 1 wins. 
 
 #### Primary Use Case Summary
 
