@@ -5,44 +5,52 @@ date:   2020-08-16 18:36:18 -0400
 categories: jekyll update
 ---
 
-This post cover the major concepts involved with the escrow service.
+Many people play games online for money. This escrow service allows players to form cryptographically-secured contracts with each other to resolve distribution of funds based on game outcomes. The contracts in question are agreements between two players and an arbiter about how to release funds from a 2-of-3 multisignature account. The arbiter enforces agreements by the players about how to release the funds based on outcomes in the game.
 
-* Player IDs / Pubkey Hashes - players are identified by pubkey hashes. a bitcoin-compatible key can be used to store player data in the namecoin chain to allow for human-readable player names which can reliably correspond with pubkeys. e.g. can register names in a namecoin namespace. also useful since players must frequently provide signatures.
+## Concepts
 
-* Escrow Contract - an escrow contract is an agreement about how to use a 2-of-3 multsig account (escrow account) containing keys from two players as well as a third party known as the arbiter. 
+### Player IDs / Pubkey Hashes 
+Players are identified by pubkey hashes. A bitcoin-compatible key can be used to store player data in the namecoin chain. This allows for human-readable player names which can reliably correspond with pubkeys, e.g. can register names in a namecoin namespace. It's also useful since players must frequently provide signatures.
 
-as part of formation of the escrow contract, the players draft a transaction to fund (funding_tx) the account as well as a script used by the arbiter to settle disputes between the players over how to pay out the account (payout_script). 
+### Escrow Contract 
+An escrow contract is an agreement about how to use a 2-of-3 multsig account (escrow account) containing keys from two players as well as a third party known as the arbiter. 
 
-because signatures from only 2 of the 3 keyholders are required to spend from the account, the players may pay out the account at any time if they cooperate. in case of a dispute, the payout script allows the players to obtain a signature from the arbiter if the conditions of the script can be satisfied. certain standard script templates are defined but players can create their own.
+As part of formation of the escrow contract, the players draft a transaction to fund the account (funding_tx) as well as a script used by the arbiter to settle disputes between the players over how to pay out the account (payout_script). 
 
 An Escrow Contract requires signatures from both players as well as the arbiter.
 
+#### Escrow Contract data stucture
 ```
-Escrow Contract data stucture:
 p1_pkh: player one's pubkey hash 
 p2_pkh: player two's pubkey hash
 arbiter_pkh: arbiter's pubkey hash
 funding_tx: the transaction which will fund the escrow account
-payout_script: the script used by the arbiter to determine if payout requests are valid
-signatures: signed hash of the other attributes. this hash is called the contract id or cxid
+payout_script: the script used by the arbiter to determine payout request validity
+contract_sigs: signed hash of the other attributes. this hash is called the contract id or cxid
 ```
-//TODO: look up how txid is computed for bitcoin transactions
 
-p1 signs both the funding_tx as well as the contract (cxid). 
-p2 verifies these signatures, then signs the funding_tx and puts his signature the contract on top of p1's. at this point the funding tx is valid because both players have signed. however the funding tx cannot already be mined for a contract to be approved by the arbiter.
-the arbiter confirms that the funding tx is valid (i.e. signed by both players but not in the blockchain) and that both player signatures are on the contract before signing on top. now the players can broadcast the funding tx. 
+### Payout Request
+A request to spend money from the escrow account. 
 
-* Payout Request - a request to spend money from the escrow account. The players may pay out the account themselves by cooperating. Otherwise they send a Payout Request to the arbiter. 
+Because signatures from only 2 of the 3 keyholders are required to spend from the account, the players may pay out the account at any time if they cooperate. In case of a dispute, the payout script allows the players to obtain a signature from the arbiter if the conditions of the payout script can be satisfied. Standard script templates are defined but players can create their own.
 
-to pay out the contract, the players may sign a payout request together or use the arbiter service to resolve a dispute.
-
-
+#### Payout Request data stucture
 ```
-Payout Request data stucture:
 contract: corresponding contract
-payout_tx: the transaction which will pay out the escrow account. must spend from the funding transaction and may only spend to addresses controlled by the players
-script_signature: the data to be provided as input to the contract payout script, most likely a digital signature
+payout_tx: the transaction which will pay out the escrow account. 
+    * must spend from the funding transaction 
+    * may only spend to addresses controlled by the players
+script_signature: input for the payout script, most likely a digital signature
 ```
+
+## Contract Implementation Steps
+1. p1 signs both the funding_tx as well as the contract (cxid). 
+2. p2 verifies these signatures, then signs the funding_tx and signs on top of p1's contract sig.
+    * at this point the funding tx is valid because both players have signed. however the funding tx cannot already be mined for a contract to be approved by the arbiter.
+3. the arbiter confirms that the funding tx is valid (i.e. signed by both players but not in the blockchain) and both player contract sigs before signing the contract on top. 
+
+Now the players can broadcast the funding tx. Once it is mined, the contract is considered `Live`.
+
 
 to use the arbiter, one player assembles a payout tx and a script signature as well as the original contract including all the contract signatures. This bundle of data is called a Payout Request. the arbiter uses the contract signatures to verify that the contract is authentic and certified by the arbiter and then uses the contract's script to determine the validity of the payout request, passing the script signature as input and using the payout tx as context.
 
