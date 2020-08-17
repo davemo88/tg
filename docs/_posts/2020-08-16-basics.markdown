@@ -5,7 +5,17 @@ date:   2020-08-16 18:36:18 -0400
 categories: jekyll update
 ---
 
-Many people play games online for money. This escrow service allows players to form cryptographically-secured contracts with each other to resolve distribution of funds based on game outcomes. The contracts in question are agreements between two players and an arbiter about how to release funds from a 2-of-3 multisignature account. The arbiter enforces agreements by the players about how to release the funds based on outcomes in the game.
+This escrow service allows players to form cryptographically-secured contracts with each other to resolve distribution of funds based on game events. The contracts in question are agreements between two players and an arbiter about how to release funds from a 2-of-3 multisignature account. The arbiter enforces agreements between the players about how to release funds based on game events. E.g. if player 1 wins, pay player 1; if player 2 wins, pay player 2.
+
+Many people play games for money but don't know or trust each other. Instead of trusting the other player to act honestly with money on the line, the players often use a trusted third party to enforce the terms of their money match. The third party usually holds the money for the duration of the match as well as resolves disputes related to the match itself, i.e. enforcing game rules.
+
+Holding the money ensures both players actually have the required amount. It also ensures that the money will be distributed correctly upon the outcome of the match. This requires that the third party also be able to determine the outcome of the match if the players do not agree.
+
+This setup is unfortunate for a few reasons. First, the players give full control of their money to the third party. The third party is necessary to settle cases in which the players do not cooperate but unnecessary otherwise. Thus the players do not need to give the third party full control of their money.
+
+Secondly, the third party must not only provided secure storage of funds, but game-domain expertise in order to resolve disputes. These services are essentially unrelated. Therefore they should be decoupled and the latter delegated to a dedicated game-domain expertise service. 
+
+For example, today the service must take as input a high dimensional game state and compute the validity of a payout request. Instead, one service ought to take game state and extract certain features, e.g. if a certain player won. It can then certify the presence of these features in certain games via digital signature. The payout system accepts those signatures as proof of match outcomes and thereby delegates all game-domain expertise.
 
 ## Concepts
 
