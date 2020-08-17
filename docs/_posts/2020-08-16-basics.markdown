@@ -1,21 +1,25 @@
 ---
 layout: post
-title:  "Escrow Basics"
+title:  "Crypto Escrow Basics"
 date:   2020-08-16 18:36:18 -0400
 categories: jekyll update
 ---
 
-This escrow service allows players to form cryptographically-secured contracts with each other to resolve distribution of funds based on game events. The contracts in question are agreements between two players and an arbiter about how to release funds from a 2-of-3 multisignature account. The arbiter enforces agreements between the players about how to release funds based on game events. E.g. if player 1 wins, pay player 1; if player 2 wins, pay player 2.
+This escrow service allows players to form cryptographically-secured contracts about the distribution of funds based on game events. The contracts in question are agreements between two players and an arbiter about how to release funds from a 2-of-3 multisignature account. The arbiter enforces these agreements, e.g. if player 1 wins, pay player 1; if player 2 wins, pay player 2. This system is called Crypto Escrow.
 
-Many people play games for money but don't know or trust each other. Instead of trusting the other player to act honestly with money on the line, the players often use a trusted third party to enforce the terms of their money match. The third party usually holds the money for the duration of the match as well as resolves disputes related to the match itself, i.e. enforcing game rules.
+Many people play games for money but don't know or trust each other. These players often use a trusted third party to enforce the terms of their money match. The third party usually holds the money for the duration of the match as well as resolves disputes related to the match itself, i.e. enforcing game rules. This third party is usually called the Tournament Organizer.
 
-Holding the money ensures both players actually have the required amount. It also ensures that the money will be distributed correctly upon the outcome of the match. This requires that the third party also be able to determine the outcome of the match if the players do not agree.
+Holding the money ensures the players have the requisite amount as well as that the money will be correctly distributed upon the outcome of the match. This requires that the third party be able to determine the outcome of the match if the players do not agree. 
 
-This setup is unfortunate for a few reasons. First, the third party takes full control of the players money, but is only necessary to settle cases in which the players do not cooperate. A multisig account allows the players to maintain control of their money and only use the arbiter when necessary. It must also provide secure underlying storage for the funds, which the blockchain provides in the case of a multisig.
+This setup is unfortunate for a few reasons. First, the third party takes possession of the players' money but is only necessary to settle cases in which the players do not cooperate. Since it takes possession, it must also provide secure storage for the funds.
 
-Worst of all, the third party must provide game-domain expertise in order to resolve disputes. This task is of arbitrary complexity depends on the game at hand. Therefore it warrants its own dedicated service.
+In contrast, a multisig account allows the players to maintain possession of their money and only use the arbiter when necessary. Both players must still commit the requisite amount, any distribution of funds will require approval by both players or one player and the arbiter, and secure underlying storage is provided by the blockchain.
 
-For example, today the service must take as input a high dimensional gamestate and output how some payments should be made. Instead, one service ought to take gamestate and extract certain features, e.g. which player won. It can then certify the presence of those features via digital signatures. The escrow system then simply accepts those signatures and thereby delegates all game-domain expertise.
+Second, the third party must provide game-domain expertise in order to resolve disputes. This task is of arbitrary complexity depending on the game at hand and can be handled separately from the storage and management of funds. It warrants its own dedicated service.
+
+For example, today the service must take any gamestate and decide how some payments should be made. Instead, one service ought to take gamestate and extract certain features, e.g. which player won. It can then certify the presence of those features via digital signatures. Crypto Escrow then simply accepts those signatures and thereby delegates all game-domain expertise.
+
+Crypto Escrow is good for TOs because it simplifies their job and it's good for players because it enhances financial security and transparency. 
 
 #### Primary Use Case Summary
 
