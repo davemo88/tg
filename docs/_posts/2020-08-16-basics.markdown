@@ -5,8 +5,9 @@ date:   2020-08-16 18:36:18 -0400
 categories: jekyll update
 ---
 
-## Concepts
-* Player IDs / Pubkey Hashes - players are identified by pubkey hashes. a bitcoin-compatible key can be used to store player data in the namecoin chain to allow for human-readable player names which can reliably correspond with pubkeys. e.g. can register names in a a custom namespace like tgplayernames/
+This post cover the major concepts involved with the escrow service.
+
+* Player IDs / Pubkey Hashes - players are identified by pubkey hashes. a bitcoin-compatible key can be used to store player data in the namecoin chain to allow for human-readable player names which can reliably correspond with pubkeys. e.g. can register names in a namecoin namespace. also useful since players must frequently provide signatures.
 
 * Escrow Contract - an escrow contract is an agreement about how to use a 2-of-3 multsig account (escrow account) containing keys from two players as well as a third party known as the arbiter. 
 
