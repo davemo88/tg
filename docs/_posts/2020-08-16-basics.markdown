@@ -11,11 +11,22 @@ Many people play games for money but don't know or trust each other. Instead of 
 
 Holding the money ensures both players actually have the required amount. It also ensures that the money will be distributed correctly upon the outcome of the match. This requires that the third party also be able to determine the outcome of the match if the players do not agree.
 
-This setup is unfortunate for a few reasons. First, the players give full control of their money to the third party. The third party is necessary to settle cases in which the players do not cooperate but unnecessary otherwise. Thus the players do not need to give the third party full control of their money.
+This setup is unfortunate for a few reasons. First, the third party takes full control of the players money, but is only necessary to settle cases in which the players do not cooperate. A multisig account allows the players to maintain control of their money and only use the arbiter when necessary. It must also provide secure underlying storage for the funds, which the blockchain provides in the case of a multisig.
 
-Secondly, the third party must not only provided secure storage of funds, but game-domain expertise in order to resolve disputes. These services are essentially unrelated. Therefore they should be decoupled and the latter delegated to a dedicated game-domain expertise service. 
+Worst of all, the third party must provide game-domain expertise in order to resolve disputes. This task is of arbitrary complexity depends on the game at hand. Therefore it warrants its own dedicated service.
 
-For example, today the service must take as input a high dimensional game state and compute the validity of a payout request. Instead, one service ought to take game state and extract certain features, e.g. if a certain player won. It can then certify the presence of these features in certain games via digital signature. The payout system accepts those signatures as proof of match outcomes and thereby delegates all game-domain expertise.
+For example, today the service must take as input a high dimensional gamestate and output how some payments should be made. Instead, one service ought to take gamestate and extract certain features, e.g. which player won. It can then certify the presence of those features via digital signatures. The escrow system then simply accepts those signatures and thereby delegates all game-domain expertise.
+
+#### Primary Use Case Summary
+
+1. player creates contract and sends it to other player
+2. other player accepts or declines it. if they accept, send contract to arbiter
+3. arbiter certifies the contract and sends it back to players
+4. players broadcast the funding tx
+5. players play their match
+6. after the match, either:
+    * the players pay out the account cooperatively
+    * one player sends a payout request to the arbiter
 
 ## Concepts
 
@@ -67,17 +78,6 @@ to use the arbiter, one player assembles a payout tx and a script signature as w
 * Payout Script - script which defines valid script signature values for payout requests. in the standard case, this will effectively be "if there is a signature from key K_1, sign transaction T_1"
 
 * Script - an bitcoin-script inspired scripting language. instead of validating bitcoin transaction signatures, it validates Payout Request signatures.
-
-## Primary Use Case Summary
-
-1. player creates contract and sends it to other player
-2. other player accepts or declines it. if they accept, send contract to arbiter
-3. arbiter certifies the contract and sends it back to players
-4. players broadcast the funding tx
-5. players do whatever activity they needed escrow for, e.g. play a video game match
-6. to resolve the contract, either:
-    * players pay out the account cooperatively
-    * in case of a dispute, one player sends a payout request to the arbiter
 
 ### Contract Details
 #### Creation
