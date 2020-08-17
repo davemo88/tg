@@ -40,8 +40,8 @@ Crypto Escrow makes it possible to designate another service as a game-domain ex
 4. players fund the escrow account
 5. players play their match
 6. players pay out the escrow account
-    * both players sign payout
-    * one player and arbiter sign payout
+    * both players sign
+    * one player signs and arbiter signs according to contract
 
 ## Concepts
 
@@ -60,15 +60,17 @@ An Escrow Contract requires signatures from both players as well as the arbiter.
 p1_pkh: player one's pubkey hash 
 p2_pkh: player two's pubkey hash
 arbiter_pkh: arbiter's pubkey hash
+amount: amount to be deposited to escrow
+payout_script: script used by the arbiter to determine payout request validity
 funding_tx: the transaction which will fund the escrow account
     * must be only funded by players
-payout_script: script used by the arbiter to determine payout request validity
 contract_sigs: signatures from players and arbiter
 ```
 #### Contract Setup Steps
 1. p1 creates the contract.
-1. p1 signs both the funding_tx as well as the contract (cxid). 
+1. p1 signs both the funding_tx as well as the contract 
     * the funding tx is cryptocurrency tx and is signed normally
+    * signing the contract means signing its hash.
     * the contract sigs are placed on top of each other and are required to be in the order of p1 first, p2 second, and the arbiter third and last
 1. p2 verifies the contract including p1's signatures, then signs the funding_tx and signs on top of p1's contract sig.
     * at this point the funding tx is valid because both players have signed. however the funding tx cannot already be mined for a contract to be approved by the arbiter.
@@ -76,19 +78,13 @@ contract_sigs: signatures from players and arbiter
 
 Now the players can broadcast the funding tx. Once it is mined, the contract is considered `Live`.
 
-
-To use the arbiter, one player assembles a payout tx and a script signature as well as the original contract including the contract signatures. This bundle of data is called a Payout Request. The arbiter uses the contract signatures to verify that the contract is authentic and certified by the arbiter and then uses the contract's script to determine the validity of the payout request, passing the script signature as input and using the bundled payout tx as context.
-
-
 ### Payout Request
-A request to spend money from the escrow account. 
-
-Because signatures from only 2 of the 3 keyholders are required to spend from the account, the players may cooperate to pay out the account at any time. In case of a dispute, the payout script allows the players to obtain a signature from the arbiter if the conditions of the payout script can be satisfied. Standard script templates are defined but players can create their own.
+A request to spend money from the escrow account to be approved by the arbiter. One player must assemble a payout tx and a script signature as well as the original contract including the contract signatures. This bundle of data is called a Payout Request. The arbiter uses the contract signatures to verify that the contract is authentic and then uses the contract's script to determine the validity of the payout request, passing the script signature as input and using the bundled payout tx as context.
 
 #### Payout Request data stucture
 ```
 contract: corresponding contract
-payout_tx: the transaction which will pay out the escrow account. 
+payout_tx: the transaction which will pay out the escrow account 
     * must spend from the funding transaction 
     * may only spend to addresses controlled by the players
 script_signature: input for the payout script, most likely a digital signature
@@ -100,9 +96,19 @@ script_signature: input for the payout script, most likely a digital signature
 
 ### Contract Details
 #### Creation
-* pubkey hashes
+* pubkey hashes - we will use bitcoin/namecoin-compliant keys  
 * script
-    * standard script
-* funding tx
+    * standard script - our standard script will implement the "if key k_i signs m_i sign t_i" pattern for up to 2 cases ? how many really
+* funding tx 
+    * must use utxos from addresses owned by the players as inputs 
+    * must spend the contract amount into the escrow account 
+    * must pay the arbiter's fee
+* contract id / cxid
+    * hash of p1_pkh + p2_pkh + arbiter_pkh + amount + payout_script + funding_tx
+
 #### Signing
 ### Payout Details
+#### Payout Request Creation
+* payout_tx - usually will be a prepared tx referred to in the payout script. signed by the player submitting the request
+    * must spend from the funding_tx escrow address output into addresses owned by the players
+*  
