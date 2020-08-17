@@ -37,9 +37,9 @@ Crypto Escrow makes it possible to designate another service as a game-domain ex
 1. player one creates and signs contract and sends it to player two
 2. player two signs contract and sends it to the arbiter
 3. arbiter signs the contract and sends it back to the players
-4. players broadcast the funding tx
+4. players fund the escrow account
 5. players play their match
-6. players resolve the contract
+6. players pay out the escrow account
     * both players sign payout
     * one player and arbiter sign payout
 
@@ -65,6 +65,20 @@ funding_tx: the transaction which will fund the escrow account
 payout_script: script used by the arbiter to determine payout request validity
 contract_sigs: signatures from players and arbiter
 ```
+#### Contract Setup Steps
+1. p1 creates the contract.
+1. p1 signs both the funding_tx as well as the contract (cxid). 
+    * the funding tx is cryptocurrency tx and is signed normally
+    * the contract sigs are placed on top of each other and are required to be in the order of p1 first, p2 second, and the arbiter third and last
+1. p2 verifies the contract including p1's signatures, then signs the funding_tx and signs on top of p1's contract sig.
+    * at this point the funding tx is valid because both players have signed. however the funding tx cannot already be mined for a contract to be approved by the arbiter.
+1. the arbiter confirms that the funding tx is valid (i.e. signed by both players but not in the blockchain) and both player contract sigs before signing the contract on top. 
+
+Now the players can broadcast the funding tx. Once it is mined, the contract is considered `Live`.
+
+
+To use the arbiter, one player assembles a payout tx and a script signature as well as the original contract including the contract signatures. This bundle of data is called a Payout Request. The arbiter uses the contract signatures to verify that the contract is authentic and certified by the arbiter and then uses the contract's script to determine the validity of the payout request, passing the script signature as input and using the bundled payout tx as context.
+
 
 ### Payout Request
 A request to spend money from the escrow account. 
@@ -79,20 +93,6 @@ payout_tx: the transaction which will pay out the escrow account.
     * may only spend to addresses controlled by the players
 script_signature: input for the payout script, most likely a digital signature
 ```
-
-## Contract Setup Steps
-1. p1 creates the contract.
-1. p1 signs both the funding_tx as well as the contract (cxid). 
-    * the funding tx is some cryptocurrency tx and is signed normally
-    * the contract sigs are placed on top of each other and are required to be in the order of p1 first, p2 second, and the arbiter third and last
-1. p2 verifies the contract including p1's signatures, then signs the funding_tx and signs on top of p1's contract sig.
-    * at this point the funding tx is valid because both players have signed. however the funding tx cannot already be mined for a contract to be approved by the arbiter.
-1. the arbiter confirms that the funding tx is valid (i.e. signed by both players but not in the blockchain) and both player contract sigs before signing the contract on top. 
-
-Now the players can broadcast the funding tx. Once it is mined, the contract is considered `Live`.
-
-
-To use the arbiter, one player assembles a payout tx and a script signature as well as the original contract including the contract signatures. This bundle of data is called a Payout Request. The arbiter uses the contract signatures to verify that the contract is authentic and certified by the arbiter and then uses the contract's script to determine the validity of the payout request, passing the script signature as input and using the bundled payout tx as context.
 
 * Payout Script - script which defines valid script signature values for payout requests. in the standard case, this will effectively be "if key k_i signed message m_i, sign transaction t_i"
 
