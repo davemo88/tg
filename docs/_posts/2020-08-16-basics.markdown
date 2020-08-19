@@ -1,10 +1,10 @@
 ---
 layout: post
-title:  "Crypto Escrow Basics"
+title:  "Heads-up Crypto Escrow Basics"
 date:   2020-08-16 18:36:18 -0400
 categories: jekyll update
 ---
-Crypto Escrow uses cryptographically-secured contracts to control the dispersal of funds held in escrow. In heads-up (1v1) gameplay, the contracts are between the two players and an arbiter about how to release funds based on the outcome of a game. The funds are held in a 2-of-3 multisignature account of which both players and the arbiter are keyholders. The arbiter enables release according to the players' terms even when the players won't cooperate to release the funds together.
+Crypto Escrow uses cryptography to secure contracts concerning the dispersal of funds held in escrow. In heads-up (1v1) gameplay, contracts are between the two players and an arbiter about how to release funds based on the outcome of a game. The funds are held in a 2-of-3 multisignature account of which both players and the arbiter are keyholders. The arbiter enables release according to the players' terms even when the players won't cooperate to release the funds together, e.g. the classic sore loser.
 
 ```
 // basic contract
@@ -26,28 +26,26 @@ Crypto Escrow uses cryptographically-secured contracts to control the dispersal 
 2. Player 2 signs the contract and sends it to the Arbiter
 3. the Arbiter signs the contract and sends it back to the players
 4. players fund the escrow account
-5. players play their match
+5. players play the game
 6. players pay out the escrow account
     * both players sign payout
     * either player and arbiter sign payout
 
 ## Motivation
-Many people play games for money but don't trust their opponents. These players use a trusted third party to enforce the terms of their money match. The job of the third party is to ensure everything goes according to plan with the game as well as with payment. To this end, the third party is trusted to hold the money for the duration of the match, distribute it according to the results, and resolve any disputes between the players.
+Many people play games for money but don't trust their opponents. These players use a trusted third party to hold the money for the duration of the game, distribute it according to the results, and resolve any disputes between the players. Holding the money ensures the players have the requisite amount and that the money can be correctly distributed once the game ends. This requires that the third party be able to verify the outcome of the game if the players don't agree.
 
-Holding the money ensures the players have the requisite amount and that the money can be correctly distributed once the game has ended. This requires that the third party be able to verify the outcome of the game if the players don't agree.
+This setup has a few problems. First, the third party is given sole possession of the players' money during the game and so must be party to all payouts as well as provide secure storage. The third party is meant to resolve disputes, which occur only in the minority of cases, so it is cumbersome to make it party to all payouts. Storage of funds is daunting by itself and warrants its own dedicated service.
 
-This third party setup is suboptimal for a few reasons. First, the third party is given possession of the players' money and so must be party to all payouts as well as provide secure storage for funds. The third party is meant to resolve disputes, which only occur in the minority of cases, so it is inefficient to make it party to all payouts. Providing secure storage of funds is a daunting challenge by itself and warrants it own dedicated service.
-
-In contrast, a multisignature account puts the money in joint possession by the players and the arbiter. Both players must still commit the requisite amount, any distribution of funds requires approval by both players or by one player and the arbiter, and secure underlying storage is provided by the blockchain.
+By using a multisig account, Crypto Escrow gives the players and the arbiter joint possession of the funds. Both players must still commit the requisite amount, the arbiter need only be party to disputed payouts, and the blockchain transparently provides the underlying storage.
 
 Second, the third party must provide game-domain expertise in order to resolve disputes. This task is of arbitrary complexity depending on the game and can be handled separately from the storage and management of funds. It also warrants its own dedicated service. 
 
-Crypto Escrow makes it possible to designate another service as a game-domain expertise delegate in the escrow contract terms. The arbiter then requires signatures from the delegate whenever its expertise is required to resolve a dispute, i.e. to confirm that Player 1 wins.
+Crypto Escrow makes it possible to designate another service as a game-domain expertise delegate in the contract terms. The arbiter then requires input from the delegate whenever its expertise is required to resolve a dispute, i.e. to confirm that Player 1 wins.
 
 ## Concepts
 
 ### Player IDs / Pubkey Hashes 
-Players are identified by pubkey hashes. A bitcoin-compatible key can be used to store player data in the namecoin chain. This allows for human-readable player names which can reliably correspond with pubkeys, e.g. can register names in a namecoin namespace. It's also useful since players must frequently provide signatures.
+Players are identified by pubkey hashes. A bitcoin-compatible key can be used to store player data in the namecoin chain. This allows for human-readable player names which can reliably correspond with pubkeys and addresses, e.g. by registering names on the namecoin chain. It's also useful since players must frequently provide signatures.
 
 ### Escrow Contract 
 An escrow contract is an agreement about how to use a 2-of-3 multsig account (escrow account) containing keys from two players as well as a third party known as the arbiter. 
@@ -61,26 +59,25 @@ An Escrow Contract requires signatures from both players as well as the arbiter.
 p1_pkh: player one's pubkey hash 
 p2_pkh: player two's pubkey hash
 arbiter_pkh: arbiter's pubkey hash
-amount: amount to be deposited to escrow
-payout_script: script used by the arbiter to determine payout request validity
-funding_tx: the transaction which will fund the escrow account
-    * must be only funded by players
+amount: amount to be held in escrow
+payout_script: script used by the arbiter to validate payout requests
+funding_tx: the transaction to fund the escrow account
 contract_sigs: signatures from players and arbiter
 ```
 #### Contract Setup Steps
 1. p1 creates the contract
-1. p1 signs both the funding_tx as well as the contract 
-    * the funding tx is cryptocurrency tx and is signed normally
+1. p1 signs the funding_tx and the contract 
+    * the funding tx is signed normally
     * signing the contract means signing its hash.
     * the contract sigs are placed on top of each other and are required to be in the order of p1 first, p2 second, and the arbiter third and last
-1. p2 verifies the contract including p1's signatures, then signs the funding_tx and signs on top of p1's contract sig.
+1. p2 verifies the contract including p1's signatures, then signs the funding_tx and signs the contract on top p1's sig.
     * at this point the funding tx is valid because both players have signed. however the funding tx cannot already be mined for a contract to be approved by the arbiter.
-1. the arbiter confirms that the funding tx is valid (i.e. signed by both players but not in the blockchain) and both player contract sigs before signing the contract on top. 
+1. the arbiter confirms that the funding tx is valid (i.e. signed by both players but not in the blockchain) and both player contract sigs before signing the contract on top of both players' sigs. 
 
 Now the players can broadcast the funding tx. Once it is mined, the contract is considered `Live`.
 
 ### Payout Request
-A request to spend money from the escrow account to be approved by the arbiter. One player must assemble a payout tx and a script signature as well as the original contract including the contract signatures. This bundle of data is called a Payout Request. The arbiter uses the contract signatures to verify that the contract is authentic and then uses the contract's script to determine the validity of the payout request, passing the script signature as input and using the bundled payout tx as context.
+A request to spend money from the escrow account. To pay out together, the players both simply sign the payout tx. To obtain a siganture from the arbiter, one player must assemble a payout tx, a script signature, and the original contract including the contract signatures. This bundle of data is called a Payout Request. The arbiter uses the contract signatures to verify that the contract is authentic and then uses the contract's script to determine the validity of the payout request, passing the script signature as input and using the bundled payout tx as context.
 
 #### Payout Request data stucture
 ```
@@ -89,11 +86,13 @@ payout_tx: the transaction which will pay out the escrow account
     * must spend from the funding transaction 
     * may only spend to addresses controlled by the players
 script_signature: input for the payout script, most likely a digital signature
+    * unused in case of payout by players
 ```
 
 ### Contract Details
 #### Creation
 * pubkey hashes - we will use bitcoin/namecoin-compliant keys  
+    * should be p2wpkh for ease with txids
 * script
     * standard script - our standard script will implement the "if key k_i signs m_i sign t_i" pattern for up to 2 cases ? how many really
 * funding tx 
@@ -101,12 +100,19 @@ script_signature: input for the payout script, most likely a digital signature
     * must spend the contract amount into the escrow account 
     * must pay the arbiter's fee
 * contract id / cxid
-    * hash of p1_pkh + p2_pkh + arbiter_pkh + amount + payout_script + funding_tx
+    * hash of p1_pkh + p2_pkh + arbiter_pkh + amount + payout_script + funding_txid
+        * use funding_txid instead of whole tx since signatures will change tx hash, use witness tx as well
 
 #### Signing
 ### Payout Details
 #### Payout Request Creation
 * payout_tx - usually will be a prepared tx referred to in the payout script. signed by the player submitting the request
-    * must spend from the funding_tx escrow address output into addresses owned by the players
+    * may only spend from the funding_tx escrow address output 
+    * may only spend into addresses owned by the players
 * payout script sig - input provided to the script sig, usually a digital signature / pubkey pair
 * contract - the entire original contract including the contract signatures must be included with the payout request
+
+## Glossary
+* escrow - an account used to hold funds for a intermediate period during a transaction, e.g. because the transaction is complex or requires a lot of funds
+* m-of-n multisignature account - a cryptocurrency account created using n separate keys and requiring m of them to spend from the account. [bitcoin wiki](https://en.bitcoin.it/wiki/Multisignature)
+* pubkey hash - the hash of a pubkey, used in place of the underlying pubkey for protection as well as a modest space savings. [bitcoin wiki](https://en.bitcoinwiki.org/wiki/Pay-to-Pubkey_Hash)
