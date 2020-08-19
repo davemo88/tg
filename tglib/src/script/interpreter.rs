@@ -55,15 +55,15 @@ impl TgScriptEnv {
         let payout_request = self.payout_request.as_ref().unwrap().clone();
 //confirm payout script hash sigs on contract
 // TODO: check funding_tx is signed by the correct parties and in the blockchain
-        if payout_request.contract.state() != ContractState::Certified {
+        if payout_request.contract.state() != ContractState::ArbiterSigned {
             return Err(TgError("invalid payout request - contract is uncertified"))
         }
 //push script sig to stack then evaluate the payout script
-        for script_sig_item in payout_request.payout_script_sig {
-            self.stack.push(script_sig_item);    
+        for script_sig_item in &payout_request.payout_script_sig.0 {
+            self.stack.push(script_sig_item.to_vec());
         }
 
-        let _result = self.eval(payout_request.contract.payout_script);
+        let _result = self.eval(payout_request.contract.payout_script.clone());
 
         match self.validity {
             None | Some(false)  => Err(TgError("invalid payout request")),
@@ -97,22 +97,22 @@ impl Default for TgScriptEnv {
 pub trait TgScriptInterpreter {
     fn eval(&mut self, _script: TgScript) -> Result<()> { Err(TgError("")) }
 // NOTE: opcode functions - in own trait?
-    fn op_pushdata1(&mut self, _n: u8, _bytes: Vec<u8>) {}
-    fn op_pushdata2(&mut self, _n: u16, _bytes: Vec<u8>) {}
-    fn op_pushdata4(&mut self, _n: u32, _bytes: Vec<u8>) {}
-    fn op_0(&mut self) {}
-    fn op_1(&mut self) {}
-    fn op_dup(&mut self) {}
-    fn op_2dup(&mut self) {}
-    fn op_drop(&mut self) {}
-    fn op_if(&mut self, _true_branch: TgScript, _false_branch: Option<TgScript>) {}
-    fn op_validate(&mut self) {}
-    fn op_else(&mut self) {}
-    fn op_endif(&mut self) {}
-    fn op_equal(&mut self) {}
-    fn op_nequal(&mut self) {}
-    fn op_verifysig(&mut self) {}
-    fn op_sha256(&mut self) {}
+    fn op_pushdata1(&mut self, _n: u8, _bytes: Vec<u8>);
+    fn op_pushdata2(&mut self, _n: u16, _bytes: Vec<u8>);
+    fn op_pushdata4(&mut self, _n: u32, _bytes: Vec<u8>);
+    fn op_0(&mut self);
+    fn op_1(&mut self);
+    fn op_dup(&mut self);
+    fn op_2dup(&mut self);
+    fn op_drop(&mut self);
+    fn op_if(&mut self, _true_branch: TgScript, _false_branch: Option<TgScript>);
+    fn op_validate(&mut self);
+    fn op_else(&mut self);
+    fn op_endif(&mut self);
+    fn op_equal(&mut self);
+    fn op_nequal(&mut self);
+    fn op_verifysig(&mut self);
+    fn op_sha256(&mut self);
 }
 
 impl TgScriptInterpreter for TgScriptEnv {
