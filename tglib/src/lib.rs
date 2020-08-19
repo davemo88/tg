@@ -30,19 +30,22 @@ pub struct LocalPlayer {
 
 pub type ByteVec = Vec<u8>;
 
-#[derive(Debug, PartialEq)]
-pub struct PubkeyHash(ByteVec);
-pub struct ScriptSig(Vec<ByteVec>);
-pub struct ContractSignature(Option<Signature>);
+#[derive(Debug, PartialEq, Clone)]
+pub struct PubkeyHash(pub ByteVec);
+#[derive(Default, Clone)]
+pub struct TgScriptSig(pub Vec<ByteVec>);
+#[derive(Clone)]
+pub struct ContractSignature(pub Option<Signature>);
 
+#[derive(Clone)]
 pub struct Contract {
-    p1_pkh:             PubkeyHash,
-    p2_pkh:             PubkeyHash,
-    arbiter_pkh:        PubkeyHash,
-    amount:             Amount,
-    payout_script:      TgScript,
-    funding_tx:         Transaction,
-    contract_sig:       ContractSignature,
+    pub p1_pkh:             PubkeyHash,
+    pub p2_pkh:             PubkeyHash,
+    pub arbiter_pkh:        PubkeyHash,
+    pub amount:             Amount,
+    pub payout_script:      TgScript,
+    pub funding_tx:         Transaction,
+    pub contract_sig:       ContractSignature,
 }
 
 impl Contract {
@@ -62,10 +65,11 @@ pub enum ContractState {
     Invalid,
 }
 
+#[derive(Clone)]
 pub struct PayoutRequest {
-    contract:               Contract,
-    payout_tx:              Transaction,
-    payout_script_sig:      ScriptSig,
+    pub contract:               Contract,
+    pub payout_tx:              Transaction,
+    pub payout_script_sig:      TgScriptSig,
 }
 
 pub enum PayoutRequestState {
