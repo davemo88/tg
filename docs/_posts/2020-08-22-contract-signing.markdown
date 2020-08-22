@@ -5,9 +5,11 @@ date:   2020-08-22 11:36:18 -0400
 categories: validation
 ---
 
-A contract requires 3 signatures in order to use the arbiter for payout. These signatures are added in a specific order: Player 1, Player 2, and finally the Arbiter. Player 1 computes the contract hash, signs it, and adds it to the contract. Player 2 verifies Player 1's signature, then signs on top. Finally the Arbiter verifies both players' signatures and signs on top before returning the now-certified contract to the players. At this point the players are free to broadcast the funding transaction and begin their game.
+A contract requires all three parties' signatures to be certified, and the arbiter will only sign payouts for certified contracts. The parties sign the contract in a specific order: Player 1, Player 2, and finally the Arbiter. 
 
-When a signature is added to the contract, it is added on top of the previous signature. Signing "on top" means using the previous signature as the message to sign for the next. The signatures must be placed in order Player 1 sig -> Player 2 sig -> Arbiter sig.
+Player 1 computes the contract hash and signs it. Player 2 verifies Player 1's signature, then signs on top. Finally the Arbiter verifies both players' signatures and signs on top before returning the now-certified contract to the players. At this point the players are free to broadcast the funding transaction, play their game, and request payout. The arbiter will process payout reqeusts for the contract.
+
+When a signature is added to the contract, it is added on top of the previous signature. "on top" means using the previous signature as the message to sign. 
 
 Player 1 does not have to verify any signatures because they are the first to sign. They simply sign the contract hash.
 
