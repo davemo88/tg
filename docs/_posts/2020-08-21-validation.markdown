@@ -2,7 +2,7 @@
 layout: post
 title:  "Security and Validation"
 date:   2020-08-21 11:36:18 -0400
-categories: validation
+categories: contract creation validation
 ---
 
 At each step in the process, the parties perform validation. This includes verifying digital signatures as well as confirming senders, recipients, and amounts of funds.
