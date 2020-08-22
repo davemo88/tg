@@ -23,7 +23,7 @@ use secp256k1::{
 pub mod script;
 use script::TgScript;
 
-pub struct LocalPlayer {
+pub struct Player {
     name: String,
     pkh: PubkeyHash,
 }
@@ -34,21 +34,34 @@ pub type ByteVec = Vec<u8>;
 pub struct PubkeyHash(pub ByteVec);
 #[derive(Default, Clone)]
 pub struct TgScriptSig(pub Vec<ByteVec>);
-#[derive(Clone)]
-pub struct ContractSignature(pub Option<Signature>);
+
+//#[derive(Clone)]
+//pub struct ContractSignature(pub Option<Signature>);
+pub type ContractSignature = Option<Signature>;
 
 #[derive(Clone)]
 pub struct Contract {
-    pub p1_pkh:             PubkeyHash,
-    pub p2_pkh:             PubkeyHash,
-    pub arbiter_pkh:        PubkeyHash,
-    pub amount:             Amount,
-    pub payout_script:      TgScript,
-    pub funding_tx:         Transaction,
-    pub contract_sig:       ContractSignature,
+    p1_pkh:             PubkeyHash,
+    p2_pkh:             PubkeyHash,
+    arbiter_pkh:        PubkeyHash,
+    amount:             Amount,
+    payout_script:      TgScript,
+    funding_tx:         Transaction,
+    contract_sig:       ContractSignature,
 }
 
 impl Contract {
+    pub fn new(p1_pkh: PubkeyHash, p2_pkh: PubkeyHash, arbiter_pkh: PubkeyHash, amount: Amount, payout_script: TgScript, funding_tx: Transaction) -> Self {
+        Contract {
+            p1_pkh,
+            p2_pkh,
+            arbiter_pkh,
+            amount,
+            payout_script,
+            funding_tx,
+            contract_sig: None,
+        }
+    }
     pub fn state(&self) -> ContractState {
         return ContractState::Invalid
     }
@@ -67,9 +80,19 @@ pub enum ContractState {
 
 #[derive(Clone)]
 pub struct PayoutRequest {
-    pub contract:               Contract,
-    pub payout_tx:              Transaction,
-    pub payout_script_sig:      TgScriptSig,
+    contract:               Contract,
+    payout_tx:              Transaction,
+    payout_script_sig:      TgScriptSig,
+}
+
+impl PayoutRequest {
+    pub fn new(contract: &Contract, payout_tx: Transaction, payout_script_sig: TgScriptSig) -> Self {
+        PayoutRequest {
+            contract: contract.clone(),
+            payout_tx,
+            payout_script_sig,
+        }
+    }
 }
 
 pub enum PayoutRequestState {

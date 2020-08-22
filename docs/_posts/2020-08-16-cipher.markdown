@@ -2,7 +2,7 @@
 layout: post
 title:  "Crypto Escrow Substitution Cipher"
 date:   2020-08-16 18:36:18 -0400
-categories: jekyll update
+categories: ciphers
 ---
 CRYPTOESCROW
 CAUGHTBYCATS
