@@ -1,16 +1,16 @@
 ---
 layout: post
-title:  "Payout Request Validation"
+title:  "Payout Validation"
 date:   2020-08-21 11:36:18 -0400
 categories: payout validation
 ---
 
-Payout is accomplished via cooperation between the players or by submission of a Payout Request to the arbiter. Here we present all the validations rules applied to Payout Requests. 
+The funds are released from escrow via cooperation between the players or by submission of a Payout to the arbiter for approval. Here we present all the validations rules applied to Payouts. 
 
-This does not cover the satisfaction of payout scripts, since that depends on the script at hand. This validation is only with respect to the data structure member values, not whether or not the arbiter will approve the request.
+This does not cover the satisfaction of payout scripts, since that depends on the script at hand. This validation is only with respect to the data structure member values, not whether or not the arbiter will approve the payout.
 
 ```
-// payout request data structure
+// payout data structure
 contract: corresponding contract
 payout_tx: transaction for which the arbiter's signature is requested
 script_signature: input for the contract payout script

@@ -7,9 +7,9 @@ use tglib::{
     TgError,
     Contract,
     ContractSignature,
-    PubkeyHash,
-    LocalPlayer,
-    PayoutRequest,
+    PlayerId,
+    ArbiterId,
+    Payout,
     TgScriptSig,
     script::TgScript,
 };
@@ -21,9 +21,9 @@ pub struct ContractMetaDetails {
 
 pub trait ContractApi {
     fn create_contract(&self,
-        p1_pkh:         PubkeyHash,
-        p2_pkh:         PubkeyHash,
-        arbiter_pkh:    PubkeyHash,
+        p1_pkh:         PlayerId,
+        p2_pkh:         PlayerId,
+        arbiter_pkh:    ArbiterId,
         amount:         Amount,
         payout_script:  TgScript,
         funding_tx:     Option<Transaction>,

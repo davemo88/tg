@@ -60,7 +60,7 @@ p1_pkh: player one's pubkey hash
 p2_pkh: player two's pubkey hash
 arbiter_pkh: arbiter's pubkey hash
 amount: amount to be held in escrow
-payout_script: script used by the arbiter to validate payout requests
+payout_script: script used by the arbiter to validate payouts
 funding_tx: the transaction to fund the escrow account
 contract_sigs: signatures from players and arbiter
 ```
@@ -76,10 +76,10 @@ contract_sigs: signatures from players and arbiter
 
 Now the players can broadcast the funding tx. Once it is mined, the contract is considered `Live`.
 
-### Payout Request
-A request to spend money from the escrow account. To pay out together, the players both simply sign the payout tx. To obtain a siganture from the arbiter, one player must assemble a payout tx, a script signature, and the original contract including the contract signatures. This bundle of data is called a Payout Request. The arbiter uses the contract signatures to verify that the contract is authentic and then uses the contract's script to determine the validity of the payout request, passing the script signature as input and using the bundled payout tx as context.
+### Payout
+A request to spend money from the escrow account. To pay out together, the players both simply sign the payout tx. To obtain a siganture from the arbiter, one player must assemble a payout tx, a script signature, and the original contract including the contract signatures. This bundle of data is called a Payout. The arbiter uses the contract signatures to verify that the contract is authentic and then uses the contract's script to determine the validity of the payout, passing the script signature as input and using the bundled payout tx as context.
 
-#### Payout Request data stucture
+#### Payout data stucture
 ```
 contract: corresponding contract
 payout_tx: the transaction which will pay out the escrow account 
@@ -105,12 +105,12 @@ script_signature: input for the payout script, most likely a digital signature
 
 #### Signing
 ### Payout Details
-#### Payout Request Creation
+#### Payout Creation
 * payout_tx - usually will be a prepared tx referred to in the payout script. signed by the player submitting the request
     * may only spend from the funding_tx escrow address output 
     * may only spend into addresses owned by the players
 * payout script sig - input provided to the script sig, usually a digital signature / pubkey pair
-* contract - the entire original contract including the contract signatures must be included with the payout request
+* contract - the entire original contract including the contract signatures must be included with the payout
 
 ## Glossary
 * escrow - an account used to hold funds for a intermediate period during a transaction, e.g. because the transaction is complex or requires a lot of funds

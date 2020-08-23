@@ -5,14 +5,14 @@ date:   2020-08-21 11:36:18 -0400
 categories: contract validation
 ---
 
-Contract creation is a detailed processes requiring many checks to ensure security and validity. Here we present all the validation rules applied to contracts. This only applies to its data members, not for processes involving contracts, e.g. [signing](http://localhost:4000/validation/2020/08/22/contract-signing.html) or [payout](http://localhost:4000/payout/validation/2020/08/21/payout-request-validation.html).
+Contract creation is a detailed processes requiring many checks to ensure security and validity. Here we present all the validation rules applied to contracts. This only applies to its data members, not for processes involving contracts, e.g. [signing](http://localhost:4000/validation/2020/08/22/contract-signing.html) or [payout](http://localhost:4000/payout/validation/2020/08/21/payout-validation.html).
 ```
 // contract data stucture
 p1_id: player one's Player ID
 p2_id: player two's Player ID
 arbiter_id: arbiter's Arbiter ID
 amount: amount to be held in escrow
-payout_script: script used by the arbiter to validate payout requests
+payout_script: script used by the arbiter to validate payouts
 funding_tx: the transaction to fund the escrow account
 contract_sigs: signatures from players and arbiter
 ```

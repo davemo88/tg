@@ -17,13 +17,13 @@ use crate::{
     Result,
     ContractState,
     TgError,
-    PayoutRequest,
+    Payout,
 };
 
 const EVAL_DEPTH_LIMIT : u8 = 2;
 
 pub struct TgScriptEnv {
-    pub payout_request: Option<PayoutRequest>,
+    pub payout: Option<Payout>,
     stack: Vec<Vec<u8>>,
     eval_depth: u8,
     validity: Option<bool>,
@@ -32,9 +32,9 @@ pub struct TgScriptEnv {
 
 #[allow(dead_code)]
 impl TgScriptEnv {
-    pub fn new(payout_request: PayoutRequest) -> Self {
+    pub fn new(payout: Payout) -> Self {
         TgScriptEnv {
-            payout_request: Some(payout_request),
+            payout: Some(payout),
             stack: Vec::new(),
             eval_depth: 0,
             validity: None,
@@ -43,27 +43,27 @@ impl TgScriptEnv {
     }
 
 //todo: probably move this out of the interpreter
-    pub fn validate_payout_request(&mut self) -> Result<()> {
+    pub fn validate_payout(&mut self) -> Result<()> {
 
-        if self.payout_request.is_none() {
+        if self.payout.is_none() {
             return Err(TgError("cannot validate payout request - payout request is None"));
         }
 
 // TODO: ensure payout_tx is signed by the same player making the request
 // TODO: ensure payout_tx is not already in the blockchain (but then who cares?)
 
-        let payout_request = self.payout_request.as_ref().unwrap().clone();
+        let payout = self.payout.as_ref().unwrap().clone();
 //confirm payout script hash sigs on contract
 // TODO: check funding_tx is signed by the correct parties and in the blockchain
-        if payout_request.contract.state() != ContractState::ArbiterSigned {
+        if payout.contract.state() != ContractState::ArbiterSigned {
             return Err(TgError("invalid payout request - contract is uncertified"))
         }
 //push script sig to stack then evaluate the payout script
-        for script_sig_item in &payout_request.payout_script_sig.0 {
+        for script_sig_item in &payout.script_sig.0 {
             self.stack.push(script_sig_item.to_vec());
         }
 
-        let _result = self.eval(payout_request.contract.payout_script.clone());
+        let _result = self.eval(payout.contract.payout_script.clone());
 
         match self.validity {
             None | Some(false)  => Err(TgError("invalid payout request")),
@@ -84,7 +84,7 @@ impl TgScriptEnv {
 impl Default for TgScriptEnv {
     fn default() -> Self {
         TgScriptEnv {
-            payout_request: None,
+            payout: None,
             stack: Vec::new(),
             eval_depth: 0,
             validity: None,
@@ -247,10 +247,10 @@ impl TgScriptInterpreter for TgScriptEnv {
 
     fn op_verifysig(&mut self) {
 
-        assert!(self.payout_request.is_some());
+        assert!(self.payout.is_some());
 
-        let payout_request = self.payout_request.as_ref().unwrap();
-        let payout_txid: &[u8] = &payout_request.payout_tx.txid();
+        let payout = self.payout.as_ref().unwrap();
+        let payout_txid: &[u8] = &payout.tx.txid();
 
         let script_txid = self.stack.pop().unwrap();
         let pubkey: PublicKey = PublicKey::from_slice(&self.stack.pop().unwrap()).unwrap();

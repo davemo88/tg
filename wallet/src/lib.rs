@@ -10,44 +10,39 @@ use tglib::{
     TgError,
     Contract,
     ContractSignature,
-    PubkeyHash,
-    LocalPlayer,
-    PayoutRequest,
+    Player,
+    Payout,
+    PlayerId,
+    ArbiterId,
     TgScriptSig,
     script::TgScript,
 };
 
 mod contract;
-mod payout_request;
+mod payout;
 
 use contract::{
     ContractApi,
 };
-use payout_request::{
-    PayoutRequestApi,
+use payout::{
+    PayoutApi,
 };
 
-// TODO: need to provide storage for local player's data
 pub struct MyWallet(MasterAccount);
-
-pub trait LocalPlayerWallet {
-    fn new_local_player(&self, name: String) -> LocalPlayer;
-    fn load_local_player(&self, name: String) -> LocalPlayer;
-}
 
 impl ContractApi for MyWallet {
     fn create_contract(&self,
-        p1_pkh:         PubkeyHash,
-        p2_pkh:         PubkeyHash,
-        arbiter_pkh:    PubkeyHash,
+        p1_id:         PlayerId,
+        p2_id:         PlayerId,
+        arbiter_id:    ArbiterId,
         amount:         Amount,
         payout_script:  TgScript,
         funding_tx:     Option<Transaction>,
     ) -> Contract {
         Contract::new(
-            p1_pkh, 
-            p2_pkh, 
-            arbiter_pkh, 
+            p1_id, 
+            p2_id, 
+            arbiter_id, 
             amount,
             payout_script,
             funding_tx.unwrap(),
@@ -61,18 +56,18 @@ impl ContractApi for MyWallet {
     }
 }
 
-impl PayoutRequestApi for MyWallet {
-    fn create_payout_request(contract: &Contract, payout_tx: Transaction, payout_script_sig: TgScriptSig) -> PayoutRequest {
-        PayoutRequest::new(
+impl PayoutApi for MyWallet {
+    fn create_payout(contract: &Contract, payout_tx: Transaction, payout_script_sig: TgScriptSig) -> Payout {
+        Payout::new(
             &contract,
             payout_tx,
             payout_script_sig,
         )
     }
-    fn sign_payout_request(&self, _payout_request: PayoutRequest) -> Result<PayoutRequest>{
+    fn sign_payout(&self, _payout: Payout) -> Result<Payout>{
         Err(TgError("cannot sign payout request"))
     }
-    fn broadcast_payout_tx(&self, _payout_request: PayoutRequest) -> Result<()> {
+    fn broadcast_payout_tx(&self, _payout: Payout) -> Result<()> {
         Err(TgError("cannot broadcast payout tx"))
     }
 }
