@@ -9,7 +9,7 @@ The Player ID is a [bech32](https://en.bitcoin.it/wiki/BIP_0173) encoded string 
 
 The Arbiter ID is similar, but the human readable part indicates that it contains arbiter data instead. This could also be done by flipping a bit in the data portion but changing the human readable part will reduce user errors and ease validation.
 
-We use the [BIP32](https://en.bitcoin.it/wiki/BIP_0032) HD wallet for its implementation of hierarchical deterministic wallets.
+We use the [BIP32](https://en.bitcoin.it/wiki/BIP_0032) HD wallet because it allows us easily define a root key and then create child keys for use elsewhere, especially pubkeys and addresses by sharing the Master Public Key.
 
 There will be at least four keychains from the root:
 
