@@ -12,12 +12,12 @@ This does not cover the satisfaction of payout scripts, since that depends on th
 ```
 // payout data structure
 contract: corresponding contract
-payout_tx: transaction for which the arbiter's signature is requested
+tx: transaction for which the arbiter's signature is requested
 script_signature: input for the contract payout script
 ```
 
 * `contract` must be the entire corresponding certified contract, including the contract signatures.
 
-* `payout_tx` must be an unsigned bitcoin transaction which only spends from the escrow address output in the contract funding transaction to one or both of the players' addresses. 
+* `tx` must be an unsigned bitcoin transaction which only spends from the escrow address output in the contract funding transaction to one or both of the players' addresses. 
 
-* `script_signature` is data provided as input to the contract payout script. it must be less than XXX in length and begin with YYY and have some metadata up front with separator ZZZ. the arbiter will only sign `payout_tx` if `script_signature` satisfies the contract payout script.
+* `script_signature` is data provided as input to the contract payout script. it must be less than XXX in length and begin with YYY and have some metadata up front with separator ZZZ. the arbiter will only sign the payout transaction if `script_signature` satisfies the contract payout script.

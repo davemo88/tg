@@ -5,12 +5,20 @@ use bitcoin::{
 use tglib::{
     Result,
     TgError,
-    Contract,
-    ContractSignature,
-    PlayerId,
-    ArbiterId,
-    Payout,
     TgScriptSig,
+    arbiter::{
+        ArbiterId,
+    },
+    contract::{
+        Contract,
+        ContractSignature,
+    },
+    payout::{
+        Payout,
+    },
+    player::{
+        PlayerId,
+    },
     script::TgScript,
 };
 

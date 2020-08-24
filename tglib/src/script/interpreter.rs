@@ -7,6 +7,14 @@ use secp256k1::{
 };
 use bitcoin::util::key::PublicKey;
 use crate::{
+    Result,
+    TgError,
+    contract::{
+        ContractState,
+    },
+    payout::{
+        Payout,
+    },
     script::{
         lib::{
 //            TgOpcode,
@@ -14,10 +22,6 @@ use crate::{
             TgOpcode::*,
         },
     },
-    Result,
-    ContractState,
-    TgError,
-    Payout,
 };
 
 const EVAL_DEPTH_LIMIT : u8 = 2;
@@ -59,7 +63,7 @@ impl TgScriptEnv {
             return Err(TgError("invalid payout request - contract is uncertified"))
         }
 //push script sig to stack then evaluate the payout script
-        for script_sig_item in &payout.script_sig.0 {
+        for script_sig_item in &payout.script_sig {
             self.stack.push(script_sig_item.to_vec());
         }
 

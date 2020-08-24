@@ -3,18 +3,28 @@ use bitcoin::{
     Transaction,
 };
 use bitcoin_wallet::{
-    account::MasterAccount,
+    account::{
+        MasterAccount,
+        Seed,
+    },
 };
 use tglib::{
     Result,
     TgError,
-    Contract,
-    ContractSignature,
-    Player,
-    Payout,
-    PlayerId,
-    ArbiterId,
     TgScriptSig,
+    arbiter::{
+        ArbiterId,
+    },
+    contract::{
+        Contract,
+        ContractSignature,
+    },
+    payout::{
+        Payout,
+    },
+    player::{
+        PlayerId,
+    },
     script::TgScript,
 };
 
@@ -28,9 +38,10 @@ use payout::{
     PayoutApi,
 };
 
-pub struct MyWallet(MasterAccount);
+pub struct PlayerWallet(MasterAccount);
 
-impl ContractApi for MyWallet {
+impl ContractApi for PlayerWallet {
+
     fn create_contract(&self,
         p1_id:         PlayerId,
         p2_id:         PlayerId,
@@ -56,7 +67,7 @@ impl ContractApi for MyWallet {
     }
 }
 
-impl PayoutApi for MyWallet {
+impl PayoutApi for PlayerWallet {
     fn create_payout(contract: &Contract, payout_tx: Transaction, payout_script_sig: TgScriptSig) -> Payout {
         Payout::new(
             &contract,
