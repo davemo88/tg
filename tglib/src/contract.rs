@@ -1,14 +1,18 @@
 use bitcoin::{
     Amount,
     Transaction,
-};
-use secp256k1::{
+    secp256k1::{
     Signature,
+    }
 };
 
-use crate::player::PlayerId;
-use crate::arbiter::ArbiterId;
-use crate::script::TgScript;
+use crate::{
+    Result,
+    TgError,
+    arbiter::ArbiterId,
+    player::PlayerId,
+    script::TgScript,
+};
 
 pub type ContractSignature = Option<Signature>;
 
@@ -40,19 +44,7 @@ impl Contract {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum ContractState {
-    Unsigned,
-    P1Signed,
-    P2Signed,
-    ArbiterSigned,
-    Live,
-    Resolved,
-    Invalid,
-}
-
-
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct ContractBuilder {
     p1_id:              Option<PlayerId>,
     p2_id:              Option<PlayerId>,
@@ -94,6 +86,7 @@ impl ContractBuilder {
     }
 
     pub fn build(&self) -> Contract {
+
         Contract::new(
             self.p1_id.clone().unwrap(),
             self.p2_id.clone().unwrap(),
@@ -103,4 +96,19 @@ impl ContractBuilder {
             self.funding_tx.clone().unwrap(),
         )
     }
+
+    pub fn generate_funding_tx(&self) -> Result<Transaction> {
+        Err(TgError("couldn't generate transaction"))
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum ContractState {
+    Unsigned,
+    P1Signed,
+    P2Signed,
+    ArbiterSigned,
+    Live,
+    Resolved,
+    Invalid,
 }

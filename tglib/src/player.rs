@@ -18,26 +18,21 @@ use bitcoin::{
         FromBase32,
         ToBase32,
     },
-};
-use secp256k1::{
-    PublicKey,
+    secp256k1::{
+        PublicKey,
+    },
 };
 
-#[derive(Default, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct PlayerId(String); 
 
 impl From<ExtendedPubKey> for PlayerId {
     fn from(xpubkey: ExtendedPubKey) -> Self {
-// extended pubkey -> bitcoin pubkey wrapper -> actual pubkey
         let mut hash_engine = Sha2Engine::default();
+// extended pubkey -> bitcoin pubkey wrapper -> actual pubkey
         hash_engine.input(&xpubkey.public_key.key.serialize_uncompressed());
         let pubkey_hash: &[u8] = &Sha2Hash::from_engine(hash_engine);
         let encoded = bech32::encode("player", pubkey_hash.to_base32()).unwrap();
         PlayerId(encoded)
     }
-}
-
-pub struct Player {
-    name:   String,
-    id:     PlayerId,
 }

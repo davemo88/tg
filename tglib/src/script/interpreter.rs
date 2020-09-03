@@ -1,11 +1,13 @@
 use std::convert::TryInto;
-use secp256k1::{
-    Secp256k1,
-    Message,
-    Signature,
-    All,
+use bitcoin::{
+    util::key::PublicKey,
+    secp256k1::{
+        Secp256k1,
+        Message,
+        Signature,
+        All,
+    },
 };
-use bitcoin::util::key::PublicKey;
 use crate::{
     Result,
     TgError,

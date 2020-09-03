@@ -18,7 +18,7 @@ use bitcoin::{
     },
 };
 
-#[derive(Default, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct ArbiterId(String); 
 
 impl From<ExtendedPubKey> for ArbiterId {
