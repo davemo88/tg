@@ -111,6 +111,37 @@ pub fn repl<'a, 'b>() -> App<'a, 'b> {
                                   .required(true)
                                   .takes_value(true))])
         .subcommand(contract_ui())
+        .subcommand(player_ui())
+}
+
+pub fn player_ui<'a, 'b>() -> App<'a, 'b> {
+    App::new("player")
+        .version(option_env!("CARGO_PKG_VERSION").unwrap_or("unknown"))
+        .author(option_env!("CARGO_PKG_AUTHORS").unwrap_or(""))
+        .about("player ops")
+        .settings(&[AppSettings::NoBinaryName, AppSettings::SubcommandRequiredElseHelp,
+            AppSettings::VersionlessSubcommands])
+        .subcommands(vec![
+            SubCommand::with_name("add").about("add to known players")
+                .arg(Arg::with_name("id")
+                    .index(1)
+                    .value_name("ID")
+                    .help("player id")
+                    .required(true))
+                .arg(Arg::with_name("name")
+                    .index(2)
+                    .value_name("NAME")
+                    .help("player name")
+                    .required(true)),
+//                    .multiple(true)),
+            SubCommand::with_name("remove").about("remove from known players")
+                .arg(Arg::with_name("id")
+                    .index(1)
+                    .value_name("ID")
+                    .help("id of player to remove")
+                    .required(true)),
+            SubCommand::with_name("list").about("list known players"),
+        ])
 }
 
 pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {

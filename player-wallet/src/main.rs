@@ -1,9 +1,8 @@
 use std::{
-    collections::{
-        HashMap,
-    },
     cmp::max,
+    collections::HashMap,
     convert::TryFrom,
+    env::current_dir,
     net::{
         AddrParseError, 
         SocketAddr
@@ -36,6 +35,7 @@ use bdk::{
 };
 use rustyline::Editor;
 use rustyline::error::ReadlineError;
+use shell_words;
 use tglib::{
     Result as TgResult,
     TgError,
@@ -55,36 +55,24 @@ use tglib::{
         PlayerId,
     },
     script::TgScript,
+    wallet::{
+        Creation,
+        Signing,
+    }
 };
 
 mod ui;
+mod db;
+
+const DB_NAME: &'static str = "player-wallet.db";
 
 pub struct PlayerWallet(Wallet);
 
 impl PlayerWallet {
+    pub fn player_id(&self) -> PlayerId {
+        PlayerId(String::from("hi"))
+    }
     
-}
-
-pub trait Creation {
-    fn create_contract(&self,
-        p1_id:         PlayerId,
-        p2_id:         PlayerId,
-        arbiter_id:    ArbiterId,
-        amount:         Amount,
-        payout_script:  TgScript,
-        funding_tx:     Option<Transaction>,
-    ) -> Contract;
-
-    fn create_payout(&self,
-        contract:           &Contract, 
-        payout_tx:          Transaction, 
-        payout_script_sig:  TgScriptSig
-    ) -> Payout;
-}
-
-pub trait Signing {
-    fn sign_contract(&self, _contract: Contract) -> TgResult<Contract>;
-    fn sign_payout(&self, _payout: Payout) -> TgResult<Payout>;
 }
 
 impl Creation for PlayerWallet {
@@ -207,11 +195,12 @@ fn main() -> Result<(), Error> {
         api::start(work_dir.clone(), network, false);
     });
 
+
     loop {
         let readline = rl.readline(">> ");
         match readline {
             Ok(line) => {
-                let split_line = line.split(' ');
+                let split_line = shell_words::split(&line).unwrap();
                 let matches = ui::repl().get_matches_from_safe(split_line);
                 if matches.is_ok() {
                     if let (c, Some(a)) = matches.unwrap().subcommand() {
@@ -220,6 +209,22 @@ fn main() -> Result<(), Error> {
                         match c {
                             "stop" => {
                                 break;
+                            }
+                            "player" => {
+                                if let (c, Some(a)) = a.subcommand() {
+                                    match c {
+                                        "add" => {
+                                            println!("{} {:?}", c, a);
+                                        }
+                                        "list" => {
+                                            println!("{}", c);
+                                        }
+                                        _ => {
+                                            println!("command '{}' is not implemented", c);
+                                        }
+                                    }
+
+                                }
                             }
                             "balance" => {
                                 let balance_amt = api::balance().unwrap();
@@ -237,6 +242,27 @@ fn main() -> Result<(), Error> {
                                 let amount = Some(a.value_of("amount").unwrap().parse::<u64>().unwrap());
                                 let withdraw_tx = api::withdraw(password, address, fee, amount).unwrap();
                                 println!("withdraw tx id: {}, fee: {}", withdraw_tx.txid, withdraw_tx.fee);
+                            }
+                            "contract" => {
+                                if let (c, Some(a)) = a.subcommand() {
+                                    match c {
+                                        "new" => {
+                                            println!("{}", c);
+                                        }
+                                        "list" => {
+                                            println!("{}", c);
+                                        }
+                                        "details" => {
+                                            println!("{}", c);
+                                        }
+                                        "sign" => {
+                                            println!("{}", c);
+                                        }
+                                        _ => {
+                                            println!("command '{}' is not implemented", c);
+                                        }
+                                    }            
+                                }
                             }
                             _ => {
                                 println!("command '{}' is not implemented", c);
