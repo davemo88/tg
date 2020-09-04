@@ -33,6 +33,7 @@ use bitcoin::{
 use bdk::{
     wallet::Wallet,
 };
+use clap::ArgMatches;
 use rustyline::Editor;
 use rustyline::error::ReadlineError;
 use shell_words;
@@ -123,6 +124,96 @@ impl Signing for PlayerWallet {
     }
 }
 
+fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> TgResult<()> {
+    if let (c, Some(a)) = subcommand {
+        match c {
+            "add" => {
+                let player = db::PlayerRecord {
+                    id:         PlayerId(a.args["id"].vals[0].clone().into_string().unwrap()),
+                    name:       a.args["name"].vals[0].clone().into_string().unwrap(),
+                };
+                match db.insert_player(player.clone()) {
+                    Ok(()) => println!("added player {} named {}", player.id.0, player.name),
+                    Err(e) => println!("{:?}", e),
+                }
+            }
+            "list" => {
+                let players = db.all_players().unwrap();
+                if (players.len() == 0) {
+                    println!("no players");
+                }
+                else {
+                    for p in players {
+                        println!("id: {}, name: {}", p.id.0, p.name);
+                    }
+                }
+            }
+            "remove" => {
+                let player_id = PlayerId(a.args["id"].vals[0].clone().into_string().unwrap());
+                match db.delete_player(player_id.clone()) {
+                    Ok(num_deleted) => match num_deleted {
+                        0 => println!("no player with that id"),
+                        1 => println!("deleted player {}", player_id.0),
+                        _ => (),
+                    }
+                    Err(e) => println!("{:?}", e),
+                }
+            }
+            _ => {
+                println!("command '{}' is not implemented", c);
+            }
+        }
+ 
+    }
+    Ok(())
+}
+
+fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> TgResult<()> {
+    if let (c, Some(a)) = subcommand {
+        match c {
+            "new" => {
+                println!("{}", c);
+            }
+            "list" => {
+                println!("{}", c);
+            }
+            "details" => {
+                println!("{}", c);
+            }
+            "sign" => {
+                println!("{}", c);
+            }
+            _ => {
+                println!("command '{}' is not implemented", c);
+            }
+        }            
+    }
+    Ok(())
+}
+
+fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> TgResult<()> {
+    if let (c, Some(a)) = subcommand {
+        match c {
+            "new" => {
+                println!("{}", c);
+            }
+            "list" => {
+                println!("{}", c);
+            }
+            "details" => {
+                println!("{}", c);
+            }
+            "sign" => {
+                println!("{}", c);
+            }
+            _ => {
+                println!("command '{}' is not implemented", c);
+            }
+        }            
+    }
+    Ok(())
+}
+
 fn main() -> Result<(), Error> {
 
     let cli = ui::cli().get_matches();
@@ -195,6 +286,10 @@ fn main() -> Result<(), Error> {
         api::start(work_dir.clone(), network, false);
     });
 
+    let mut db_path = current_dir().unwrap();
+    db_path.push(DB_NAME);
+    let db = db::DB::new(&db_path).unwrap();
+    db.create_tables();
 
     loop {
         let readline = rl.readline(">> ");
@@ -211,20 +306,7 @@ fn main() -> Result<(), Error> {
                                 break;
                             }
                             "player" => {
-                                if let (c, Some(a)) = a.subcommand() {
-                                    match c {
-                                        "add" => {
-                                            println!("{} {:?}", c, a);
-                                        }
-                                        "list" => {
-                                            println!("{}", c);
-                                        }
-                                        _ => {
-                                            println!("command '{}' is not implemented", c);
-                                        }
-                                    }
-
-                                }
+                                player_subcommand(a.subcommand(), &db);
                             }
                             "balance" => {
                                 let balance_amt = api::balance().unwrap();
@@ -244,25 +326,10 @@ fn main() -> Result<(), Error> {
                                 println!("withdraw tx id: {}, fee: {}", withdraw_tx.txid, withdraw_tx.fee);
                             }
                             "contract" => {
-                                if let (c, Some(a)) = a.subcommand() {
-                                    match c {
-                                        "new" => {
-                                            println!("{}", c);
-                                        }
-                                        "list" => {
-                                            println!("{}", c);
-                                        }
-                                        "details" => {
-                                            println!("{}", c);
-                                        }
-                                        "sign" => {
-                                            println!("{}", c);
-                                        }
-                                        _ => {
-                                            println!("command '{}' is not implemented", c);
-                                        }
-                                    }            
-                                }
+                                contract_subcommand(a.subcommand(), &db);
+                            }
+                            "payout" => {
+                                payout_subcommand(a.subcommand(), &db);
                             }
                             _ => {
                                 println!("command '{}' is not implemented", c);

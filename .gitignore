@@ -1,4 +1,5 @@
 *.swp
+*.db
 /arb/target
 /arb/Cargo.lock
 /tglib/target

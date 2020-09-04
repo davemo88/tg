@@ -3,7 +3,6 @@ use std::{
         Path, 
         PathBuf
     },
-    env::current_dir,
     fs::remove_file,
 };
 use rusqlite::{params, Connection, Result};
@@ -11,25 +10,24 @@ use tglib::{
     player::PlayerId,
 };
 
-#[derive(Debug)]
-
+#[derive(Debug, Clone)]
 pub struct PlayerRecord {
-    id:             PlayerId,
-    name:           String,
+    pub id:             PlayerId,
+    pub name:           String,
 }
 
 pub struct ContractRecord {
-    cxid:           String,
-    p1_id:          PlayerId,
-    p2_id:          PlayerId,
-    funding_txid:   String,
-    hex:            String,
-    desc:           String,
+    pub cxid:           String,
+    pub p1_id:          PlayerId,
+    pub p2_id:          PlayerId,
+    pub funding_txid:   String,
+    pub hex:            String,
+    pub desc:           String,
 }
 
 pub struct PayoutRecord {
-    cxid:           String,
-    hex:            String,
+    pub cxid:           String,
+    pub hex:            String,
 }
 
 pub struct DB {
@@ -68,11 +66,13 @@ impl DB {
     }
 
     pub fn insert_player(&self, player: PlayerRecord) -> Result<()> {
-        self.conn.execute(
+         match self.conn.execute(
             "INSERT INTO player (id, name) VALUES (?1, ?2)",
             params![player.id.0, player.name],
-        )?;
-        Ok(())
+         ) {
+             Ok(_) => Ok(()),
+             Err(e) => Err(e),
+         }
     }
 
     pub fn insert_contract(&self, contract: ContractRecord) -> Result<()> {
@@ -90,6 +90,29 @@ impl DB {
         )?;
         Ok(())
     }
+
+    pub fn all_players(&self) -> Result<Vec<PlayerRecord>> {
+        let mut stmt = self.conn.prepare("SELECT id, name FROM player")?;
+        let player_iter = stmt.query_map(params![], |row| {
+            Ok(PlayerRecord {
+                id: PlayerId(row.get(0)?),
+                name: row.get(1)?,
+            })
+        })?;
+
+        let mut players = Vec::<PlayerRecord>::new();
+        for p in player_iter {
+            players.push(p.unwrap());
+        }
+        Ok(players)
+    }
+
+    pub fn delete_player(&self, id: PlayerId) -> Result<usize> {
+        self.conn.execute(
+            "DELETE FROM player WHERE id = ?1",
+            params![id.0],
+        )
+    }
 }
 
 
@@ -97,6 +120,7 @@ impl DB {
 mod test {
 
     use super::*;
+    use std::env::current_dir;
 
     #[test]
     fn test_create_tables() -> Result<()> {
