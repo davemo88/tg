@@ -27,11 +27,18 @@ use bitcoin::{
     Address,
     Amount,
     Network,
+    PublicKey,
     Transaction,
+    Script,
+    blockdata::{
+        script::Builder,
+        opcodes::all as Opcodes,
+    },
     util::bip32::ExtendedPubKey,
 };
 use bdk::{
     wallet::Wallet,
+    api as bdk_api,
 };
 use clap::ArgMatches;
 use rustyline::Editor;
@@ -65,42 +72,93 @@ use tglib::{
 mod ui;
 mod db;
 
-const DB_NAME: &'static str = "player-wallet.db";
+mod mock;
+
+const ARBITER_ID: &'static str = "arbiter1somebogusid";
+const DB_NAME: &'static str = "dev-app.db";
 
 pub struct PlayerWallet(Wallet);
 
 impl PlayerWallet {
     pub fn player_id(&self) -> PlayerId {
-        PlayerId(String::from("hi"))
+        PlayerId::from(self.0.master.master_public().clone())
+    }
+
+    fn create_funding_tx(&self, p2_id: PlayerId, amount: Amount) -> Transaction {
+
+        let escrow_address = self.create_escrow_address(&p2_id).unwrap();
+        
+        let p1_withdraw_tx = bdk_api::withdraw(
+            String::from(mock::PASSPHRASE),
+            escrow_address,
+            1,
+            None,
+        );
+
+        Transaction {
+            version: 1,
+            lock_time: 0,
+            input: Vec::new(),
+            output: Vec::new(),
+        }
+    }
+
+    fn create_escrow_address(&self, p2_id: &PlayerId) -> TgResult<Address> {
+
+        let p1_pubkey = self.get_pubkey();
+        let p2_pubkey = mock::PlayerPubkeyService::get_pubkey(p2_id);
+        let arbiter_pubkey = mock::ArbiterPubkeyService::get_pubkey();
+
+        let escrow_address = Address::p2wsh(
+            &self.create_escrow_script(p1_pubkey, p2_pubkey, arbiter_pubkey),
+            self.0.master_public().network
+        );
+
+        Ok(escrow_address)
+
+    }
+
+    fn get_pubkey(&self) -> PublicKey {
+        PublicKey::from_str("lol shit").unwrap()
+    }
+
+    fn create_escrow_script(&self, p1_pubkey: PublicKey, p2_pubkey: PublicKey, arbiter_pubkey: PublicKey) -> Script {
+// standard multisig transaction script
+// https://en.bitcoin.it/wiki/BIP_0011
+        let b = Builder::new();
+        b.push_opcode(Opcodes::OP_PUSHBYTES_2);
+        b.push_slice(&p1_pubkey.to_bytes());
+        b.push_slice(&p2_pubkey.to_bytes());
+        b.push_slice(&arbiter_pubkey.to_bytes());
+        b.push_opcode(Opcodes::OP_PUSHBYTES_3);
+        b.push_opcode(Opcodes::OP_CHECKMULTISIG);
+
+        b.into_script()
+    }
+
+    fn create_payout_script(&self, p2_id: PlayerId, amount: Amount, funding_tx: Transaction) -> TgScript {
+        TgScript::default()
     }
     
 }
 
-impl Creation for PlayerWallet {
-    fn create_contract(&self,
-        p1_id:         PlayerId,
-        p2_id:         PlayerId,
-        arbiter_id:    ArbiterId,
+impl PlayerWallet {
+    pub fn create_contract(&self,
+        p2_id:          PlayerId,
         amount:         Amount,
-        payout_script:  TgScript,
-        funding_tx:     Option<Transaction>,
     ) -> Contract {
-        let mut contract = ContractBuilder::default();
-        contract.p1_id(p1_id);
-        contract.p2_id(p2_id);
-        contract.arbiter_id(arbiter_id);
-        contract.amount(amount);
-        contract.payout_script(payout_script);
 
-        if let Some(tx) = funding_tx {
-           contract.funding_tx(tx);
-        }
-        else {
-// TODO: generate one using the player ids, arbiter id, and amount from the contract
-        }
+        let funding_tx = self.create_funding_tx(p2_id.clone(), amount);
 
+        Contract::new(
+            self.player_id(),
+            p2_id.clone(),
+            ArbiterId(String::from(ARBITER_ID)),
+            amount,
+            funding_tx.clone(),
+            self.create_payout_script(p2_id, amount, funding_tx),
+        )
 
-        contract.build()
     }
 
     fn create_payout(&self, contract: &Contract, payout_tx: Transaction, payout_script_sig: TgScriptSig) -> Payout {
@@ -154,7 +212,7 @@ fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> Tg
                     Ok(num_deleted) => match num_deleted {
                         0 => println!("no player with that id"),
                         1 => println!("deleted player {}", player_id.0),
-                        _ => (),
+                        _ => (),//this is impossible
                     }
                     Err(e) => println!("{:?}", e),
                 }
@@ -172,7 +230,10 @@ fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> 
     if let (c, Some(a)) = subcommand {
         match c {
             "new" => {
-                println!("{}", c);
+// TODO: this is gonna go pretty deep so want to get out of this file asap
+                println!("new {:?}", a);
+                let p2_id = PlayerId(a.args["other"].vals[0].clone().into_string().unwrap());
+                let amount = a.args["other"].vals[0].clone();
             }
             "list" => {
                 println!("{}", c);
@@ -195,16 +256,16 @@ fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> Tg
     if let (c, Some(a)) = subcommand {
         match c {
             "new" => {
-                println!("{}", c);
+                println!("new {:?}", a);
             }
             "list" => {
-                println!("{}", c);
+                println!("list");
             }
             "details" => {
-                println!("{}", c);
+                println!("details {:?}", a);
             }
             "sign" => {
-                println!("{}", c);
+                println!("sign {:?}", a);
             }
             _ => {
                 println!("command '{}' is not implemented", c);

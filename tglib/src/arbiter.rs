@@ -19,7 +19,7 @@ use bitcoin::{
 };
 
 #[derive(Debug, Default, Clone)]
-pub struct ArbiterId(String); 
+pub struct ArbiterId(pub String); 
 
 impl From<ExtendedPubKey> for ArbiterId {
     fn from(xpubkey: ExtendedPubKey) -> Self {

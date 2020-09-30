@@ -18,24 +18,24 @@ pub type ContractSignature = Option<Signature>;
 
 #[derive(Clone)]
 pub struct Contract {
-    p1_id:              PlayerId,
-    p2_id:              PlayerId,
-    arbiter_id:         ArbiterId,
-    amount:             Amount,
-pub payout_script:      TgScript,
-    funding_tx:         Transaction,
-    contract_sig:       ContractSignature,
+    pub p1_id:              PlayerId,
+    pub p2_id:              PlayerId,
+    pub arbiter_id:         ArbiterId,
+    pub amount:             Amount,
+    pub funding_tx:         Transaction,
+    pub payout_script:      TgScript,
+    pub contract_sig:       ContractSignature,
 }
 
 impl Contract {
-    pub fn new(p1_id: PlayerId, p2_id: PlayerId, arbiter_id: ArbiterId, amount: Amount, payout_script: TgScript, funding_tx: Transaction) -> Self {
+    pub fn new(p1_id: PlayerId, p2_id: PlayerId, arbiter_id: ArbiterId, amount: Amount, funding_tx: Transaction, payout_script: TgScript) -> Self {
         Contract {
             p1_id,
             p2_id,
             arbiter_id,
             amount,
-            payout_script,
             funding_tx,
+            payout_script,
             contract_sig: None,
         }
     }
@@ -44,14 +44,15 @@ impl Contract {
     }
 }
 
+// unnecessary
 #[derive(Debug, Default)]
 pub struct ContractBuilder {
     p1_id:              Option<PlayerId>,
     p2_id:              Option<PlayerId>,
     arbiter_id:         Option<ArbiterId>,
     amount:             Option<Amount>,
-    payout_script:      Option<TgScript>,
     funding_tx:         Option<Transaction>,
+    payout_script:      Option<TgScript>,
 }
 
 impl ContractBuilder {
@@ -75,13 +76,13 @@ impl ContractBuilder {
         self
     }
 
-    pub fn payout_script(&mut self, script: TgScript) -> &mut Self {
-        self.payout_script = Some(script);
+    pub fn funding_tx(&mut self, funding_tx: Transaction) -> &mut Self {
+        self.funding_tx = Some(funding_tx);
         self
     }
 
-    pub fn funding_tx(&mut self, funding_tx: Transaction) -> &mut Self {
-        self.funding_tx = Some(funding_tx);
+    pub fn payout_script(&mut self, script: TgScript) -> &mut Self {
+        self.payout_script = Some(script);
         self
     }
 
@@ -92,8 +93,8 @@ impl ContractBuilder {
             self.p2_id.clone().unwrap(),
             self.arbiter_id.clone().unwrap(),
             self.amount.clone().unwrap(),
-            self.payout_script.clone().unwrap(),
             self.funding_tx.clone().unwrap(),
+            self.payout_script.clone().unwrap(),
         )
     }
 
