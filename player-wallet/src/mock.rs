@@ -1,8 +1,8 @@
 use std::str::FromStr;
-use bitcoin::PublicKey;
 use tglib::{
     player::PlayerId,
 };
+use bdk::bitcoin::PublicKey;
 
 const ARBITER_PUBKEY: &'static str = "bogusarbiterpubkey";
 const PLAYER_PUBKEY: &'static str = "bogusplayerpubkey";

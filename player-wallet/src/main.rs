@@ -23,7 +23,7 @@ use bdk::api;
 use bdk::config::Config;
 use bdk::error::Error;
 use std::process::ChildStderr;
-use bitcoin::{
+use bdk::bitcoin::{
     Address,
     Amount,
     Network,
@@ -119,6 +119,7 @@ impl PlayerWallet {
     }
 
     fn get_pubkey(&self) -> PublicKey {
+// believe this is intended to get the next unused pubkey, e.g. by incrementing the kix
         PublicKey::from_str("lol shit").unwrap()
     }
 
