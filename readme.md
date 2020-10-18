@@ -1,4 +1,4 @@
-#Tournament Grounds Toothless Rake 
+# Crypto Escrow 
 
 an arbitration service for cryptocurrency escrow, especially for transactions related to video games
 
