@@ -13,6 +13,7 @@ import { SignatureSwitch } from '../signature-switch.tsx';
 import { PlayerPortrait } from '../player-portrait.tsx';
 import { PlayerSelector } from '../player-selector.tsx';
 
+// TODO: add referee / game-domain expertise delegate pubkey input
 export const NewContract = ({ navigation }) => {
   const selectedLocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
   const playerTwos = playerSelectors
