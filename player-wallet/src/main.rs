@@ -18,27 +18,39 @@ use log::{debug, error, info, warn, LevelFilter};
 use serde::{
     Serialize,
 };
-use bdk::api::{balance, deposit_addr, init_config, start, stop, update_config, withdraw};
-use bdk::api;
-use bdk::config::Config;
-use bdk::error::Error;
 use std::process::ChildStderr;
-use bdk::bitcoin::{
-    Address,
-    Amount,
-    Network,
-    PublicKey,
-    Transaction,
-    Script,
-    blockdata::{
-        script::Builder,
-        opcodes::all as Opcodes,
-    },
-    util::bip32::ExtendedPubKey,
-};
 use bdk::{
-    wallet::Wallet,
-    api as bdk_api,
+    bitcoin::{
+        Address,
+        Amount,
+        Network,
+        PublicKey,
+        Transaction,
+        Script,
+        blockdata::{
+            script::Builder,
+            opcodes::all as Opcodes,
+        },
+        secp256k1::{
+            Secp256k1,
+            Message,
+            Signature,
+            All,
+        },
+        util::{
+            bip32::ExtendedPubKey,
+            psbt::PartiallySignedTransaction,
+        }
+    },
+    blockchain::{
+        noop_progress,
+        ElectrumBlockchain,
+    },
+    database::MemoryDatabase,
+    electrum_client::Client,
+    Error,
+    ScriptType,
+    Wallet,
 };
 use clap::ArgMatches;
 use rustyline::Editor;
@@ -77,23 +89,43 @@ mod mock;
 const ARBITER_ID: &'static str = "arbiter1somebogusid";
 const DB_NAME: &'static str = "dev-app.db";
 
-pub struct PlayerWallet(Wallet);
+pub struct PlayerWallet {
+    xpubkey: ExtendedPubKey,
+    network: Network,
+    wallet: Wallet<ElectrumBlockchain, MemoryDatabase>
+}
 
 impl PlayerWallet {
+    pub fn new(xpubkey: ExtendedPubKey, network: Network) -> Self {
+// TODO: put this somewhere else
+        let client = Client::new("ssl://electrum.blockstream.info:60002", None).unwrap();
+        PlayerWallet {
+            xpubkey,
+            network,
+            wallet: Wallet::new(
+                "wpkh([xkey_checksum/deri/vation/path]childkey/deri/vation/path)",
+                Some("wpkh([xkey_checksum/deri/vation/path]childkey/deri/vation/path)"),
+                network,
+                MemoryDatabase::default(),
+                ElectrumBlockchain::from(client)
+            ).unwrap()
+        }
+    }
+
     pub fn player_id(&self) -> PlayerId {
-        PlayerId::from(self.0.master.master_public().clone())
+        PlayerId::from(self.xpubkey)
     }
 
     fn create_funding_tx(&self, p2_id: PlayerId, amount: Amount) -> Transaction {
 
         let escrow_address = self.create_escrow_address(&p2_id).unwrap();
         
-        let p1_withdraw_tx = bdk_api::withdraw(
-            String::from(mock::PASSPHRASE),
-            escrow_address,
-            1,
-            None,
-        );
+//        let p1_withdraw_tx = bdk_api::withdraw(
+//            String::from(mock::PASSPHRASE),
+//            escrow_address,
+//            1,
+//            None,
+//        );
 
         Transaction {
             version: 1,
@@ -111,7 +143,7 @@ impl PlayerWallet {
 
         let escrow_address = Address::p2wsh(
             &self.create_escrow_script(p1_pubkey, p2_pubkey, arbiter_pubkey),
-            self.0.master_public().network
+            self.network,
         );
 
         Ok(escrow_address)
@@ -126,13 +158,13 @@ impl PlayerWallet {
     fn create_escrow_script(&self, p1_pubkey: PublicKey, p2_pubkey: PublicKey, arbiter_pubkey: PublicKey) -> Script {
 // standard multisig transaction script
 // https://en.bitcoin.it/wiki/BIP_0011
-        let b = Builder::new();
-        b.push_opcode(Opcodes::OP_PUSHBYTES_2);
-        b.push_slice(&p1_pubkey.to_bytes());
-        b.push_slice(&p2_pubkey.to_bytes());
-        b.push_slice(&arbiter_pubkey.to_bytes());
-        b.push_opcode(Opcodes::OP_PUSHBYTES_3);
-        b.push_opcode(Opcodes::OP_CHECKMULTISIG);
+        let b = Builder::new()
+            .push_opcode(Opcodes::OP_PUSHBYTES_2)
+            .push_slice(&p1_pubkey.to_bytes())
+            .push_slice(&p2_pubkey.to_bytes())
+            .push_slice(&arbiter_pubkey.to_bytes())
+            .push_opcode(Opcodes::OP_PUSHBYTES_3)
+            .push_opcode(Opcodes::OP_CHECKMULTISIG);
 
         b.into_script()
     }
@@ -169,18 +201,33 @@ impl PlayerWallet {
             payout_script_sig,
         )
     }
-    
-
 }
 
 impl Signing for PlayerWallet {
+
     fn sign_contract(&self, _contract: Contract) -> TgResult<Contract> {
+// delegate to SigningWallet e.g. trezor
         Err(TgError("cannot sign contract"))
     }
 
     fn sign_payout(&self, _payout: Payout) -> TgResult<Payout>{
+// delegate to SigningWallet e.g. trezor
         Err(TgError("cannot sign payout request"))
     }
+}
+
+// TODO: need to clarify. this is signing in the normal bitcoin / crypto sense
+// and the Signing trait is for signing our contracts and payouts only
+// this is here because we will delegate from the app wallet to e.g.
+// a hardware wallet for key storage and signing
+
+// we'll only do pubkey-related tasks in our application wallet
+// and delegate key storage and signing to a better tested wallet 
+// e.g. trezor
+pub trait SigningWallet {
+    fn mxpubkey() -> ExtendedPubKey;
+    fn sign_tx(pstx: PartiallySignedTransaction, kdp: String) -> TgResult<Transaction>;
+    fn sign_message(msg: Message, kdp: String) -> TgResult<Signature>;
 }
 
 fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> TgResult<()> {
@@ -213,7 +260,7 @@ fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> Tg
                     Ok(num_deleted) => match num_deleted {
                         0 => println!("no player with that id"),
                         1 => println!("deleted player {}", player_id.0),
-                        _ => (),//this is impossible
+                        n => panic!("{} removed, should be impossible", n),//this is impossible
                     }
                     Err(e) => println!("{:?}", e),
                 }
@@ -222,7 +269,6 @@ fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> Tg
                 println!("command '{}' is not implemented", c);
             }
         }
- 
     }
     Ok(())
 }
@@ -286,7 +332,6 @@ fn main() -> Result<(), Error> {
     let discovery = cli.value_of("discovery").map(|d| d == "on").unwrap_or(true);
     let network = cli.value_of("network").unwrap_or("testnet");
     let password = cli.value_of("password").expect("password is required");
-    let peers = cli.values_of("peers").map(|a| a.collect::<Vec<&str>>()).unwrap_or(Vec::new());
 
     let work_dir: PathBuf = PathBuf::from(directory);
     let mut log_file = work_dir.clone();
@@ -309,44 +354,27 @@ fn main() -> Result<(), Error> {
     println!("working directory: {:?}", work_dir);
     println!("discovery: {:?}", discovery);
     println!("network: {}", network);
-    println!("peers: {:?}", peers);
 
-    let init_result = api::init_config(work_dir.clone(), network, password, None);
+    let client = Client::new("ssl://electrum.blockstream.info:60002", None)?;
 
-    match init_result {
-        Ok(Some(init_result)) => {
-            println!("created new wallet, seed words: {}", init_result.mnemonic_words);
-            println!("first deposit address: {}", init_result.deposit_address);
-        }
-        Ok(None) => {
-            println!("wallet exists");
-        }
-        Err(e) => {
-            println!("config error: {:?}", e);
-        }
-    };
+    let wallet = Wallet::new(
+        "wpkh([xkey_checksum/deri/vation/path]childkey/deri/vation/path)",
+        Some("wpkh([xkey_checksum/deri/vation/path]childkey/deri/vation/path)"),
+        network,
+        MemoryDatabase::default(),
+        ElectrumBlockchain::from(client)
+    )?;
 
-    let peers = peers.into_iter()
-        .map(|p| SocketAddr::from_str(p))
-        .collect::<Result<Vec<SocketAddr>, AddrParseError>>()?;
+    wallet.sync(noop_progress(), None)?;
 
-    let connections = max(peers.len(), connections);
-
-    println!("peer connections: {}", connections);
-
-    let config = api::update_config(work_dir.clone(), network, peers, connections, discovery).unwrap();
-    debug!("config: {:?}", config);
+//    let config = api::update_config(work_dir.clone(), network, peers, connections, discovery).unwrap();
+//    debug!("config: {:?}", config);
 
     let mut rl = Editor::<()>::new();
 
     if rl.load_history(history_file).is_err() {
         println!("No previous history.");
     }
-
-    let p2p_thread = thread::spawn(move || {
-        println!("starting p2p thread");
-        api::start(work_dir.clone(), network, false);
-    });
 
     let mut db_path = current_dir().unwrap();
     db_path.push(DB_NAME);
@@ -371,12 +399,12 @@ fn main() -> Result<(), Error> {
                                 player_subcommand(a.subcommand(), &db);
                             }
                             "balance" => {
-                                let balance_amt = api::balance().unwrap();
-                                println!("balance: {}, confirmed: {}", balance_amt.balance, balance_amt.confirmed);
+//                                let balance_amt = api::balance().unwrap();
+                                println!("balance");//: {}, confirmed: {}", balance_amt.balance, balance_amt.confirmed);
                             }
                             "deposit" => {
-                               let deposit_addr = api::deposit_addr();
-                                println!("deposit address: {}", deposit_addr);
+//                               let deposit_addr = api::deposit_addr();
+                                println!("deposit address");//: {}", deposit_addr);
                             }
                             "withdraw" => {
                                 // passphrase: String, address: Address, fee_per_vbyte: u64, amount: Option<u64>
@@ -384,8 +412,8 @@ fn main() -> Result<(), Error> {
                                 let address = Address::from_str(a.value_of("address").unwrap()).unwrap();
                                 let fee = a.value_of("fee").unwrap().parse::<u64>().unwrap();
                                 let amount = Some(a.value_of("amount").unwrap().parse::<u64>().unwrap());
-                                let withdraw_tx = api::withdraw(password, address, fee, amount).unwrap();
-                                println!("withdraw tx id: {}, fee: {}", withdraw_tx.txid, withdraw_tx.fee);
+//                                let withdraw_tx = api::withdraw(password, address, fee, amount).unwrap();
+                                println!("withdraw tx");// id: {}, fee: {}", withdraw_tx.txid, withdraw_tx.fee);
                             }
                             "contract" => {
                                 contract_subcommand(a.subcommand(), &db);
@@ -419,8 +447,6 @@ fn main() -> Result<(), Error> {
     }
     rl.save_history(history_file).unwrap();
     println!("stopping");
-    api::stop();
-    p2p_thread.join().unwrap();
     println!("stopped");
 
     Ok(())

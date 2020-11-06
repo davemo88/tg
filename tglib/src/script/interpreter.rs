@@ -1,5 +1,5 @@
 use std::convert::TryInto;
-use bitcoin::{
+use bdk::bitcoin::{
     util::key::PublicKey,
     secp256k1::{
         Secp256k1,

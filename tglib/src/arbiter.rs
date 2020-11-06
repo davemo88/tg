@@ -1,7 +1,7 @@
 use std::convert::{
     From,
 };
-use bitcoin::{
+use bdk::bitcoin::{
     util::bip32::{
         ExtendedPubKey,
     },

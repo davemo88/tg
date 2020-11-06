@@ -4,10 +4,10 @@ title:  "Heads-up Crypto Escrow Basics"
 date:   2020-08-16 18:36:18 -0400
 categories: jekyll update
 ---
-Crypto Escrow uses cryptography to secure contracts concerning the dispersal of funds held in escrow. In heads-up (1v1) gameplay, contracts are between the two players and an arbiter about how to release funds based on the outcome of a game. The funds are held in a 2-of-3 multisignature account of which both players and the arbiter are keyholders. The arbiter enables release according to the players' terms even when the players won't cooperate to release the funds together, e.g. the classic sore loser.
+Crypto Escrow uses cryptography to enforce contracts related to funds held in escrow. In heads-up gaming, for example, contracts are between the two players and an arbiter about how to distribute funds based on the outcome of a game. The funds are held in a 2-of-3 multisignature account, of which both players and the arbiter are keyholders. The arbiter enables distribution of funds even when the players won't cooperate, e.g. the classic sore loser.
 
 ```
-// basic contract
+// basic heads-up gaming contract
 {
     player1:    Pauline
     player2:    Pedro

@@ -1,4 +1,4 @@
-use bitcoin::{
+use bdk::bitcoin::{
     Transaction,
 };
 use crate::{
