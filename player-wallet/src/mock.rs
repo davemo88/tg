@@ -14,6 +14,7 @@ use bdk::{
                 DerivationPath,
                 ExtendedPubKey,
                 ExtendedPrivKey,
+                Fingerprint,
             },
             psbt::PartiallySignedTransaction,
         },
@@ -37,13 +38,13 @@ use crate::{
 };
 
 const ARBITER_PUBKEY: &'static str = "bogusarbiterpubkey";
-const PLAYER_PUBKEY: &'static str = "bogusplayerpubkey";
+const PLAYER_PUBKEY: &'static str = "bogusotherplayerpubkey";
 
 const PURPOSE: u32 = 44;
 const COIN: u32 = 0;
 const ACCOUNT: u32 = 0;
 
-const PLAYER_MNEMONIC: &'static str = "team beauty local basket provide hammer avocado flower virtual soul manual obvious inmate solve almost";
+const PLAYER_MNEMONIC: &'static str = "snake predict impose woman wire tattoo hungry survey uphold breeze system learn clerk media faint brisk betray retreat";
 
 pub const PASSPHRASE: &'static str = "testpass";
 
@@ -85,23 +86,38 @@ impl Trezor {
 
 impl SigningWallet for Trezor {
 
-    fn mxpubkey() -> ExtendedPubKey {
+    fn fingerprint() -> Fingerprint {
         let m = Mnemonic::parse(PLAYER_MNEMONIC).unwrap();
         let xprivkey = ExtendedPrivKey::new_master(Network::Testnet, &m.to_seed("")).unwrap();
         let secp = Secp256k1::new();
+        xprivkey.fingerprint(&secp)
+    }
+
+    fn xpubkey() -> ExtendedPubKey {
+        let m = Mnemonic::parse(PLAYER_MNEMONIC).unwrap();
+        let xprivkey = ExtendedPrivKey::new_master(Network::Testnet, &m.to_seed("")).unwrap();
+        let secp = Secp256k1::new();
+        let fingerprint = xprivkey.fingerprint(&secp);
         ExtendedPubKey::from_private(&secp, &xprivkey)
+    }
+
+    fn descriptor_xpubkey() -> String {
+        let m = Mnemonic::parse(PLAYER_MNEMONIC).unwrap();
+        let xprivkey = ExtendedPrivKey::new_master(Network::Testnet, &m.to_seed("")).unwrap();
+        let secp = Secp256k1::new();
+        let fingerprint = xprivkey.fingerprint(&secp);
+        let xpubkey = ExtendedPubKey::from_private(&secp, &xprivkey);
+        String::from(format!("[{}/44'/0'/0']{}", fingerprint, xpubkey))
     }
 
     fn sign_tx(pstx: PartiallySignedTransaction, kdp: String) -> TgResult<Transaction> {
         let wallet = Trezor::wallet();
 
-        let result = wallet.sign(pstx, None);
-        if result.is_ok() {
-            let (signed_tx, _) = result.unwrap();
-            Ok(signed_tx.extract_tx())
-        }
-        else {
-            Err(TgError("cannot sign transaction"))
+        match wallet.sign(pstx, None) {
+            Ok((signed_tx, _)) => {
+                Ok(signed_tx.extract_tx())
+            }
+            _ => Err(TgError("cannot sign transaction"))
         }
     }
 
@@ -111,22 +127,22 @@ impl SigningWallet for Trezor {
     }
 }
 
-pub struct BitcoinCore;
-
-impl SigningWallet for BitcoinCore {
-
-    fn mxpubkey() -> ExtendedPubKey {
-        let m = Mnemonic::parse(PLAYER_MNEMONIC).unwrap();
-        let xprivkey = ExtendedPrivKey::new_master(Network::Testnet, &m.to_seed("")).unwrap();
-        ExtendedPubKey::from_private(&Secp256k1::new(), &xprivkey)
-    }
-
-    fn sign_tx(pstx: PartiallySignedTransaction, kdp: String) -> TgResult<Transaction> {
-        Err(TgError("cannot sign transaction"))
-    }
-
-    fn sign_message(msg: Message, kdp: String) -> TgResult<Signature> {
-        Err(TgError("cannot sign message"))
-
-    }
-}
+//pub struct BitcoinCore;
+//
+//impl SigningWallet for BitcoinCore {
+//
+//    fn descriptor_xpubkey() -> ExtendedPubKey {
+//        let m = Mnemonic::parse(PLAYER_MNEMONIC).unwrap();
+//        let xprivkey = ExtendedPrivKey::new_master(Network::Testnet, &m.to_seed("")).unwrap();
+//        ExtendedPubKey::from_private(&Secp256k1::new(), &xprivkey)
+//    }
+//
+//    fn sign_tx(pstx: PartiallySignedTransaction, kdp: String) -> TgResult<Transaction> {
+//        Err(TgError("cannot sign transaction"))
+//    }
+//
+//    fn sign_message(msg: Message, kdp: String) -> TgResult<Signature> {
+//        Err(TgError("cannot sign message"))
+//
+//    }
+//}

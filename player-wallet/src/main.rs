@@ -13,8 +13,7 @@ use std::{
     str::FromStr,
     thread,
 };
-use fern;
-use log::{debug, error, info, warn, LevelFilter};
+use log::debug;
 use serde::{
     Serialize,
 };
@@ -38,7 +37,10 @@ use bdk::{
             All,
         },
         util::{
-            bip32::ExtendedPubKey,
+            bip32::{
+                ExtendedPubKey,
+                Fingerprint,
+            },
             psbt::PartiallySignedTransaction,
         }
     },
@@ -85,26 +87,33 @@ mod ui;
 mod db;
 
 mod mock;
+use mock::{
+    Trezor,
+};
 
 const ARBITER_ID: &'static str = "arbiter1somebogusid";
 const DB_NAME: &'static str = "dev-app.db";
 
 pub struct PlayerWallet {
+    fingerprint: Fingerprint,
     xpubkey: ExtendedPubKey,
     network: Network,
     wallet: Wallet<ElectrumBlockchain, MemoryDatabase>
 }
 
 impl PlayerWallet {
-    pub fn new(xpubkey: ExtendedPubKey, network: Network) -> Self {
-// TODO: put this somewhere else
+    pub fn new(fingerprint: Fingerprint, xpubkey: ExtendedPubKey, network: Network) -> Self {
+        let descriptor_key = format!("[{}/44'/0'/0']{}", fingerprint, xpubkey);
+        let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
+        let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
         let client = Client::new("ssl://electrum.blockstream.info:60002", None).unwrap();
         PlayerWallet {
+            fingerprint,
             xpubkey,
             network,
             wallet: Wallet::new(
-                "wpkh([xkey_checksum/deri/vation/path]childkey/deri/vation/path)",
-                Some("wpkh([xkey_checksum/deri/vation/path]childkey/deri/vation/path)"),
+                &external_descriptor,
+                Some(&internal_descriptor),
                 network,
                 MemoryDatabase::default(),
                 ElectrumBlockchain::from(client)
@@ -225,7 +234,9 @@ impl Signing for PlayerWallet {
 // and delegate key storage and signing to a better tested wallet 
 // e.g. trezor
 pub trait SigningWallet {
-    fn mxpubkey() -> ExtendedPubKey;
+    fn fingerprint() -> Fingerprint;
+    fn xpubkey() -> ExtendedPubKey;
+    fn descriptor_xpubkey() -> String;
     fn sign_tx(pstx: PartiallySignedTransaction, kdp: String) -> TgResult<Transaction>;
     fn sign_message(msg: Message, kdp: String) -> TgResult<Signature>;
 }
@@ -324,51 +335,16 @@ fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> Tg
 
 fn main() -> Result<(), Error> {
 
-    let cli = ui::cli().get_matches();
-    let log_level = cli.value_of("logging").unwrap_or("info");
-
-    let connections = cli.value_of("connections").map(|c| c.parse::<usize>().unwrap()).unwrap_or(5);
-    let directory = cli.value_of("directory").unwrap_or(".");
-    let discovery = cli.value_of("discovery").map(|d| d == "on").unwrap_or(true);
-    let network = cli.value_of("network").unwrap_or("testnet");
-    let password = cli.value_of("password").expect("password is required");
-
-    let work_dir: PathBuf = PathBuf::from(directory);
-    let mut log_file = work_dir.clone();
-    log_file.push(network);
-    log_file.push("wallet.log");
-    let log_file = log_file.as_path();
-    let log_level = LevelFilter::from_str(log_level).unwrap();
-
-    setup_logger(log_file, log_level);
-
+    let network = Network::Testnet;
+    let work_dir: PathBuf = PathBuf::from("./");
     let mut history_file = work_dir.clone();
-    history_file.push(network);
+    history_file.push(&network.to_string());
     history_file.push("history.txt");
     let history_file = history_file.as_path();
-//    info!("history file: {:?}", history_file);
 
-    let network = network.parse::<Network>().unwrap();
+    let player_wallet = PlayerWallet::new(Trezor::fingerprint(), Trezor::xpubkey(), network);
 
-    println!("logging level: {}", log_level);
-    println!("working directory: {:?}", work_dir);
-    println!("discovery: {:?}", discovery);
-    println!("network: {}", network);
-
-    let client = Client::new("ssl://electrum.blockstream.info:60002", None)?;
-
-    let wallet = Wallet::new(
-        "wpkh([xkey_checksum/deri/vation/path]childkey/deri/vation/path)",
-        Some("wpkh([xkey_checksum/deri/vation/path]childkey/deri/vation/path)"),
-        network,
-        MemoryDatabase::default(),
-        ElectrumBlockchain::from(client)
-    )?;
-
-    wallet.sync(noop_progress(), None)?;
-
-//    let config = api::update_config(work_dir.clone(), network, peers, connections, discovery).unwrap();
-//    debug!("config: {:?}", config);
+    player_wallet.wallet.sync(noop_progress(), None)?;
 
     let mut rl = Editor::<()>::new();
 
@@ -451,21 +427,4 @@ fn main() -> Result<(), Error> {
 
     Ok(())
 
-}
-
-fn setup_logger(file: &Path, level: LevelFilter) -> Result<(), fern::InitError> {
-    fern::Dispatch::new()
-        .format(|out, message, record| {
-            out.finish(format_args!(
-                "{}[{}][{}] {}",
-                chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S]"),
-                record.target(),
-                record.level(),
-                message
-            ))
-        })
-        .level(level)
-        .chain(fern::log_file(file)?)
-        .apply()?;
-    Ok(())
 }
