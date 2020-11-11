@@ -1,4 +1,4 @@
-use bitcoin::{
+use bdk::bitcoin::{
     Amount,
     Transaction,
     secp256k1::{
@@ -45,6 +45,8 @@ impl Contract {
 }
 
 // unnecessary
+// but could become worthwhile, e.g. if contract fields lose pub
+// e.g. make contract with new but only allow certain mutations like signing
 #[derive(Debug, Default)]
 pub struct ContractBuilder {
     p1_id:              Option<PlayerId>,

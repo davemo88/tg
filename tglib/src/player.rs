@@ -3,24 +3,30 @@ use std::convert::{
     Into,
     TryInto,
 };
-use bitcoin::{
-    util::bip32::{
-        ExtendedPubKey,
+use bdk::{
+    bitcoin::{
+        util::bip32::{
+            ExtendedPubKey,
+        },
+        hashes::{
+            Hash,
+            HashEngine,
+            sha256::HashEngine as Sha2Engine,
+            sha256::Hash as Sha2Hash,
+        },
+        bech32::{
+            self,
+            FromBase32,
+            ToBase32,
+        },
+        secp256k1::{
+            PublicKey,
+        },
     },
-    hashes::{
-        Hash,
-        HashEngine,
-        sha256::HashEngine as Sha2Engine,
-        sha256::Hash as Sha2Hash,
-    },
-    bech32::{
-        self,
-        FromBase32,
-        ToBase32,
-    },
-    secp256k1::{
-        PublicKey,
-    },
+    descriptor::{
+        Descriptor,
+        MiniscriptKey,
+    }
 };
 
 #[derive(Debug, Default, Clone)]
