@@ -7,40 +7,9 @@ pub fn repl<'a, 'b>() -> App<'a, 'b> {
         .about("wallet ops")
         .settings(&[AppSettings::NoBinaryName, AppSettings::SubcommandRequiredElseHelp,
             AppSettings::VersionlessSubcommands])
-        .subcommands(vec![SubCommand::with_name("stop").about("Stop wallet"),
-                          SubCommand::with_name("balance").about("Display balances (in sats)"),
-                          SubCommand::with_name("deposit").about("Display deposit address"),
-                          SubCommand::with_name("withdraw").about("Withdraw sats to address")
-                              .arg(Arg::with_name("password")
-                                  .short("p")
-                                  .long("password")
-                                  .value_name("PASSWORD")
-                                  .help("wallet password")
-                                  .required(true)
-                                  .takes_value(true))
-                              .arg(Arg::with_name("address")
-                                  .short("d")
-                                  .long("destination")
-                                  .value_name("ADDRESS")
-                                  .help("destination address")
-                                  .required(true)
-                                  .takes_value(true))
-                              .arg(Arg::with_name("fee")
-                                  .short("f")
-                                  .long("fee")
-                                  .value_name("SATS")
-                                  .help("sats per vbyte")
-                                  .required(true)
-                                  .takes_value(true))
-                              .arg(Arg::with_name("amount")
-                                  .short("a")
-                                  .long("amount")
-                                  .value_name("SATS")
-                                  .help("amount of sats to withdraw")
-                                  .required(true)
-                                  .takes_value(true))])
-        .subcommand(contract_ui())
+        .subcommand(SubCommand::with_name("balance").about("Display balances (in sats)"))
         .subcommand(player_ui())
+        .subcommand(contract_ui())
 }
 
 pub fn player_ui<'a, 'b>() -> App<'a, 'b> {

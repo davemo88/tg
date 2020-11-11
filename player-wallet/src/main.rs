@@ -9,7 +9,9 @@ use std::{
     },
     path::{
         PathBuf, 
-        Path},
+        Path,
+    },
+    process::ChildStderr,
     str::FromStr,
     thread,
 };
@@ -17,42 +19,19 @@ use log::debug;
 use serde::{
     Serialize,
 };
-use std::process::ChildStderr;
 use bdk::{
     bitcoin::{
         Address,
-        Amount,
-        Network,
-        PublicKey,
-        Transaction,
-        Script,
-        blockdata::{
-            script::Builder,
-            opcodes::all as Opcodes,
-        },
-        secp256k1::{
-            Secp256k1,
-            Message,
-            Signature,
-            All,
-        },
         util::{
-            bip32::{
-                ExtendedPubKey,
-                Fingerprint,
-            },
             psbt::PartiallySignedTransaction,
         }
     },
     blockchain::{
         noop_progress,
-        ElectrumBlockchain,
     },
     database::MemoryDatabase,
     electrum_client::Client,
     Error,
-    ScriptType,
-    Wallet,
 };
 use clap::ArgMatches;
 use rustyline::Editor;
@@ -61,14 +40,11 @@ use shell_words;
 use tglib::{
     Result as TgResult,
     TgError,
-    TgScriptSig,
     arbiter::{
         ArbiterId,
     },
     contract::{
         Contract,
-        ContractBuilder,
-        ContractSignature,
     },
     payout::{
         Payout,
@@ -83,163 +59,20 @@ use tglib::{
     }
 };
 
-mod ui;
 mod db;
-
 mod mock;
+mod ui;
+mod wallet;
 use mock::{
     Trezor,
+    NETWORK,
+};
+use wallet::{
+    PlayerWallet,
+    SigningWallet,
 };
 
-const ARBITER_ID: &'static str = "arbiter1somebogusid";
 const DB_NAME: &'static str = "dev-app.db";
-
-pub struct PlayerWallet {
-    fingerprint: Fingerprint,
-    xpubkey: ExtendedPubKey,
-    network: Network,
-    wallet: Wallet<ElectrumBlockchain, MemoryDatabase>
-}
-
-impl PlayerWallet {
-    pub fn new(fingerprint: Fingerprint, xpubkey: ExtendedPubKey, network: Network) -> Self {
-        let descriptor_key = format!("[{}/44'/0'/0']{}", fingerprint, xpubkey);
-        let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
-        let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
-        let client = Client::new("ssl://electrum.blockstream.info:60002", None).unwrap();
-        PlayerWallet {
-            fingerprint,
-            xpubkey,
-            network,
-            wallet: Wallet::new(
-                &external_descriptor,
-                Some(&internal_descriptor),
-                network,
-                MemoryDatabase::default(),
-                ElectrumBlockchain::from(client)
-            ).unwrap()
-        }
-    }
-
-    pub fn player_id(&self) -> PlayerId {
-        PlayerId::from(self.xpubkey)
-    }
-
-    fn create_funding_tx(&self, p2_id: PlayerId, amount: Amount) -> Transaction {
-
-        let escrow_address = self.create_escrow_address(&p2_id).unwrap();
-        
-//        let p1_withdraw_tx = bdk_api::withdraw(
-//            String::from(mock::PASSPHRASE),
-//            escrow_address,
-//            1,
-//            None,
-//        );
-
-        Transaction {
-            version: 1,
-            lock_time: 0,
-            input: Vec::new(),
-            output: Vec::new(),
-        }
-    }
-
-    fn create_escrow_address(&self, p2_id: &PlayerId) -> TgResult<Address> {
-
-        let p1_pubkey = self.get_pubkey();
-        let p2_pubkey = mock::PlayerPubkeyService::get_pubkey(p2_id);
-        let arbiter_pubkey = mock::ArbiterPubkeyService::get_pubkey();
-
-        let escrow_address = Address::p2wsh(
-            &self.create_escrow_script(p1_pubkey, p2_pubkey, arbiter_pubkey),
-            self.network,
-        );
-
-        Ok(escrow_address)
-
-    }
-
-    fn get_pubkey(&self) -> PublicKey {
-// believe this is intended to get the next unused pubkey, e.g. by incrementing the kix
-        PublicKey::from_str("lol shit").unwrap()
-    }
-
-    fn create_escrow_script(&self, p1_pubkey: PublicKey, p2_pubkey: PublicKey, arbiter_pubkey: PublicKey) -> Script {
-// standard multisig transaction script
-// https://en.bitcoin.it/wiki/BIP_0011
-        let b = Builder::new()
-            .push_opcode(Opcodes::OP_PUSHBYTES_2)
-            .push_slice(&p1_pubkey.to_bytes())
-            .push_slice(&p2_pubkey.to_bytes())
-            .push_slice(&arbiter_pubkey.to_bytes())
-            .push_opcode(Opcodes::OP_PUSHBYTES_3)
-            .push_opcode(Opcodes::OP_CHECKMULTISIG);
-
-        b.into_script()
-    }
-
-    fn create_payout_script(&self, p2_id: PlayerId, amount: Amount, funding_tx: Transaction) -> TgScript {
-        TgScript::default()
-    }
-    
-}
-
-impl PlayerWallet {
-    pub fn create_contract(&self,
-        p2_id:          PlayerId,
-        amount:         Amount,
-    ) -> Contract {
-
-        let funding_tx = self.create_funding_tx(p2_id.clone(), amount);
-
-        Contract::new(
-            self.player_id(),
-            p2_id.clone(),
-            ArbiterId(String::from(ARBITER_ID)),
-            amount,
-            funding_tx.clone(),
-            self.create_payout_script(p2_id, amount, funding_tx),
-        )
-
-    }
-
-    fn create_payout(&self, contract: &Contract, payout_tx: Transaction, payout_script_sig: TgScriptSig) -> Payout {
-        Payout::new(
-            &contract,
-            payout_tx,
-            payout_script_sig,
-        )
-    }
-}
-
-impl Signing for PlayerWallet {
-
-    fn sign_contract(&self, _contract: Contract) -> TgResult<Contract> {
-// delegate to SigningWallet e.g. trezor
-        Err(TgError("cannot sign contract"))
-    }
-
-    fn sign_payout(&self, _payout: Payout) -> TgResult<Payout>{
-// delegate to SigningWallet e.g. trezor
-        Err(TgError("cannot sign payout request"))
-    }
-}
-
-// TODO: need to clarify. this is signing in the normal bitcoin / crypto sense
-// and the Signing trait is for signing our contracts and payouts only
-// this is here because we will delegate from the app wallet to e.g.
-// a hardware wallet for key storage and signing
-
-// we'll only do pubkey-related tasks in our application wallet
-// and delegate key storage and signing to a better tested wallet 
-// e.g. trezor
-pub trait SigningWallet {
-    fn fingerprint() -> Fingerprint;
-    fn xpubkey() -> ExtendedPubKey;
-    fn descriptor_xpubkey() -> String;
-    fn sign_tx(pstx: PartiallySignedTransaction, kdp: String) -> TgResult<Transaction>;
-    fn sign_message(msg: Message, kdp: String) -> TgResult<Signature>;
-}
 
 fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> TgResult<()> {
     if let (c, Some(a)) = subcommand {
@@ -335,14 +168,13 @@ fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> Tg
 
 fn main() -> Result<(), Error> {
 
-    let network = Network::Testnet;
     let work_dir: PathBuf = PathBuf::from("./");
     let mut history_file = work_dir.clone();
-    history_file.push(&network.to_string());
+    history_file.push(&NETWORK.to_string());
     history_file.push("history.txt");
     let history_file = history_file.as_path();
 
-    let player_wallet = PlayerWallet::new(Trezor::fingerprint(), Trezor::xpubkey(), network);
+    let player_wallet = PlayerWallet::new(Trezor::fingerprint(), Trezor::xpubkey(), NETWORK);
 
     player_wallet.wallet.sync(noop_progress(), None)?;
 
@@ -368,15 +200,14 @@ fn main() -> Result<(), Error> {
                         debug!("command: {}, args: {:?}", c, a);
                         rl.add_history_entry(line.as_str());
                         match c {
-                            "stop" => {
+                            "quit" => {
                                 break;
                             }
                             "player" => {
                                 player_subcommand(a.subcommand(), &db);
                             }
                             "balance" => {
-//                                let balance_amt = api::balance().unwrap();
-                                println!("balance");//: {}, confirmed: {}", balance_amt.balance, balance_amt.confirmed);
+                                println!("balance");
                             }
                             "deposit" => {
 //                               let deposit_addr = api::deposit_addr();
@@ -427,4 +258,13 @@ fn main() -> Result<(), Error> {
 
     Ok(())
 
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn balance() {
+            
+    }
 }

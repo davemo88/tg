@@ -34,9 +34,12 @@ use bdk::{
 };
 use bip39::Mnemonic;
 use crate::{
-    SigningWallet,
+    wallet::SigningWallet,
 };
 
+pub const NETWORK: Network = Network::Regtest;
+pub const ELECTRS_SERVER: &'static str = "tcp://127.0.0.1:60401";
+pub const ARBITER_ID: &'static str = "arbiter1somebogusid";
 const ARBITER_PUBKEY: &'static str = "bogusarbiterpubkey";
 const PLAYER_PUBKEY: &'static str = "bogusotherplayerpubkey";
 
@@ -69,7 +72,7 @@ pub struct Trezor;
 impl Trezor {
     fn wallet() -> Wallet<OfflineBlockchain, MemoryDatabase> {
         let m = Mnemonic::parse(PLAYER_MNEMONIC).unwrap();
-        let xprivkey = ExtendedPrivKey::new_master(Network::Testnet, &m.to_seed("")).unwrap();
+        let xprivkey = ExtendedPrivKey::new_master(Network::Regtest, &m.to_seed("")).unwrap();
         let secp = Secp256k1::new();
         let fingerprint = xprivkey.fingerprint(&secp);
         let descriptor_key = format!("[{}/44'/0'/0']{}", fingerprint, xprivkey);
@@ -78,7 +81,7 @@ impl Trezor {
         Wallet::new_offline(
             &external_descriptor,
             Some(&internal_descriptor),
-            Network::Testnet,
+            NETWORK,
             MemoryDatabase::default(),
         ).unwrap()
     }
@@ -88,14 +91,14 @@ impl SigningWallet for Trezor {
 
     fn fingerprint() -> Fingerprint {
         let m = Mnemonic::parse(PLAYER_MNEMONIC).unwrap();
-        let xprivkey = ExtendedPrivKey::new_master(Network::Testnet, &m.to_seed("")).unwrap();
+        let xprivkey = ExtendedPrivKey::new_master(NETWORK, &m.to_seed("")).unwrap();
         let secp = Secp256k1::new();
         xprivkey.fingerprint(&secp)
     }
 
     fn xpubkey() -> ExtendedPubKey {
         let m = Mnemonic::parse(PLAYER_MNEMONIC).unwrap();
-        let xprivkey = ExtendedPrivKey::new_master(Network::Testnet, &m.to_seed("")).unwrap();
+        let xprivkey = ExtendedPrivKey::new_master(NETWORK, &m.to_seed("")).unwrap();
         let secp = Secp256k1::new();
         let fingerprint = xprivkey.fingerprint(&secp);
         ExtendedPubKey::from_private(&secp, &xprivkey)
@@ -103,7 +106,7 @@ impl SigningWallet for Trezor {
 
     fn descriptor_xpubkey() -> String {
         let m = Mnemonic::parse(PLAYER_MNEMONIC).unwrap();
-        let xprivkey = ExtendedPrivKey::new_master(Network::Testnet, &m.to_seed("")).unwrap();
+        let xprivkey = ExtendedPrivKey::new_master(NETWORK, &m.to_seed("")).unwrap();
         let secp = Secp256k1::new();
         let fingerprint = xprivkey.fingerprint(&secp);
         let xpubkey = ExtendedPubKey::from_private(&secp, &xprivkey);
