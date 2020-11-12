@@ -103,6 +103,11 @@ impl PlayerWallet {
         PlayerId::from(self.xpubkey)
     }
 
+    pub fn balance(&self) -> Amount {
+        self.wallet.sync(noop_progress(), None).unwrap();
+        Amount::from_sat(self.wallet.get_balance().unwrap())
+    }
+
     fn create_funding_tx(&self, p2_id: PlayerId, amount: Amount) -> Transaction {
 
         let escrow_address = self.create_escrow_address(&p2_id).unwrap();
@@ -212,9 +217,9 @@ impl Signing for PlayerWallet {
 // and delegate key storage and signing to a better tested wallet 
 // e.g. trezor
 pub trait SigningWallet {
-    fn fingerprint() -> Fingerprint;
-    fn xpubkey() -> ExtendedPubKey;
-    fn descriptor_xpubkey() -> String;
-    fn sign_tx(pstx: PartiallySignedTransaction, kdp: String) -> TgResult<Transaction>;
-    fn sign_message(msg: Message, kdp: String) -> TgResult<Signature>;
+    fn fingerprint(&self) -> Fingerprint;
+    fn xpubkey(&self) -> ExtendedPubKey;
+    fn descriptor_xpubkey(&self) -> String;
+    fn sign_tx(&self, pstx: PartiallySignedTransaction, kdp: String) -> TgResult<Transaction>;
+    fn sign_message(&self, msg: Message, kdp: String) -> TgResult<Signature>;
 }
