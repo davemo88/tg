@@ -174,6 +174,8 @@ fn main() -> Result<(), Error> {
     history_file.push("history.txt");
     let history_file = history_file.as_path();
 
+    let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_MNEMONIC).unwrap());
+
     let player_wallet = PlayerWallet::new(Trezor::fingerprint(), Trezor::xpubkey(), NETWORK);
 
     player_wallet.wallet.sync(noop_progress(), None)?;
@@ -207,7 +209,7 @@ fn main() -> Result<(), Error> {
                                 player_subcommand(a.subcommand(), &db);
                             }
                             "balance" => {
-                                println!("balance");
+                                println!("{}", player_wallet.balance());
                             }
                             "deposit" => {
 //                               let deposit_addr = api::deposit_addr();
@@ -263,8 +265,13 @@ fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
 
+    use super::*;
+
+    const PLAYER_1_MNEMONIC: &'static str = "deny income tiger glove special recycle cup surface unusual sleep speed scene enroll finger protect dice powder unit";
+    const PLAYER_2_MNEMONIC: &'static str = "carry tooth vague volcano refuse purity bike owner diary dignity toe body notable foil hedgehog mesh dream shock";
+
     #[test]
-    fn balance() {
-            
+    fn fund_players() {
+                    
     }
 }
