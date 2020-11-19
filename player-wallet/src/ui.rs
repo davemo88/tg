@@ -12,6 +12,30 @@ pub fn repl<'a, 'b>() -> App<'a, 'b> {
         .subcommand(contract_ui())
 }
 
+pub fn debug_ui<'a, 'b>() -> App<'a, 'b> {
+    App::new("regtest")
+        .version(option_env!("CARGO_PKG_VERSION").unwrap_or("unknown"))
+        .author(option_env!("CARGO_PKG_AUTHORS").unwrap_or(""))
+        .about("player ops")
+        .settings(&[AppSettings::NoBinaryName, AppSettings::SubcommandRequiredElseHelp,
+            AppSettings::VersionlessSubcommands])
+        .subcommands(vec![
+            SubCommand::with_name("fund-address").about("fund an address") 
+                .arg(Arg::with_name("address")
+                    .index(1)
+                    .value_name("ADDRESS")
+                    .help("which address to fund")
+                    .required(true))
+                .arg(Arg::with_name("amount")
+                    .index(2)
+                    .value_name("AMOUNT")
+                    .help("how much to fund")
+                    .required(false)
+                    .default_value("100000000"))
+        
+        ])
+}
+
 pub fn player_ui<'a, 'b>() -> App<'a, 'b> {
     App::new("player")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or("unknown"))

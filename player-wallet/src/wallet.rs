@@ -83,7 +83,6 @@ impl PlayerWallet {
         let descriptor_key = format!("[{}/44'/0'/0']{}", fingerprint, xpubkey);
         let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
         let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
-//        let client = Client::new("ssl://electrum.blockstream.info:60002", None).unwrap();
         let client = Client::new(ELECTRS_SERVER, None).unwrap();
         PlayerWallet {
             fingerprint,
@@ -91,7 +90,7 @@ impl PlayerWallet {
             network,
             wallet: Wallet::new(
                 &external_descriptor,
-                Some(&internal_descriptor),
+                None,//Some(&internal_descriptor),
                 network,
                 MemoryDatabase::default(),
                 ElectrumBlockchain::from(client)
@@ -106,6 +105,10 @@ impl PlayerWallet {
     pub fn balance(&self) -> Amount {
         self.wallet.sync(noop_progress(), None).unwrap();
         Amount::from_sat(self.wallet.get_balance().unwrap())
+    }
+
+    pub fn new_address(&self) -> Address {
+        self.wallet.get_new_address().unwrap()
     }
 
     fn create_funding_tx(&self, p2_id: PlayerId, amount: Amount) -> Transaction {
@@ -167,8 +170,8 @@ impl PlayerWallet {
     
 }
 
-impl PlayerWallet {
-    pub fn create_contract(&self,
+impl Creation for PlayerWallet {
+    fn create_contract(&self,
         p2_id:          PlayerId,
         amount:         Amount,
     ) -> Contract {

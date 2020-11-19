@@ -19,3 +19,6 @@ fern = "0.6"
 rustyline = "6.2.0"
 shell-words= "1.0"
 rusqlite = { version = "0.20", features = ["bundled"] }
+
+[dev-dependencies]
+bitcoincore-rpc = "0.12.0"

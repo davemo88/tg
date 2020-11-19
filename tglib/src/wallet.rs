@@ -20,12 +20,12 @@ use crate::{
 
 pub trait Creation {
     fn create_contract(&self,
-        p1_id:         PlayerId,
+//        p1_id:         PlayerId,
         p2_id:         PlayerId,
-        arbiter_id:    ArbiterId,
+//        arbiter_id:    ArbiterId,
         amount:         Amount,
-        payout_script:  TgScript,
-        funding_tx:     Option<Transaction>,
+//        payout_script:  TgScript,
+//        funding_tx:     Option<Transaction>,
     ) -> Contract;
 
     fn create_payout(&self,

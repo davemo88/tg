@@ -38,6 +38,7 @@ use crate::{
 };
 
 pub const NETWORK: Network = Network::Regtest;
+pub const BITCOIN_RPC_URL: &'static str = "http://127.0.0.1:18443";
 pub const ELECTRS_SERVER: &'static str = "tcp://127.0.0.1:60401";
 pub const ARBITER_ID: &'static str = "arbiter1somebogusid";
 const ARBITER_PUBKEY: &'static str = "bogusarbiterpubkey";
@@ -47,7 +48,8 @@ const PURPOSE: u32 = 44;
 const COIN: u32 = 0;
 const ACCOUNT: u32 = 0;
 
-const PLAYER_MNEMONIC: &'static str = "snake predict impose woman wire tattoo hungry survey uphold breeze system learn clerk media faint brisk betray retreat";
+// TODO: remove and put all stuff like this in tests
+pub const PLAYER_MNEMONIC: &'static str = "snake predict impose woman wire tattoo hungry survey uphold breeze system learn clerk media faint brisk betray retreat";
 
 pub const PASSPHRASE: &'static str = "testpass";
 
@@ -73,8 +75,8 @@ pub struct Trezor {
 }
 
 impl Trezor {
-    fn new(mnemonic: Mnemonic) -> Self {
-        let xprivkey = ExtendedPrivKey::new_master(Network::Regtest, &mnemonic.to_seed("")).unwrap();
+    pub fn new(mnemonic: Mnemonic) -> Self {
+        let xprivkey = ExtendedPrivKey::new_master(NETWORK, &mnemonic.to_seed("")).unwrap();
         let secp = Secp256k1::new();
         let fingerprint = xprivkey.fingerprint(&secp);
         let descriptor_key = format!("[{}/44'/0'/0']{}", fingerprint, xprivkey);
