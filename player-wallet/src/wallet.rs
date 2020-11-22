@@ -1,5 +1,6 @@
 use std::{
     str::FromStr,
+    convert::TryInto,
 };
 use bdk::{
     bitcoin::{
@@ -14,6 +15,7 @@ use bdk::{
         blockdata::{
             script::Builder,
             opcodes::all as Opcodes,
+            transaction::OutPoint,
         },
         secp256k1::{
             Secp256k1,
@@ -49,7 +51,6 @@ use tglib::{
     },
     contract::{
         Contract,
-        ContractSignature,
         PlayerContractInfo,
     },
     payout::{
@@ -68,11 +69,11 @@ use crate::{
     mock::{
         PlayerInfoService,
         ArbiterService,
-        ARBITER_ID,
-        ELECTRS_SERVER,
         BITCOIN_DERIVATION_PATH,
+        ELECTRS_SERVER,
         ESCROW_SUBACCOUNT,
         ESCROW_KIX,
+        NETWORK,
     },
 };
 
@@ -86,9 +87,9 @@ pub struct PlayerWallet {
 
 impl PlayerWallet {
     pub fn new(fingerprint: Fingerprint, xpubkey: ExtendedPubKey, network: Network) -> Self {
-        let descriptor_key = format!("[{}/44'/0'/0']{}", fingerprint, xpubkey);
+        let descriptor_key = format!("[{}/{}]{}", fingerprint, BITCOIN_DERIVATION_PATH, xpubkey);
         let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
-        let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
+//        let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
         let client = Client::new(ELECTRS_SERVER, None).unwrap();
         PlayerWallet {
             fingerprint,
@@ -117,17 +118,18 @@ impl PlayerWallet {
         self.wallet.get_new_address().unwrap()
     }
 
-    fn create_funding_tx(&self, p2_contract_info: PlayerContractInfo, amount: Amount) -> Transaction {
+    fn create_funding_tx(&self, p2_contract_info: &PlayerContractInfo, amount: Amount, escrow_address: &Address) -> Transaction {
 
-        let escrow_address = self.create_escrow_address(p2_contract_info.escrow_pubkey).unwrap();
+//        let arbiter_pubkey = ArbiterService::get_escrow_pubkey();
+//        let escrow_address = self.create_escrow_address(p2_contract_info.escrow_pubkey, arbiter_pubkey).unwrap();
 
         let mut input = Vec::new();
         let arbiter_fee = amount.as_sat()/100;
         let sats_per_player = (amount.as_sat() + arbiter_fee)/2;
         let mut total: u64 = 0;
 
-// p2's inputs
-        for utxo in p2_contract_info.utxos {
+        assert_ne!(p2_contract_info.utxos.len(), 0);
+        for utxo in &p2_contract_info.utxos {
             if total > sats_per_player {
                 break
             }
@@ -141,6 +143,7 @@ impl PlayerWallet {
                 });
             }
         }
+        assert!(total > sats_per_player);
         let p2_change = total - sats_per_player;
         for utxo in self.wallet.list_unspent().unwrap() {
             if total > 2 * sats_per_player + p2_change {
@@ -156,6 +159,7 @@ impl PlayerWallet {
                 });
             }
         }
+        assert!(total > 2 * sats_per_player + p2_change);
         let p1_change = total - 2 * sats_per_player - p2_change;
 
         let output = vec!(
@@ -185,14 +189,11 @@ impl PlayerWallet {
         }
     }
 
-    fn create_escrow_address(&self, p2_pubkey: PublicKey) -> TgResult<Address> {
-
-        let p1_pubkey = self.get_new_escrow_pubkey();
-        let arbiter_pubkey = ArbiterService::get_escrow_pubkey();
+    pub fn create_escrow_address(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pubkey: &PublicKey, network: Network) -> TgResult<Address> {
 
         let escrow_address = Address::p2wsh(
-            &self.create_escrow_script(p1_pubkey, p2_pubkey, arbiter_pubkey),
-            self.network,
+            &PlayerWallet::create_escrow_script(p1_pubkey, p2_pubkey, arbiter_pubkey),
+            network,
         );
 
         Ok(escrow_address)
@@ -202,13 +203,12 @@ impl PlayerWallet {
     pub fn get_new_escrow_pubkey(&self) -> PublicKey {
 // TODO: need to store escrow_kix somewhere and increment for new contracts
         let secp = Secp256k1::new();
-        let path = DerivationPath::from_str(&String::from(format!("m/{}/{}/{}", BITCOIN_DERIVATION_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
-        println!("{:?}",path);
+        let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
         let escrow_pubkey = self.xpubkey.derive_pub(&secp, &path).unwrap();
         escrow_pubkey.public_key
     }
 
-    fn create_escrow_script(&self, p1_pubkey: PublicKey, p2_pubkey: PublicKey, arbiter_pubkey: PublicKey) -> Script {
+    fn create_escrow_script(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pubkey: &PublicKey) -> Script {
 // standard multisig transaction script
 // https://en.bitcoin.it/wiki/BIP_0011
         let b = Builder::new()
@@ -222,29 +222,87 @@ impl PlayerWallet {
         b.into_script()
     }
 
-    fn create_payout_script(&self, p2_id: PlayerId, amount: Amount, funding_tx: Transaction) -> TgScript {
-        TgScript::default()
+// we are ignoring specification of the game master pubkey and substituting
+// the arbiter pubkey for the game master here out of laziness
+    pub fn create_payout_script(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, amount: Amount, funding_tx: &Transaction, escrow_address: &Address) -> TgScript {
+        let p1_payout_address = Address::p2wpkh(&p1_pubkey, NETWORK).unwrap();
+        let p1_payout_tx = PlayerWallet::create_payout_tx(&funding_tx, &escrow_address, &p1_payout_address).unwrap();
+        let p2_payout_address = Address::p2wpkh(&p2_pubkey, NETWORK).unwrap();
+        let p2_payout_tx = PlayerWallet::create_payout_tx(&funding_tx, &escrow_address, &p2_payout_address).unwrap();
+        use tglib::script::TgOpcode::*;
+
+        let txid1: &[u8] = &p1_payout_tx.txid();
+        let txid2: &[u8] = &p2_payout_tx.txid();
+// T    ODO should be a pubkeyhash instead of full pubkey, same reasons as bitcoin addresses
+// t    hat requires the pubkey to also be given as input as in standard pay to pubkey hash
+        let pubkey_bytes = ArbiterService::get_escrow_pubkey().to_bytes();
+
+        TgScript(vec![         
+            OP_PUSHDATA1(pubkey_bytes.len().try_into().unwrap(), pubkey_bytes.clone()),
+            OP_2DUP,
+            OP_PUSHDATA1(txid1.len().try_into().unwrap(), Vec::from(txid1)),
+            OP_VERIFYSIG,
+            OP_IF(
+                TgScript(vec![
+                    OP_1,
+                ]),
+                Some(TgScript(vec![
+                    OP_PUSHDATA1(txid2.len().try_into().unwrap(), Vec::from(txid2)),
+                    OP_VERIFYSIG,
+                ]))
+            ),
+            OP_VALIDATE,
+        ])
+    }
+
+    fn create_payout_tx(funding_tx: &Transaction, escrow_address: &Address, payout_address: &Address) -> TgResult<Transaction> {
+
+        let mut input = Vec::<TxIn>::new();
+        let mut amount = 0;
+
+        for (i, txout) in funding_tx.output.iter().enumerate() {
+            if txout.script_pubkey == escrow_address.script_pubkey() {
+                amount = txout.value;
+                input.push(TxIn {
+                    previous_output: OutPoint {
+                        txid: funding_tx.txid(),
+                        vout: i as u32,
+                    },
+                    script_sig: Script::new(),
+                    sequence: 0,
+                    witness: Vec::new()
+                })
+            }
+        }
+
+        Ok(Transaction {
+            version: 1,
+            lock_time: 0,
+            input: Vec::new(),
+            output: vec!(TxOut { 
+                value: amount, 
+                script_pubkey: payout_address.script_pubkey() 
+            })
+        })
+
     }
     
 }
 
 impl Creation for PlayerWallet {
-    fn create_contract(&self,
-        p2_id:          PlayerId,
-        amount:         Amount,
-    ) -> Contract {
+    fn create_contract(&self, p2_contract_info: PlayerContractInfo, amount: Amount, arbiter_pubkey: PublicKey ) -> Contract {
 
-        let p2_contract_info = PlayerInfoService::get_contract_info(&p2_id);
-
-        let funding_tx = self.create_funding_tx(p2_contract_info, amount);
+        let p1_pubkey = self.get_new_escrow_pubkey();
+        let escrow_address = PlayerWallet::create_escrow_address(&p1_pubkey, &p2_contract_info.escrow_pubkey, &arbiter_pubkey, self.network).unwrap();
+        let funding_tx = self.create_funding_tx(&p2_contract_info, amount, &escrow_address);
+        let payout_script = PlayerWallet::create_payout_script(&p1_pubkey, &p2_contract_info.escrow_pubkey, amount, &funding_tx, &escrow_address);
 
         Contract::new(
-            self.player_id(),
-            p2_id.clone(),
-            ArbiterId(String::from(ARBITER_ID)),
+            p1_pubkey,
+            p2_contract_info.escrow_pubkey,
             amount,
-            funding_tx.clone(),
-            self.create_payout_script(p2_id, amount, funding_tx),
+            funding_tx,
+            payout_script,
         )
     }
 
@@ -282,6 +340,6 @@ pub trait SigningWallet {
     fn fingerprint(&self) -> Fingerprint;
     fn xpubkey(&self) -> ExtendedPubKey;
     fn descriptor_xpubkey(&self) -> String;
-    fn sign_tx(&self, pstx: PartiallySignedTransaction, kdp: String) -> TgResult<Transaction>;
-    fn sign_message(&self, msg: Message, kdp: String) -> TgResult<Signature>;
+    fn sign_tx(&self, pstx: PartiallySignedTransaction, descriptor: String) -> TgResult<Transaction>;
+    fn sign_message(&self, msg: Message, path: DerivationPath) -> TgResult<Signature>;
 }

@@ -32,7 +32,10 @@ use bdk::{
         PublicKey,
         Transaction,
     },
-    blockchain::OfflineBlockchain,
+    blockchain::{
+        OfflineBlockchain,
+        noop_progress,
+    },
     database::MemoryDatabase,
     Wallet,
 };
@@ -47,7 +50,6 @@ use crate::{
 pub const NETWORK: Network = Network::Regtest;
 pub const BITCOIN_RPC_URL: &'static str = "http://127.0.0.1:18443";
 pub const ELECTRS_SERVER: &'static str = "tcp://127.0.0.1:60401";
-pub const ARBITER_ID: &'static str = "arbiter1somebogusid";
 
 pub const BITCOIN_DERIVATION_PATH: &'static str = "44'/0'/0'";
 pub const ESCROW_SUBACCOUNT: &'static str = "7";
@@ -57,17 +59,16 @@ pub const PLAYER_1_MNEMONIC: &'static str = "deny income tiger glove special rec
 pub const PLAYER_2_MNEMONIC: &'static str = "carry tooth vague volcano refuse purity bike owner diary dignity toe body notable foil hedgehog mesh dream shock";
 pub const ARBITER_MNEMONIC: &'static str = "meadow found language where fringe casual print marine segment throw old tackle industry chest screen group huge output";
 
-pub const PASSPHRASE: &'static str = "testpass";
-
 pub struct PlayerInfoService;
 
 impl PlayerInfoService {
     pub fn get_contract_info(player_id: &PlayerId) -> PlayerContractInfo {
         let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_2_MNEMONIC).unwrap());
         let player_wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
+        player_wallet.wallet.sync(noop_progress(), None).unwrap();
+        let escrow_pubkey = player_wallet.get_new_escrow_pubkey();
         PlayerContractInfo {
-            escrow_pubkey: player_wallet.get_new_escrow_pubkey(),
-            payout_address: player_wallet.new_address(),
+            escrow_pubkey,
 // TODO: send to internal descriptor, no immediate way to do so atm
             change_address: player_wallet.new_address(),
             utxos: player_wallet.wallet.list_unspent().unwrap(),
@@ -85,9 +86,11 @@ impl ArbiterService {
     }
 
     pub fn get_fee_address() -> Address {
-        let signing_wallet = Trezor::new(Mnemonic::parse(ARBITER_MNEMONIC).unwrap());
-        let arbiter_wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
-        arbiter_wallet.new_address()
+        let root_key = ExtendedPrivKey::new_master(NETWORK, &Mnemonic::parse(ARBITER_MNEMONIC).unwrap().to_seed("")).unwrap();
+        let secp = Secp256k1::new();
+        let path = DerivationPath::from_str("m/44'/0'/0'/0/0").unwrap();
+        let fee_address_key = root_key.derive_priv(&secp, &path).unwrap();
+        Address::p2wpkh(&PublicKey::from_private_key(&secp, &fee_address_key.private_key), NETWORK).unwrap()
     }
 }
 
@@ -98,13 +101,11 @@ pub struct Trezor {
 
 impl Trezor {
     pub fn new(mnemonic: Mnemonic) -> Self {
-        let xprivkey = ExtendedPrivKey::new_master(NETWORK, &mnemonic.to_seed("")).unwrap();
+        let root_key = ExtendedPrivKey::new_master(NETWORK, &mnemonic.to_seed("")).unwrap();
         let secp = Secp256k1::new();
-        let fingerprint = xprivkey.fingerprint(&secp);
-// this is wrong. i didn't actually derive the key below, just pasted in the master lol
-// the wallet doesn't derive the full chain of child keys
-// what should be passed here is either the extended key just one above the wildcard in the tree
-        let descriptor_key = format!("[{}/{}]{}", fingerprint, BITCOIN_DERIVATION_PATH, xprivkey);
+        let fingerprint = root_key.fingerprint(&secp);
+        let account_key = derive_account_xprivkey(&mnemonic);
+        let descriptor_key = format!("[{}/{}]{}", fingerprint, BITCOIN_DERIVATION_PATH, account_key);
         let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
         let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
         let wallet = Wallet::new_offline(
@@ -124,23 +125,21 @@ impl Trezor {
 impl SigningWallet for Trezor {
 
     fn fingerprint(&self) -> Fingerprint {
-        let xprivkey = ExtendedPrivKey::new_master(NETWORK, &self.mnemonic.to_seed("")).unwrap();
+//        let xprivkey = ExtendedPrivKey::new_master(NETWORK, &self.mnemonic.to_seed("")).unwrap();
+        let xprivkey = derive_account_xprivkey(&self.mnemonic);
         let secp = Secp256k1::new();
         xprivkey.fingerprint(&secp)
     }
 
     fn xpubkey(&self) -> ExtendedPubKey {
-        let xprivkey = ExtendedPrivKey::new_master(NETWORK, &self.mnemonic.to_seed("")).unwrap();
-        let secp = Secp256k1::new();
-        let fingerprint = xprivkey.fingerprint(&secp);
-        ExtendedPubKey::from_private(&secp, &xprivkey)
+        derive_account_xpubkey(&self.mnemonic)
     }
 
     fn descriptor_xpubkey(&self) -> String {
         let xprivkey = ExtendedPrivKey::new_master(NETWORK, &self.mnemonic.to_seed("")).unwrap();
         let secp = Secp256k1::new();
         let fingerprint = xprivkey.fingerprint(&secp);
-        let xpubkey = ExtendedPubKey::from_private(&secp, &xprivkey);
+        let xpubkey = derive_account_xpubkey(&self.mnemonic);
         String::from(format!("[{}/44'/0'/0']{}", fingerprint, xpubkey))
     }
 
@@ -153,8 +152,22 @@ impl SigningWallet for Trezor {
         }
     }
 
-    fn sign_message(&self, msg: Message, kdp: String) -> TgResult<Signature> {
-        Err(TgError("cannot sign message"))
-
+    fn sign_message(&self, msg: Message, path: DerivationPath) -> TgResult<Signature> {
+        let root_key = ExtendedPrivKey::new_master(NETWORK, &self.mnemonic.to_seed("")).unwrap();
+        let secp = Secp256k1::new();
+        let signing_key = root_key.derive_priv(&secp, &path).unwrap();
+        Ok(secp.sign(&msg, &signing_key.private_key.key))
     }
+}
+
+pub fn derive_account_xprivkey(mnemonic: &Mnemonic) -> ExtendedPrivKey {
+        let xprivkey = ExtendedPrivKey::new_master(NETWORK, &mnemonic.to_seed("")).unwrap();
+        let secp = Secp256k1::new();
+        let path = DerivationPath::from_str(&String::from(format!("m/{}", BITCOIN_DERIVATION_PATH))).unwrap();
+        xprivkey.derive_priv(&secp, &path).unwrap()
+}
+
+pub fn derive_account_xpubkey(mnemonic: &Mnemonic) -> ExtendedPubKey {
+        let secp = Secp256k1::new();
+        ExtendedPubKey::from_private(&secp, &derive_account_xprivkey(mnemonic))
 }

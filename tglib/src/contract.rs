@@ -1,3 +1,4 @@
+use std::convert::AsRef;
 use bdk::{
     bitcoin::{
         Address,
@@ -6,7 +7,13 @@ use bdk::{
         PublicKey,
         secp256k1::{
             Signature,
-        }
+        },
+        hashes::{
+            Hash,
+            HashEngine,
+            sha256::Hash as ShaHash,
+            sha256::HashEngine as ShaHashEngine,
+        },
     },
     UTXO,
 };
@@ -19,30 +26,33 @@ use crate::{
     script::TgScript,
 };
 
-pub type ContractSignature = Option<Signature>;
-
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Contract {
-    pub p1_id:              PlayerId,
-    pub p2_id:              PlayerId,
-    pub arbiter_id:         ArbiterId,
+    pub p1_pubkey:          PublicKey,
+    pub p2_pubkey:          PublicKey,
     pub amount:             Amount,
     pub funding_tx:         Transaction,
     pub payout_script:      TgScript,
-    pub contract_sig:       ContractSignature,
+    pub sigs:               Vec<Signature>, 
 }
 
 impl Contract {
-    pub fn new(p1_id: PlayerId, p2_id: PlayerId, arbiter_id: ArbiterId, amount: Amount, funding_tx: Transaction, payout_script: TgScript) -> Self {
+    pub fn new(p1_pubkey: PublicKey, p2_pubkey: PublicKey, amount: Amount, funding_tx: Transaction, payout_script: TgScript) -> Self {
         Contract {
-            p1_id,
-            p2_id,
-            arbiter_id,
+            p1_pubkey,
+            p2_pubkey,
             amount,
             funding_tx,
             payout_script,
-            contract_sig: None,
+            sigs: Vec::new(),
         }
+    }
+
+    pub fn cxid(&self) -> Vec<u8> {
+        let mut engine = ShaHashEngine::default();
+        engine.input(&Vec::from(self.payout_script.clone()));
+        let hash: &[u8] = &ShaHash::from_engine(engine);
+        hash.to_vec()
     }
 
     pub fn state(&self) -> ContractState {
@@ -63,7 +73,6 @@ pub enum ContractState {
 
 pub struct PlayerContractInfo {
     pub escrow_pubkey: PublicKey,
-    pub payout_address: Address,
     pub change_address: Address,
     pub utxos: Vec<UTXO>,
 }

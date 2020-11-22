@@ -1,5 +1,6 @@
 use bdk::bitcoin::{
     Amount,
+    PublicKey,
     Transaction,
     secp256k1::{
         Secp256k1,
@@ -10,7 +11,7 @@ use bdk::bitcoin::{
 };
 use crate::{
     arbiter::ArbiterId,
-    contract::Contract,
+    contract::{Contract, PlayerContractInfo},
     payout::Payout,
     player::PlayerId,
     script::TgScript,
@@ -20,12 +21,9 @@ use crate::{
 
 pub trait Creation {
     fn create_contract(&self,
-//        p1_id:         PlayerId,
-        p2_id:         PlayerId,
-//        arbiter_id:    ArbiterId,
+        p2_contract_info: PlayerContractInfo,
         amount:         Amount,
-//        payout_script:  TgScript,
-//        funding_tx:     Option<Transaction>,
+        arbiter_pubkey: PublicKey,
     ) -> Contract;
 
     fn create_payout(&self,
@@ -39,4 +37,3 @@ pub trait Signing {
     fn sign_contract(&self, contract: Contract) -> TgResult<Contract>;
     fn sign_payout(&self, payout: Payout) -> TgResult<Payout>;
 }
-
