@@ -8,6 +8,8 @@ use bdk::{
         Network,
         PublicKey,
         Transaction,
+        TxIn,
+        TxOut,
         Script,
         blockdata::{
             script::Builder,
@@ -22,6 +24,7 @@ use bdk::{
         util::{
             bip32::{
                 ExtendedPubKey,
+                DerivationPath,
                 Fingerprint,
             },
             psbt::PartiallySignedTransaction,
@@ -46,8 +49,8 @@ use tglib::{
     },
     contract::{
         Contract,
-        ContractBuilder,
         ContractSignature,
+        PlayerContractInfo,
     },
     payout::{
         Payout,
@@ -63,10 +66,13 @@ use tglib::{
 };
 use crate::{
     mock::{
-        PlayerPubkeyService,
-        ArbiterPubkeyService,
+        PlayerInfoService,
+        ArbiterService,
         ARBITER_ID,
         ELECTRS_SERVER,
+        BITCOIN_DERIVATION_PATH,
+        ESCROW_SUBACCOUNT,
+        ESCROW_KIX,
     },
 };
 
@@ -111,30 +117,78 @@ impl PlayerWallet {
         self.wallet.get_new_address().unwrap()
     }
 
-    fn create_funding_tx(&self, p2_id: PlayerId, amount: Amount) -> Transaction {
+    fn create_funding_tx(&self, p2_contract_info: PlayerContractInfo, amount: Amount) -> Transaction {
 
-        let escrow_address = self.create_escrow_address(&p2_id).unwrap();
-        
-//        let p1_withdraw_tx = bdk_api::withdraw(
-//            String::from(mock::PASSPHRASE),
-//            escrow_address,
-//            1,
-//            None,
-//        );
+        let escrow_address = self.create_escrow_address(p2_contract_info.escrow_pubkey).unwrap();
+
+        let mut input = Vec::new();
+        let arbiter_fee = amount.as_sat()/100;
+        let sats_per_player = (amount.as_sat() + arbiter_fee)/2;
+        let mut total: u64 = 0;
+
+// p2's inputs
+        for utxo in p2_contract_info.utxos {
+            if total > sats_per_player {
+                break
+            }
+            else {
+                total += utxo.txout.value;
+                input.push(TxIn{
+                    previous_output: utxo.outpoint, 
+                    script_sig: Script::new(),
+                    sequence: 0,
+                    witness: Vec::new(),
+                });
+            }
+        }
+        let p2_change = total - sats_per_player;
+        for utxo in self.wallet.list_unspent().unwrap() {
+            if total > 2 * sats_per_player + p2_change {
+                break
+            }
+            else {
+                total += utxo.txout.value;
+                input.push(TxIn{
+                    previous_output: utxo.outpoint, 
+                    script_sig: Script::new(),
+                    sequence: 0,
+                    witness: Vec::new(),
+                });
+            }
+        }
+        let p1_change = total - 2 * sats_per_player - p2_change;
+
+        let output = vec!(
+            TxOut { 
+                value: amount.as_sat(),
+                script_pubkey: escrow_address.script_pubkey(),
+            },
+            TxOut { 
+                value: arbiter_fee,
+                script_pubkey: ArbiterService::get_fee_address().script_pubkey(),
+            },
+            TxOut { 
+                value: p2_change, 
+                script_pubkey: p2_contract_info.change_address.script_pubkey(),
+            },
+            TxOut { 
+                value: p1_change, 
+                script_pubkey: self.new_address().script_pubkey(),
+            },
+        );
 
         Transaction {
             version: 1,
             lock_time: 0,
-            input: Vec::new(),
-            output: Vec::new(),
+            input,
+            output,
         }
     }
 
-    fn create_escrow_address(&self, p2_id: &PlayerId) -> TgResult<Address> {
+    fn create_escrow_address(&self, p2_pubkey: PublicKey) -> TgResult<Address> {
 
-        let p1_pubkey = self.get_pubkey();
-        let p2_pubkey = PlayerPubkeyService::get_pubkey(p2_id);
-        let arbiter_pubkey = ArbiterPubkeyService::get_pubkey();
+        let p1_pubkey = self.get_new_escrow_pubkey();
+        let arbiter_pubkey = ArbiterService::get_escrow_pubkey();
 
         let escrow_address = Address::p2wsh(
             &self.create_escrow_script(p1_pubkey, p2_pubkey, arbiter_pubkey),
@@ -145,9 +199,13 @@ impl PlayerWallet {
 
     }
 
-    fn get_pubkey(&self) -> PublicKey {
-// believe this is intended to get the next unused pubkey, e.g. by incrementing the kix
-        PublicKey::from_str("lol shit").unwrap()
+    pub fn get_new_escrow_pubkey(&self) -> PublicKey {
+// TODO: need to store escrow_kix somewhere and increment for new contracts
+        let secp = Secp256k1::new();
+        let path = DerivationPath::from_str(&String::from(format!("m/{}/{}/{}", BITCOIN_DERIVATION_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
+        println!("{:?}",path);
+        let escrow_pubkey = self.xpubkey.derive_pub(&secp, &path).unwrap();
+        escrow_pubkey.public_key
     }
 
     fn create_escrow_script(&self, p1_pubkey: PublicKey, p2_pubkey: PublicKey, arbiter_pubkey: PublicKey) -> Script {
@@ -176,7 +234,9 @@ impl Creation for PlayerWallet {
         amount:         Amount,
     ) -> Contract {
 
-        let funding_tx = self.create_funding_tx(p2_id.clone(), amount);
+        let p2_contract_info = PlayerInfoService::get_contract_info(&p2_id);
+
+        let funding_tx = self.create_funding_tx(p2_contract_info, amount);
 
         Contract::new(
             self.player_id(),
@@ -186,7 +246,6 @@ impl Creation for PlayerWallet {
             funding_tx.clone(),
             self.create_payout_script(p2_id, amount, funding_tx),
         )
-
     }
 
     fn create_payout(&self, contract: &Contract, payout_tx: Transaction, payout_script_sig: TgScriptSig) -> Payout {
