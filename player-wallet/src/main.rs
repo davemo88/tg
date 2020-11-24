@@ -19,7 +19,7 @@ use std::{
     thread,
     time::Duration,
 };
-use hex::encode;
+use hex::{decode, encode};
 use log::debug;
 use serde::{
     Serialize,
@@ -164,7 +164,7 @@ fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> 
                     cxid: hex::encode(contract.cxid()),
                     p1_id: player_wallet.player_id(),
                     p2_id,
-                    hex: hex::encode::<Vec<u8>>(contract.clone().into()),
+                    hex: hex::encode(contract.to_bytes()),
                     funding_txid: contract.funding_tx.txid().to_string(),
                     desc: desc.to_string(),
                 };
@@ -186,7 +186,14 @@ fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> 
                 }
             }
             "details" => {
-                println!("{}", c);
+                let contracts = db.all_contracts().unwrap();
+                for c in contracts {
+                    if c.cxid == a.value_of("cxid").unwrap() {
+                        let contract = Contract::from_bytes(hex::decode(c.hex).unwrap());
+                        println!("{:?}", contract);
+                        break;
+                    }
+                }
             }
             "sign" => {
                 println!("{}", c);

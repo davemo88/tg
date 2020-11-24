@@ -1,4 +1,5 @@
 use std::convert::AsRef;
+use bincode;
 use serde::{Serialize, Deserialize,};
 use bdk::{
     bitcoin::{
@@ -6,7 +7,7 @@ use bdk::{
         Amount,
         Transaction,
         PublicKey,
-        consensus::serialize,
+        consensus,
         hashes::{
             Hash,
             HashEngine,
@@ -60,20 +61,30 @@ impl Contract {
     pub fn state(&self) -> ContractState {
         return ContractState::Invalid
     }
-}
 
-// should implement encode / decode?
-impl Into<Vec<u8>> for Contract {
-    fn into(self) -> Vec<u8> {
-        let mut v: Vec<u8> = Vec::new();
-        v.extend(self.p1_pubkey.to_bytes());
-        v.extend(self.p2_pubkey.to_bytes());
-        v.extend(self.arbiter_pubkey.to_bytes());
-        v.extend(serialize(&self.funding_tx));
-        v.extend(Vec::from(self.payout_script));
-        v
+// TODO: should these functions be more explicit and specific
+    pub fn to_bytes(&self) -> Vec<u8> {
+        bincode::serialize(&self).unwrap()
+    }
+
+    pub fn from_bytes(bytes: Vec<u8>) -> Contract {
+        let decoded: Option<Contract> = bincode::deserialize(&bytes[..]).unwrap();
+        decoded.unwrap()
     }
 }
+
+//// should implement encode / decode?
+//impl Into<Vec<u8>> for Contract {
+//    fn into(self) -> Vec<u8> {
+//        let mut v: Vec<u8> = Vec::new();
+//        v.extend(self.p1_pubkey.to_bytes());
+//        v.extend(self.p2_pubkey.to_bytes());
+//        v.extend(self.arbiter_pubkey.to_bytes());
+//        v.extend(consensus::serialize(&self.funding_tx));
+//        v.extend(Vec::from(self.payout_script));
+//        v
+//    }
+//}
 
 #[derive(Debug, PartialEq)]
 pub enum ContractState {
