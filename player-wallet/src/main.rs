@@ -1,7 +1,10 @@
 use std::{
     cmp::max,
     collections::HashMap,
-    convert::TryFrom,
+    convert::{
+        Into,
+        TryFrom,
+    },
     env::current_dir,
     net::{
         AddrParseError, 
@@ -16,6 +19,7 @@ use std::{
     thread,
     time::Duration,
 };
+use hex::encode;
 use log::debug;
 use serde::{
     Serialize,
@@ -65,8 +69,7 @@ use tglib::{
     },
     script::TgScript,
     wallet::{
-        Creation,
-        Signing,
+        SigningWallet,
     }
 };
 
@@ -75,6 +78,7 @@ mod mock;
 mod ui;
 mod wallet;
 use mock::{
+    ArbiterService,
     PlayerInfoService,
     Trezor,
     ARBITER_MNEMONIC,
@@ -87,7 +91,6 @@ use mock::{
 };
 use wallet::{
     PlayerWallet,
-    SigningWallet,
 };
 
 const DB_NAME: &'static str = "dev-app.db";
@@ -121,11 +124,16 @@ fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> Tg
                 match db.delete_player(player_id.clone()) {
                     Ok(num_deleted) => match num_deleted {
                         0 => println!("no player with that id"),
-                        1 => println!("deleted player {}", player_id.0),
+                        1 => println!("removed player {}", player_id.0),
                         n => panic!("{} removed, should be impossible", n),//this is impossible
                     }
                     Err(e) => println!("{:?}", e),
                 }
+            },
+            "id" => {
+                let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
+                let player_wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
+                println!("{}", player_wallet.player_id().0);
             }
             _ => {
                 println!("command '{}' is not implemented", c);
@@ -140,12 +148,42 @@ fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> 
         match c {
             "new" => {
 // TODO: this is gonna go pretty deep so want to get out of this file asap
-                println!("new {:?}", a);
-                let p2_id = PlayerId(a.args["other"].vals[0].clone().into_string().unwrap());
-                let amount = a.args["other"].vals[0].clone();
+//                println!("new {:?}", a);
+                let p2_id = PlayerId(a.value_of("player-2").unwrap().to_string());
+                let amount = Amount::from_sat(a.value_of("amount").unwrap().parse::<u64>().unwrap());
+                let desc = a.value_of("desc").unwrap_or("");
+//                println!("p2: {:?} amount: {:?}, {}", p2_id, amount, desc);
+                let p2_contract_info = PlayerInfoService::get_contract_info(&p2_id);
+                let arbiter_pubkey = ArbiterService::get_escrow_pubkey();
+
+                let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
+                let player_wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
+
+                let contract = player_wallet.create_contract(p2_contract_info, amount, arbiter_pubkey);
+                let contract_record = db::ContractRecord {
+                    cxid: hex::encode(contract.cxid()),
+                    p1_id: player_wallet.player_id(),
+                    p2_id,
+                    hex: hex::encode::<Vec<u8>>(contract.clone().into()),
+                    funding_txid: contract.funding_tx.txid().to_string(),
+                    desc: desc.to_string(),
+                };
+
+                match db.insert_contract(contract_record.clone()) {
+                    Ok(()) => println!("created contract {}", contract_record.cxid),
+                    Err(e) => println!("{:?}", e),
+                }
             }
             "list" => {
-                println!("{}", c);
+                let contracts = db.all_contracts().unwrap();
+                if (contracts.len() == 0) {
+                    println!("no players");
+                }
+                else {
+                    for c in contracts {
+                        println!("cxid: {:?}, p1: {:?}, p2: {:?}, desc: {}", c.cxid, c.p1_id.0, c.p2_id.0, c.desc);
+                    }
+                }
             }
             "details" => {
                 println!("{}", c);
@@ -196,8 +234,6 @@ fn main() -> Result<(), Error> {
 
     let player_wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
 
-    player_wallet.wallet.sync(noop_progress(), None)?;
-
     let mut rl = Editor::<()>::new();
 
     if rl.load_history(history_file).is_err() {
@@ -230,16 +266,10 @@ fn main() -> Result<(), Error> {
                                 println!("{}", player_wallet.balance());
                             }
                             "deposit" => {
-//                               let deposit_addr = api::deposit_addr();
-                                println!("deposit address");//: {}", deposit_addr);
+                                let deposit_addr = player_wallet.new_address();
+                                println!("deposit address: {}", deposit_addr);
                             }
                             "withdraw" => {
-                                // passphrase: String, address: Address, fee_per_vbyte: u64, amount: Option<u64>
-                                let password = a.value_of("password").unwrap().to_string();
-                                let address = Address::from_str(a.value_of("address").unwrap()).unwrap();
-                                let fee = a.value_of("fee").unwrap().parse::<u64>().unwrap();
-                                let amount = Some(a.value_of("amount").unwrap().parse::<u64>().unwrap());
-//                                let withdraw_tx = api::withdraw(password, address, fee, amount).unwrap();
                                 println!("withdraw tx");// id: {}, fee: {}", withdraw_tx.txid, withdraw_tx.fee);
                             }
                             "contract" => {
@@ -286,12 +316,16 @@ mod tests {
     use super::*;
     use mock::{
         BITCOIN_RPC_URL,
-        ArbiterService,
     };
     use bitcoincore_rpc::{Auth, Client as RpcClient, RpcApi, json::EstimateMode};
+    use tglib::wallet::{
+        create_payout_script,
+        create_escrow_address,
+    };
 
     const SATS: u64 = 1000000;
 
+    #[test]
     fn fund_players() {
         let p1_signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap()); 
         let p1_wallet = PlayerWallet::new(p1_signing_wallet.fingerprint(), p1_signing_wallet.xpubkey(), NETWORK);
@@ -313,7 +347,6 @@ mod tests {
     fn create_contract() -> Contract {
         let p1_signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap()); 
         let p1_wallet = PlayerWallet::new(p1_signing_wallet.fingerprint(), p1_signing_wallet.xpubkey(), NETWORK);
-        p1_wallet.wallet.sync(noop_progress(), None);
         let p2_contract_info = PlayerInfoService::get_contract_info(&PlayerId(String::from("player 2")));
         let arbiter_pubkey = ArbiterService::get_escrow_pubkey();
         p1_wallet.create_contract(p2_contract_info, Amount::from_sat(SATS), arbiter_pubkey)
@@ -322,7 +355,6 @@ mod tests {
     fn create_signed_contract() -> Contract {
         let p1_signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap()); 
         let p1_wallet = PlayerWallet::new(p1_signing_wallet.fingerprint(), p1_signing_wallet.xpubkey(), NETWORK);
-        p1_wallet.wallet.sync(noop_progress(), None);
         let p2_contract_info = PlayerInfoService::get_contract_info(&PlayerId(String::from("player 2")));
         let arbiter_pubkey = ArbiterService::get_escrow_pubkey();
         let mut contract = p1_wallet.create_contract(p2_contract_info, Amount::from_sat(SATS), arbiter_pubkey);
@@ -369,14 +401,14 @@ mod tests {
 
         let arbiter_pubkey = ArbiterService::get_escrow_pubkey();
 
-        let escrow_address = PlayerWallet::create_escrow_address(
+        let escrow_address = create_escrow_address(
             &contract.p1_pubkey,
             &contract.p2_pubkey,
             &arbiter_pubkey,
             NETWORK,
         ).unwrap();
         let escrow_script_pubkey = escrow_address.script_pubkey();
-        let amount = contract.amount.as_sat();
+        let amount = SATS;
         let fee_address = ArbiterService::get_fee_address();
         let fee_script_pubkey = fee_address.script_pubkey();
         let fee_amount = amount/100;
@@ -392,12 +424,12 @@ mod tests {
         assert!(matching_escrow_address);
         assert!(correct_fee);
 
-        let payout_script = PlayerWallet::create_payout_script(
+        let payout_script = create_payout_script(
             &contract.p1_pubkey,
             &contract.p2_pubkey,
-            contract.amount,
+            &arbiter_pubkey,
             &contract.funding_tx,
-            &escrow_address,
+            NETWORK,
         );
 
         assert_eq!(contract.payout_script, payout_script);

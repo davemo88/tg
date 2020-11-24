@@ -16,6 +16,7 @@ pub struct PlayerRecord {
     pub name:           String,
 }
 
+#[derive(Debug, Clone)]
 pub struct ContractRecord {
     pub cxid:           String,
     pub p1_id:          PlayerId,
@@ -25,6 +26,7 @@ pub struct ContractRecord {
     pub desc:           String,
 }
 
+#[derive(Debug, Clone)]
 pub struct PayoutRecord {
     pub cxid:           String,
     pub hex:            String,
@@ -81,6 +83,32 @@ impl DB {
             params![contract.cxid, contract.p1_id.0, contract.p2_id.0, contract.funding_txid, contract.hex, contract.desc],
         )?;
         Ok(())
+    }
+    pub fn all_contracts(&self) -> Result<Vec<ContractRecord>> {
+        let mut stmt = self.conn.prepare("SELECT * FROM contract")?;
+        let contract_iter = stmt.query_map(params![], |row| {
+            Ok(ContractRecord {
+                cxid: row.get(0)?, 
+                p1_id: PlayerId(row.get(1)?),
+                p2_id: PlayerId(row.get(2)?),
+                funding_txid: row.get(3)?,
+                hex: row.get(4)?,
+                desc: row.get(5)?,
+            })
+        })?;
+
+        let mut contracts = Vec::<ContractRecord>::new();
+        for c in contract_iter {
+            contracts.push(c.unwrap());
+        }
+        Ok(contracts)
+    }
+
+    pub fn delete_contract(&self, cxid: String) -> Result<usize> {
+        self.conn.execute(
+            "DELETE FROM contract WHERE cxid = ?1",
+            params![cxid],
+        )
     }
 
     pub fn insert_payout(&self, payout: PayoutRecord) -> Result<()> {

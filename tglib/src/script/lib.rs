@@ -1,12 +1,12 @@
-
 use std::{
     fmt,
 };
+use serde::{Serialize, Deserialize,};
 use byteorder::{BigEndian, WriteBytesExt};
 
 
 #[allow(non_camel_case_types)]
-#[derive(PartialEq, Eq, PartialOrd, Clone)]
+#[derive(PartialEq, Eq, PartialOrd, Clone, Serialize, Deserialize)]
 pub enum TgOpcode {
     OP_0,
     OP_1,
@@ -96,7 +96,7 @@ impl Into<u8> for TgOpcode {
     }
 }
 
-#[derive(Clone, PartialOrd, PartialEq, Eq, Debug,)]
+#[derive(Clone, PartialOrd, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct TgScript(pub Vec<TgOpcode>);
 
 impl Default for TgScript {

@@ -12,30 +12,6 @@ pub fn repl<'a, 'b>() -> App<'a, 'b> {
         .subcommand(contract_ui())
 }
 
-pub fn debug_ui<'a, 'b>() -> App<'a, 'b> {
-    App::new("regtest")
-        .version(option_env!("CARGO_PKG_VERSION").unwrap_or("unknown"))
-        .author(option_env!("CARGO_PKG_AUTHORS").unwrap_or(""))
-        .about("player ops")
-        .settings(&[AppSettings::NoBinaryName, AppSettings::SubcommandRequiredElseHelp,
-            AppSettings::VersionlessSubcommands])
-        .subcommands(vec![
-            SubCommand::with_name("fund-address").about("fund an address") 
-                .arg(Arg::with_name("address")
-                    .index(1)
-                    .value_name("ADDRESS")
-                    .help("which address to fund")
-                    .required(true))
-                .arg(Arg::with_name("amount")
-                    .index(2)
-                    .value_name("AMOUNT")
-                    .help("how much to fund")
-                    .required(false)
-                    .default_value("100000000"))
-        
-        ])
-}
-
 pub fn player_ui<'a, 'b>() -> App<'a, 'b> {
     App::new("player")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or("unknown"))
@@ -63,6 +39,7 @@ pub fn player_ui<'a, 'b>() -> App<'a, 'b> {
                     .help("id of player to remove")
                     .required(true)),
             SubCommand::with_name("list").about("list known players"),
+            SubCommand::with_name("id").about("shows local player id"),
         ])
 }
 
@@ -76,27 +53,30 @@ pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
         .subcommands(vec![
             SubCommand::with_name("new").about("create a new contract")
                 .arg(Arg::with_name("player-2")
-                    .short("p2")
-                    .long("player-2")
+                    .index(1)
                     .value_name("PLAYER2")
                     .help("player 2's id")
                     .required(true)
                     .takes_value(true))
                 .arg(Arg::with_name("amount")
-                    .short("a")
-                    .long("amount")
+                    .index(2)
                     .value_name("AMOUNT")
                     .help("amount")
                     .required(true)
                     .takes_value(true))
-                .arg(Arg::with_name("referee")
-                    .short("r")
-                    .long("referee")
-                    .value_name("REFEREE")
-                    .help("referee id")
-                    .required(false)
+                .arg(Arg::with_name("desc")
+                    .short("d")
+                    .long("desc")
+                    .value_name("DESC")
+                    .help("description")
                     .takes_value(true)),
-            SubCommand::with_name("list").about("list all contracts"),
+            SubCommand::with_name("import").about("import contract")
+                .arg(Arg::with_name("contract-hex")
+                    .index(1)
+                    .value_name("CONTRACT_HEX")
+                    .help("hex-encoded contract")
+                    .required(true)
+                    .takes_value(true)),
             SubCommand::with_name("details").about("show contract details")
                 .arg(Arg::with_name("cxid")
                     .index(1)
@@ -111,5 +91,13 @@ pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
                     .help("contract id")
                     .required(true)
                     .takes_value(true)),
+            SubCommand::with_name("delete").about("delete contract")
+                .arg(Arg::with_name("cxid")
+                    .index(1)
+                    .value_name("CXID")
+                    .help("contract id")
+                    .required(true)
+                    .takes_value(true)),
+            SubCommand::with_name("list").about("list all contracts"),
         ])
 }

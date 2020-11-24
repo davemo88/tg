@@ -5,7 +5,7 @@ use tglib::{
     },
     player::PlayerId,
     wallet::{
-//        Signing,
+        SigningWallet,
     },
     Result as TgResult,
     TgError,
@@ -43,7 +43,6 @@ use bip39::Mnemonic;
 use crate::{
     wallet::{
         PlayerWallet,
-        SigningWallet,
     }
 };
 
@@ -66,7 +65,7 @@ impl PlayerInfoService {
         let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_2_MNEMONIC).unwrap());
         let player_wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
         player_wallet.wallet.sync(noop_progress(), None).unwrap();
-        let escrow_pubkey = player_wallet.get_new_escrow_pubkey();
+        let escrow_pubkey = player_wallet.new_escrow_pubkey();
         PlayerContractInfo {
             escrow_pubkey,
 // TODO: send to internal descriptor, no immediate way to do so atm
@@ -82,7 +81,7 @@ impl ArbiterService {
     pub fn get_escrow_pubkey() -> PublicKey {
         let signing_wallet = Trezor::new(Mnemonic::parse(ARBITER_MNEMONIC).unwrap());
         let arbiter_wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
-        arbiter_wallet.get_new_escrow_pubkey()
+        arbiter_wallet.new_escrow_pubkey()
     }
 
     pub fn get_fee_address() -> Address {

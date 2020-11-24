@@ -1,18 +1,20 @@
 use std::convert::AsRef;
+use serde::{Serialize, Deserialize,};
 use bdk::{
     bitcoin::{
         Address,
         Amount,
         Transaction,
         PublicKey,
-        secp256k1::{
-            Signature,
-        },
+        consensus::serialize,
         hashes::{
             Hash,
             HashEngine,
             sha256::Hash as ShaHash,
             sha256::HashEngine as ShaHashEngine,
+        },
+        secp256k1::{
+            Signature,
         },
     },
     UTXO,
@@ -26,22 +28,22 @@ use crate::{
     script::TgScript,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Contract {
     pub p1_pubkey:          PublicKey,
     pub p2_pubkey:          PublicKey,
-    pub amount:             Amount,
+    pub arbiter_pubkey:     PublicKey,
     pub funding_tx:         Transaction,
     pub payout_script:      TgScript,
     pub sigs:               Vec<Signature>, 
 }
 
 impl Contract {
-    pub fn new(p1_pubkey: PublicKey, p2_pubkey: PublicKey, amount: Amount, funding_tx: Transaction, payout_script: TgScript) -> Self {
+    pub fn new(p1_pubkey: PublicKey, p2_pubkey: PublicKey, arbiter_pubkey: PublicKey, funding_tx: Transaction, payout_script: TgScript) -> Self {
         Contract {
             p1_pubkey,
             p2_pubkey,
-            amount,
+            arbiter_pubkey,
             funding_tx,
             payout_script,
             sigs: Vec::new(),
@@ -57,6 +59,19 @@ impl Contract {
 
     pub fn state(&self) -> ContractState {
         return ContractState::Invalid
+    }
+}
+
+// should implement encode / decode?
+impl Into<Vec<u8>> for Contract {
+    fn into(self) -> Vec<u8> {
+        let mut v: Vec<u8> = Vec::new();
+        v.extend(self.p1_pubkey.to_bytes());
+        v.extend(self.p2_pubkey.to_bytes());
+        v.extend(self.arbiter_pubkey.to_bytes());
+        v.extend(serialize(&self.funding_tx));
+        v.extend(Vec::from(self.payout_script));
+        v
     }
 }
 
