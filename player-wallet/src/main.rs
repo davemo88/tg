@@ -48,7 +48,7 @@ use bdk::{
 use bip39::{
     Mnemonic, 
 };
-use clap::ArgMatches;
+use clap::{App, Arg, ArgMatches, SubCommand, AppSettings};
 use rustyline::Editor;
 use rustyline::error::ReadlineError;
 use shell_words;
@@ -93,11 +93,18 @@ use mock::{
 use wallet::{
     PlayerWallet,
 };
-use ui::{
-    player_subcommand,
-    contract_subcommand,
-    payout_subcommand,
-};
+use ui::wallet_subcommand;
+
+fn repl<'a, 'b>() -> App<'a, 'b> {
+    App::new("repl")
+        .version(option_env!("CARGO_PKG_VERSION").unwrap_or("unknown"))
+        .author(option_env!("CARGO_PKG_AUTHORS").unwrap_or(""))
+        .about("wallet repl")
+        .settings(&[AppSettings::NoBinaryName, AppSettings::SubcommandRequiredElseHelp,
+            AppSettings::VersionlessSubcommands])
+        .subcommand(SubCommand::with_name("quit").about("quit the repl"))
+        .subcommand(ui::wallet_ui())
+}
 
 fn main() -> Result<(), Error> {
 
@@ -107,9 +114,9 @@ fn main() -> Result<(), Error> {
     history_file.push("history.txt");
     let history_file = history_file.as_path();
 
-    let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-
-    let wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
+//    let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
+//
+//    let wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
 
     let mut rl = Editor::<()>::new();
 
@@ -122,33 +129,17 @@ fn main() -> Result<(), Error> {
         match readline {
             Ok(line) => {
                 let split_line = shell_words::split(&line).unwrap();
-                let matches = ui::repl().get_matches_from_safe(split_line);
+                let matches = repl().get_matches_from_safe(split_line);
                 if matches.is_ok() {
                     if let (c, Some(a)) = matches.unwrap().subcommand() {
                         debug!("command: {}, args: {:?}", c, a);
                         rl.add_history_entry(line.as_str());
                         match c {
+                            "wallet" => {
+                                wallet_subcommand(a.subcommand());
+                            }
                             "quit" => {
                                 break;
-                            }
-                            "player" => {
-                                player_subcommand(a.subcommand(), &wallet);
-                            }
-                            "balance" => {
-                                println!("{}", wallet.balance());
-                            }
-                            "deposit" => {
-                                let deposit_addr = wallet.new_address();
-                                println!("deposit address: {}", deposit_addr);
-                            }
-                            "withdraw" => {
-                                println!("withdraw tx");// id: {}, fee: {}", withdraw_tx.txid, withdraw_tx.fee);
-                            }
-                            "contract" => {
-                                contract_subcommand(a.subcommand(), &wallet);
-                            }
-                            "payout" => {
-                                payout_subcommand(a.subcommand(), &wallet);
                             }
                             _ => {
                                 println!("command '{}' is not implemented", c);

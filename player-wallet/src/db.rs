@@ -167,6 +167,13 @@ impl DB {
         Ok(payouts)
     }
 
+    pub fn delete_payout(&self, cxid: String) -> Result<usize> {
+        self.conn.execute(
+            "DELETE FROM payout WHERE cxid = ?1",
+            params![cxid],
+        )
+    }
+
     pub fn all_players(&self) -> Result<Vec<PlayerRecord>> {
         let mut stmt = self.conn.prepare("SELECT * FROM player")?;
         let player_iter = stmt.query_map(params![], |row| {
