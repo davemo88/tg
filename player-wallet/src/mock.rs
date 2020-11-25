@@ -134,14 +134,6 @@ impl SigningWallet for Trezor {
         derive_account_xpubkey(&self.mnemonic)
     }
 
-    fn descriptor_xpubkey(&self) -> String {
-        let xprivkey = ExtendedPrivKey::new_master(NETWORK, &self.mnemonic.to_seed("")).unwrap();
-        let secp = Secp256k1::new();
-        let fingerprint = xprivkey.fingerprint(&secp);
-        let xpubkey = derive_account_xpubkey(&self.mnemonic);
-        String::from(format!("[{}/44'/0'/0']{}", fingerprint, xpubkey))
-    }
-
     fn sign_tx(&self, pstx: PartiallySignedTransaction, kdp: String) -> TgResult<Transaction> {
         match self.wallet.sign(pstx, None) {
             Ok((signed_tx, _)) => {

@@ -160,7 +160,6 @@ fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> 
                 let player_wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
 
                 let contract = player_wallet.create_contract(p2_contract_info, amount, arbiter_pubkey);
-                println!("{:?}", contract.payout_script);
                 let contract_record = db::ContractRecord {
                     cxid: hex::encode(contract.cxid()),
                     p1_id: player_wallet.player_id(),
@@ -192,13 +191,26 @@ fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> 
                     if c.cxid == a.value_of("cxid").unwrap() {
                         let contract = Contract::from_bytes(hex::decode(c.hex).unwrap());
                         println!("{:?}", contract);
-                        println!("payout_script {:?}", contract.payout_script);
                         break;
                     }
                 }
             }
             "sign" => {
-                println!("{}", c);
+                let contracts = db.all_contracts().unwrap();
+                for c in contracts {
+                    if c.cxid == a.value_of("cxid").unwrap() {
+                        let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
+                        let sig = signing_wallet.sign_message(
+                            Message::from_slice(&hex::decode(c.cxid.clone()).unwrap()).unwrap(),
+                            DerivationPath::from_str(&format!("m/{}/{}/{}", BITCOIN_DERIVATION_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(),
+                        ).unwrap();
+                        let mut contract = Contract::from_bytes(hex::decode(c.hex.clone()).unwrap());
+                        contract.sigs.push(sig);
+                        db.add_signature(c.cxid, hex::encode(contract.to_bytes()));
+                        assert_ne!(hex::encode(contract.to_bytes()), c.hex);
+                        break;
+                    }
+                }
             }
             _ => {
                 println!("command '{}' is not implemented", c);

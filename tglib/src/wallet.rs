@@ -53,7 +53,6 @@ use crate::{
 pub trait SigningWallet {
     fn fingerprint(&self) -> Fingerprint;
     fn xpubkey(&self) -> ExtendedPubKey;
-    fn descriptor_xpubkey(&self) -> String;
     fn sign_tx(&self, pstx: PartiallySignedTransaction, descriptor: String) -> TgResult<Transaction>;
     fn sign_message(&self, msg: Message, path: DerivationPath) -> TgResult<Signature>;
 }

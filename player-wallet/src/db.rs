@@ -84,6 +84,16 @@ impl DB {
         )?;
         Ok(())
     }
+
+    pub fn add_signature(&self, cxid: String, hex: String) -> Result<()> {
+// TODO: validation
+        self.conn.execute(
+            "UPDATE contract SET hex = ?1 WHERE cxid = ?2",
+            params![hex, cxid],
+        )?;
+        Ok(())
+    }
+
     pub fn all_contracts(&self) -> Result<Vec<ContractRecord>> {
         let mut stmt = self.conn.prepare("SELECT * FROM contract")?;
         let contract_iter = stmt.query_map(params![], |row| {
