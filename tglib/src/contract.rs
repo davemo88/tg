@@ -29,7 +29,7 @@ use nom::{
     bytes::complete::take,
     number::complete::{be_u8, be_u16, be_u32},
     branch::alt,
-    multi::{many1, length_data},
+    multi::{many0, length_data},
     combinator::opt,
     sequence::{tuple, preceded, terminated},
 };
@@ -148,8 +148,13 @@ fn payout_script(input: &[u8]) -> IResult<&[u8], TgScript> {
 }
 
 fn sigs(input: &[u8]) -> IResult<&[u8], Vec<Signature>> {
-// TODO: oops
-    Ok((input, Vec::new()))
+    many0(signature)(input)
+}
+
+fn signature(input: &[u8]) -> IResult<&[u8], Signature> {
+    let (input, b) = take(64u8)(input)?;
+    let sig = Signature::from_compact(b).unwrap();
+    Ok((input, sig))
 }
 
 #[derive(Debug, PartialEq)]
