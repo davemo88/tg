@@ -29,7 +29,7 @@ use nom::{
     bytes::complete::take,
     number::complete::{be_u8, be_u16, be_u32},
     branch::alt,
-    multi::{many0, length_data},
+    multi::{many0, length_data, length_value},
     combinator::opt,
     sequence::{tuple, preceded, terminated},
 };
@@ -142,9 +142,7 @@ fn funding_tx(input: &[u8]) -> IResult<&[u8], Transaction> {
 }
 
 fn payout_script(input: &[u8]) -> IResult<&[u8], TgScript> {
-    let (input, b) = length_data(be_u32)(input)?;
-    let (_, script) = tg_script(&b).unwrap();
-    Ok((input, script))
+    length_value(be_u32, tg_script)(input)
 }
 
 fn sigs(input: &[u8]) -> IResult<&[u8], Vec<Signature>> {
