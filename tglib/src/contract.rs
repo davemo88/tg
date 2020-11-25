@@ -78,7 +78,6 @@ impl Contract {
         return ContractState::Invalid
     }
 
-// TODO: should these functions be more explicit and specific
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut v = Vec::new();
 // 3 fixed-length pubkeys
@@ -93,8 +92,9 @@ impl Contract {
         let payout_script = Vec::from(self.payout_script.clone());
         v.write_u32::<BigEndian>(payout_script.len() as u32).unwrap();
         v.extend(payout_script);
+// signatures in compact (fixed length) format
         for sig in &self.sigs {
-            v.extend(sig.to_string().into_bytes());
+            v.extend(sig.serialize_compact().to_vec());
         }
         v
     }
@@ -143,7 +143,7 @@ fn funding_tx(input: &[u8]) -> IResult<&[u8], Transaction> {
 
 fn payout_script(input: &[u8]) -> IResult<&[u8], TgScript> {
     let (input, b) = length_data(be_u32)(input)?;
-    let (input, script) = tg_script(&b).unwrap();
+    let (_, script) = tg_script(&b).unwrap();
     Ok((input, script))
 }
 
