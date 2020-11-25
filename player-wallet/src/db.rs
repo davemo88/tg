@@ -28,7 +28,6 @@ pub struct ContractRecord {
     pub cxid:           String,
     pub p1_id:          PlayerId,
     pub p2_id:          PlayerId,
-    pub funding_txid:   String,
     pub hex:            String,
     pub desc:           String,
 }
@@ -43,7 +42,7 @@ pub struct PayoutRecord {
 impl From<Payout> for PayoutRecord {
     fn from(p: Payout) -> PayoutRecord {
         let sig = match p.script_sig {
-           Some(sig) => hex::encode(p.script_sig.unwrap().serialize_compact().to_vec()),
+           Some(sig) => hex::encode(sig.serialize_compact().to_vec()),
            None => String::default(),
         };
         PayoutRecord {
@@ -74,7 +73,6 @@ impl DB {
                     cxid            TEXT PRIMARY KEY,
                     p1_id           TEXT NOT NULL,
                     p2_id           TEXT NOT NULL,
-                    funding_txid    TEXT NOT NULL UNIQUE,
                     hex             TEXT NOT NULL UNIQUE,
                     desc            TEXT,
                     FOREIGN KEY(p1_id) REFERENCES player(id),
@@ -82,7 +80,8 @@ impl DB {
                 );
                 CREATE TABLE IF NOT EXISTS payout (
                     cxid            TEXT PRIMARY KEY,
-                    hex             TEXT NOT NULL UNIQUE,
+                    tx              TEXT NOT NULL UNIQUE,
+                    sig             TEXT NOT NULL UNIQUE,
                     FOREIGN KEY(cxid) REFERENCES contract(cxid)
                 );
             COMMIT;"
@@ -101,8 +100,8 @@ impl DB {
 
     pub fn insert_contract(&self, contract: ContractRecord) -> Result<()> {
         self.conn.execute(
-            "INSERT INTO contract (cxid, p1_id, p2_id, funding_txid, hex, desc) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            params![contract.cxid, contract.p1_id.0, contract.p2_id.0, contract.funding_txid, contract.hex, contract.desc],
+            "INSERT INTO contract (cxid, p1_id, p2_id, hex, desc) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![contract.cxid, contract.p1_id.0, contract.p2_id.0, contract.hex, contract.desc],
         )?;
         Ok(())
     }
@@ -123,9 +122,8 @@ impl DB {
                 cxid: row.get(0)?, 
                 p1_id: PlayerId(row.get(1)?),
                 p2_id: PlayerId(row.get(2)?),
-                funding_txid: row.get(3)?,
-                hex: row.get(4)?,
-                desc: row.get(5)?,
+                hex: row.get(3)?,
+                desc: row.get(4)?,
             })
         })?;
 
@@ -145,14 +143,32 @@ impl DB {
 
     pub fn insert_payout(&self, payout: PayoutRecord) -> Result<()> {
         self.conn.execute(
-            "INSERT INTO payout (cxid, hex) VALUES (?1, ?2)",
-            params![payout.cxid, payout.hex],
+            "INSERT INTO payout (cxid, tx, sig) VALUES (?1, ?2, ?3) ON CONFLICT(cxid) DO UPDATE SET
+            tx=?2, sig=?3",
+            params![payout.cxid, payout.tx, payout.sig],
         )?;
         Ok(())
     }
 
+    pub fn all_payouts(&self) -> Result<Vec<PayoutRecord>> {
+        let mut stmt = self.conn.prepare("SELECT * FROM payout")?;
+        let payout_iter = stmt.query_map(params![], |row| {
+            Ok(PayoutRecord {
+                cxid: row.get(0)?,
+                tx: row.get(1)?,
+                sig: row.get(2)?,
+            })
+        })?;
+
+        let mut payouts = Vec::<PayoutRecord>::new();
+        for p in payout_iter {
+            payouts.push(p.unwrap());
+        }
+        Ok(payouts)
+    }
+
     pub fn all_players(&self) -> Result<Vec<PlayerRecord>> {
-        let mut stmt = self.conn.prepare("SELECT id, name FROM player")?;
+        let mut stmt = self.conn.prepare("SELECT * FROM player")?;
         let player_iter = stmt.query_map(params![], |row| {
             Ok(PlayerRecord {
                 id: PlayerId(row.get(0)?),

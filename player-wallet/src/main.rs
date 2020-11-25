@@ -82,6 +82,7 @@ use mock::{
     PlayerInfoService,
     Trezor,
     ARBITER_MNEMONIC,
+    DB_NAME,
     NETWORK,
     PLAYER_1_MNEMONIC,
     PLAYER_2_MNEMONIC,
@@ -92,160 +93,15 @@ use mock::{
 use wallet::{
     PlayerWallet,
 };
-
-const DB_NAME: &'static str = "dev-app.db";
-
-fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> TgResult<()> {
-    if let (c, Some(a)) = subcommand {
-        match c {
-            "add" => {
-                let player = db::PlayerRecord {
-                    id:         PlayerId(a.args["id"].vals[0].clone().into_string().unwrap()),
-                    name:       a.args["name"].vals[0].clone().into_string().unwrap(),
-                };
-                match db.insert_player(player.clone()) {
-                    Ok(()) => println!("added player {} named {}", player.id.0, player.name),
-                    Err(e) => println!("{:?}", e),
-                }
-            }
-            "list" => {
-                let players = db.all_players().unwrap();
-                if (players.len() == 0) {
-                    println!("no players");
-                }
-                else {
-                    for p in players {
-                        println!("id: {}, name: {}", p.id.0, p.name);
-                    }
-                }
-            }
-            "remove" => {
-                let player_id = PlayerId(a.args["id"].vals[0].clone().into_string().unwrap());
-                match db.delete_player(player_id.clone()) {
-                    Ok(num_deleted) => match num_deleted {
-                        0 => println!("no player with that id"),
-                        1 => println!("removed player {}", player_id.0),
-                        n => panic!("{} removed, should be impossible", n),//this is impossible
-                    }
-                    Err(e) => println!("{:?}", e),
-                }
-            },
-            "id" => {
-                let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-                let player_wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
-                println!("{}", player_wallet.player_id().0);
-            }
-            _ => {
-                println!("command '{}' is not implemented", c);
-            }
-        }
-    }
-    Ok(())
-}
-
-fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> TgResult<()> {
-    if let (c, Some(a)) = subcommand {
-        match c {
-            "new" => {
-// TODO: this is gonna go pretty deep so want to get out of this file asap
-//                println!("new {:?}", a);
-                let p2_id = PlayerId(a.value_of("player-2").unwrap().to_string());
-                let amount = Amount::from_sat(a.value_of("amount").unwrap().parse::<u64>().unwrap());
-                let desc = a.value_of("desc").unwrap_or("");
-//                println!("p2: {:?} amount: {:?}, {}", p2_id, amount, desc);
-                let p2_contract_info = PlayerInfoService::get_contract_info(&p2_id);
-                let arbiter_pubkey = ArbiterService::get_escrow_pubkey();
-
-                let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-                let player_wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
-
-                let contract = player_wallet.create_contract(p2_contract_info, amount, arbiter_pubkey);
-                let contract_record = db::ContractRecord {
-                    cxid: hex::encode(contract.cxid()),
-                    p1_id: player_wallet.player_id(),
-                    p2_id,
-                    hex: hex::encode(contract.to_bytes()),
-                    funding_txid: contract.funding_tx.txid().to_string(),
-                    desc: desc.to_string(),
-                };
-
-                match db.insert_contract(contract_record.clone()) {
-                    Ok(()) => println!("created contract {}", contract_record.cxid),
-                    Err(e) => println!("{:?}", e),
-                }
-            }
-            "list" => {
-                let contracts = db.all_contracts().unwrap();
-                if (contracts.len() == 0) {
-                    println!("no players");
-                }
-                else {
-                    for c in contracts {
-                        println!("cxid: {:?}, p1: {:?}, p2: {:?}, desc: {}", c.cxid, c.p1_id.0, c.p2_id.0, c.desc);
-                    }
-                }
-            }
-            "details" => {
-                let contracts = db.all_contracts().unwrap();
-                for c in contracts {
-                    if c.cxid == a.value_of("cxid").unwrap() {
-                        let contract = Contract::from_bytes(hex::decode(c.hex).unwrap());
-                        println!("{:?}", contract);
-                        break;
-                    }
-                }
-            }
-            "sign" => {
-                let contracts = db.all_contracts().unwrap();
-                for c in contracts {
-                    if c.cxid == a.value_of("cxid").unwrap() {
-                        let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-                        let sig = signing_wallet.sign_message(
-                            Message::from_slice(&hex::decode(c.cxid.clone()).unwrap()).unwrap(),
-                            DerivationPath::from_str(&format!("m/{}/{}/{}", BITCOIN_DERIVATION_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(),
-                        ).unwrap();
-                        let mut contract = Contract::from_bytes(hex::decode(c.hex.clone()).unwrap());
-                        contract.sigs.push(sig);
-                        db.add_signature(c.cxid, hex::encode(contract.to_bytes()));
-                        assert_ne!(hex::encode(contract.to_bytes()), c.hex);
-                        break;
-                    }
-                }
-            }
-            _ => {
-                println!("command '{}' is not implemented", c);
-            }
-        }            
-    }
-    Ok(())
-}
-
-fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> TgResult<()> {
-    if let (c, Some(a)) = subcommand {
-        match c {
-            "new" => {
-                println!("new {:?}", a);
-            }
-            "list" => {
-                println!("list");
-            }
-            "details" => {
-                println!("details {:?}", a);
-            }
-            "sign" => {
-                println!("sign {:?}", a);
-            }
-            _ => {
-                println!("command '{}' is not implemented", c);
-            }
-        }            
-    }
-    Ok(())
-}
+use ui::{
+    player_subcommand,
+    contract_subcommand,
+    payout_subcommand,
+};
 
 fn main() -> Result<(), Error> {
 
-    let work_dir: PathBuf = PathBuf::from("./");
+    let work_dir: PathBuf = current_dir().unwrap();
     let mut history_file = work_dir.clone();
     history_file.push(&NETWORK.to_string());
     history_file.push("history.txt");
@@ -253,18 +109,13 @@ fn main() -> Result<(), Error> {
 
     let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
 
-    let player_wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
+    let wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
 
     let mut rl = Editor::<()>::new();
 
     if rl.load_history(history_file).is_err() {
         println!("No previous history.");
     }
-
-    let mut db_path = current_dir().unwrap();
-    db_path.push(DB_NAME);
-    let db = db::DB::new(&db_path).unwrap();
-    db.create_tables();
 
     loop {
         let readline = rl.readline(">> ");
@@ -281,23 +132,23 @@ fn main() -> Result<(), Error> {
                                 break;
                             }
                             "player" => {
-                                player_subcommand(a.subcommand(), &db);
+                                player_subcommand(a.subcommand(), &wallet);
                             }
                             "balance" => {
-                                println!("{}", player_wallet.balance());
+                                println!("{}", wallet.balance());
                             }
                             "deposit" => {
-                                let deposit_addr = player_wallet.new_address();
+                                let deposit_addr = wallet.new_address();
                                 println!("deposit address: {}", deposit_addr);
                             }
                             "withdraw" => {
                                 println!("withdraw tx");// id: {}, fee: {}", withdraw_tx.txid, withdraw_tx.fee);
                             }
                             "contract" => {
-                                contract_subcommand(a.subcommand(), &db);
+                                contract_subcommand(a.subcommand(), &wallet);
                             }
                             "payout" => {
-                                payout_subcommand(a.subcommand(), &db);
+                                payout_subcommand(a.subcommand(), &wallet);
                             }
                             _ => {
                                 println!("command '{}' is not implemented", c);

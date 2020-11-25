@@ -1,4 +1,5 @@
 use std::{
+    env::current_dir,
     str::FromStr,
     convert::TryInto,
 };
@@ -67,11 +68,13 @@ use tglib::{
 use crate::{
     db::{
         ContractRecord,
+        DB,
     },
     mock::{
         PlayerInfoService,
         ArbiterService,
         BITCOIN_DERIVATION_PATH,
+        DB_NAME,
         ELECTRS_SERVER,
         ESCROW_SUBACCOUNT,
         ESCROW_KIX,
@@ -82,7 +85,8 @@ pub struct PlayerWallet {
     fingerprint: Fingerprint,
     xpubkey: ExtendedPubKey,
     network: Network,
-    pub wallet: Wallet<ElectrumBlockchain, MemoryDatabase>
+    pub wallet: Wallet<ElectrumBlockchain, MemoryDatabase>,
+    pub db: DB,
 }
 
 impl PlayerWallet {
@@ -91,6 +95,11 @@ impl PlayerWallet {
         let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
         let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
         let client = Client::new(ELECTRS_SERVER, None).unwrap();
+        let mut db_path = current_dir().unwrap();
+        db_path.push(DB_NAME);
+        let db = DB::new(&db_path).unwrap();
+        db.create_tables();
+
         PlayerWallet {
             fingerprint,
             xpubkey,
@@ -101,7 +110,9 @@ impl PlayerWallet {
                 network,
                 MemoryDatabase::default(),
                 ElectrumBlockchain::from(client)
-            ).unwrap()
+            ).unwrap(),
+            db,
+
         }
     }
 

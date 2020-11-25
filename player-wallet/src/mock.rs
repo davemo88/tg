@@ -46,6 +46,8 @@ use crate::{
     }
 };
 
+
+pub const DB_NAME: &'static str = "dev-app.db";
 pub const NETWORK: Network = Network::Regtest;
 pub const BITCOIN_RPC_URL: &'static str = "http://127.0.0.1:18443";
 pub const ELECTRS_SERVER: &'static str = "tcp://127.0.0.1:60401";
