@@ -45,7 +45,6 @@ use bdk::{
 use tglib::{
     Result as TgResult,
     TgError,
-    TgScriptSig,
     arbiter::{
         ArbiterId,
     },

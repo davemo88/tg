@@ -38,7 +38,6 @@ use crate::{
     payout::Payout,
     player::PlayerId,
     script::TgScript,
-    TgScriptSig,
     Result as TgResult,
 };
 
@@ -77,6 +76,16 @@ fn create_escrow_script(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pu
         .push_opcode(Opcodes::OP_PUSHBYTES_3)
         .push_opcode(Opcodes::OP_CHECKMULTISIG);
     b.into_script()
+}
+
+pub fn create_payout(contract: &Contract, payout_address: &Address) -> Payout {
+    let escrow_address = create_escrow_address(
+        &contract.p1_pubkey,
+        &contract.p2_pubkey,
+        &contract.arbiter_pubkey,
+        payout_address.network,
+        ).unwrap();
+    Payout::new(contract.clone(), create_payout_tx(&contract.funding_tx, &escrow_address, &payout_address).unwrap())
 }
 
 // we are ignoring specification of the game master pubkey and substituting

@@ -1,13 +1,20 @@
 use std::{
+    convert::{
+        From,
+    },
     path::{
         Path, 
         PathBuf
     },
     fs::remove_file,
 };
+use bdk::bitcoin::{
+    consensus,
+};
 use rusqlite::{params, Connection, Result};
 use tglib::{
     player::PlayerId,
+    payout::Payout,
 };
 
 #[derive(Debug, Clone)]
@@ -29,7 +36,22 @@ pub struct ContractRecord {
 #[derive(Debug, Clone)]
 pub struct PayoutRecord {
     pub cxid:           String,
-    pub hex:            String,
+    pub tx:             String,
+    pub sig:            String,
+}
+
+impl From<Payout> for PayoutRecord {
+    fn from(p: Payout) -> PayoutRecord {
+        let sig = match p.script_sig {
+           Some(sig) => hex::encode(p.script_sig.unwrap().serialize_compact().to_vec()),
+           None => String::default(),
+        };
+        PayoutRecord {
+            cxid: hex::encode(p.contract.cxid()),
+            tx: hex::encode(consensus::serialize(&p.tx)),
+            sig,
+        }
+    }
 }
 
 pub struct DB {

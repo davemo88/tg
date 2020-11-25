@@ -65,9 +65,9 @@ impl TgScriptEnv {
             return Err(TgError("invalid payout request - contract is uncertified"))
         }
 //push script sig to stack then evaluate the payout script
-        for script_sig_item in &payout.script_sig {
-            self.stack.push(script_sig_item.to_vec());
-        }
+        if payout.script_sig.is_some() {
+            self.stack.push(payout.script_sig.unwrap().serialize_compact().to_vec());
+        };
 
         let _result = self.eval(payout.contract.payout_script.clone());
 
@@ -260,7 +260,7 @@ impl TgScriptInterpreter for TgScriptEnv {
 
         let script_txid = self.stack.pop().unwrap();
         let pubkey: PublicKey = PublicKey::from_slice(&self.stack.pop().unwrap()).unwrap();
-        let sig: Signature = Signature::from_der(&self.stack.pop().unwrap()).unwrap();
+        let sig: Signature = Signature::from_compact(&self.stack.pop().unwrap()).unwrap();
 
         let msg: Message = Message::from_slice(&script_txid).unwrap();
 

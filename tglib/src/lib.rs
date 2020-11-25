@@ -9,8 +9,6 @@ pub mod payout;
 pub mod script;
 pub mod wallet;
 
-pub type TgScriptSig = Vec<Vec<u8>>;
-
 #[derive(Debug)]
 pub struct TgError(pub &'static str);
 

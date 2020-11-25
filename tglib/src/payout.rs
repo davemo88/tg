@@ -1,8 +1,10 @@
 use bdk::bitcoin::{
     Transaction,
+    secp256k1::{
+        Signature,
+    }
 };
 use crate::{
-    TgScriptSig,
     contract::{
         Contract,
     },
@@ -12,21 +14,22 @@ use crate::{
 pub struct Payout {
     pub contract:        Contract,
     pub tx:              Transaction,
-    pub script_sig:      TgScriptSig,
+    pub script_sig:      Option<Signature>,
 }
 
 impl Payout {
-    pub fn new(contract: &Contract, tx: Transaction, script_sig: TgScriptSig) -> Self {
+    pub fn new(contract: Contract, tx: Transaction) -> Self {
         Payout {
-            contract: contract.clone(),
+            contract,
             tx,
-            script_sig,
+            script_sig: None,
         }
     }
 }
 
 pub enum PayoutState {
     Unsigned,
+    PlayerSigned,
     ArbiterSigned,
     Live,
     Resolved,
