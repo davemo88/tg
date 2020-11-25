@@ -114,9 +114,3 @@ impl From<TgScript> for Vec<u8> {
         v
     }
 }
-
-//#[cfg(test)]
-//mod tests {
-//    use super::*;
-//
-//}

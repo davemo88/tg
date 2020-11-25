@@ -90,9 +90,7 @@ impl Contract {
         v.write_u32::<BigEndian>(funding_tx.len() as u32).unwrap();
         v.extend(funding_tx);
 // payout script length  + bytes
-        println!("payout script going to bytes: {:?}", self.payout_script);
         let payout_script = Vec::from(self.payout_script.clone());
-        println!("payout script as bytes({}): {:?}", payout_script.len(), payout_script);
         v.write_u32::<BigEndian>(payout_script.len() as u32).unwrap();
         v.extend(payout_script);
         for sig in &self.sigs {
@@ -146,7 +144,6 @@ fn funding_tx(input: &[u8]) -> IResult<&[u8], Transaction> {
 fn payout_script(input: &[u8]) -> IResult<&[u8], TgScript> {
     let (input, b) = length_data(be_u32)(input)?;
     let (input, script) = tg_script(&b).unwrap();
-    println!("input: {:?} script{:?}", input, script);
     Ok((input, script))
 }
 

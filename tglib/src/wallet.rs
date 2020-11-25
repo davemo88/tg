@@ -59,12 +59,10 @@ pub trait SigningWallet {
 }
 
 pub fn create_escrow_address(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pubkey: &PublicKey, network: Network) -> TgResult<Address> {
-
     let escrow_address = Address::p2wsh(
         &create_escrow_script(p1_pubkey, p2_pubkey, arbiter_pubkey),
         network,
     );
-
     Ok(escrow_address)
 
 }
@@ -79,7 +77,6 @@ fn create_escrow_script(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pu
         .push_slice(&arbiter_pubkey.to_bytes())
         .push_opcode(Opcodes::OP_PUSHBYTES_3)
         .push_opcode(Opcodes::OP_CHECKMULTISIG);
-
     b.into_script()
 }
 
@@ -133,14 +130,15 @@ fn create_payout_tx(funding_tx: &Transaction, escrow_address: &Address, payout_a
                 script_sig: Script::new(),
                 sequence: 0,
                 witness: Vec::new()
-            })
+            });
+            break;
         }
     }
 
     Ok(Transaction {
         version: 1,
         lock_time: 0,
-        input: Vec::new(),
+        input,
         output: vec!(TxOut { 
             value: amount, 
             script_pubkey: payout_address.script_pubkey() 
