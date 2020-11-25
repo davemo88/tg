@@ -60,6 +60,16 @@ fn op_equal(input: &[u8]) -> IResult<&[u8], TgOpcode> {
 }
 
 #[allow(dead_code)]
+fn op_verifysig(input: &[u8]) -> IResult<&[u8], TgOpcode> {
+    op_bytecode(TgOpcode::OP_VERIFYSIG)(input)
+}
+
+#[allow(dead_code)]
+fn op_validate(input: &[u8]) -> IResult<&[u8], TgOpcode> {
+    op_bytecode(TgOpcode::OP_VALIDATE)(input)
+}
+
+#[allow(dead_code)]
 fn op_if(input: &[u8]) -> IResult<&[u8], TgOpcode> {
     let (input, (true_branch, else_block)) = tuple((
         preceded(
@@ -148,7 +158,10 @@ pub fn tg_script(input: &[u8]) -> IResult<&[u8], TgScript> {
             op_if,
             op_drop,
             op_dup,
+            op_2dup,
             op_equal,
+            op_verifysig,
+            op_validate,
             op_pushdata1,
             op_pushdata2,
             op_pushdata4,

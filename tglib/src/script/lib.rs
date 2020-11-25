@@ -58,12 +58,11 @@ impl From<TgOpcode> for Vec<u8> {
             OP_PUSHDATA2(num_bytes, data)           =>  { v.write_u16::<BigEndian>(num_bytes).unwrap(); v.extend(Vec::from(data)); v } ,
             OP_PUSHDATA4(num_bytes, data)           =>  { v.write_u32::<BigEndian>(num_bytes).unwrap(); v.extend(Vec::from(data)); v } ,
             OP_IF(true_branch, None)                =>  { v.extend(Vec::from(true_branch)); v.push(OP_ENDIF.bytecode()); v },
-            OP_IF(true_branch, Some(false_branch))  =>  { v.extend(Vec::from(true_branch)); v.extend(Vec::from(false_branch)); v.push(OP_ENDIF.bytecode()); v },
+            OP_IF(true_branch, Some(false_branch))  =>  { v.extend(Vec::from(true_branch)); v.push(OP_ELSE(TgScript::default()).bytecode()); v.extend(Vec::from(false_branch)); v.push(OP_ENDIF.bytecode()); v },
 //NOTE: don't think this should ever happen either ... hmmm
             OP_ELSE(_false_branch)                  =>  { panic!("encountered OP_ELSE outside of OP_IF"); },
            _ => v,
         }
-
     }
 }
 

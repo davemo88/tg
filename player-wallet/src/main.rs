@@ -160,6 +160,7 @@ fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> 
                 let player_wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
 
                 let contract = player_wallet.create_contract(p2_contract_info, amount, arbiter_pubkey);
+                println!("{:?}", contract.payout_script);
                 let contract_record = db::ContractRecord {
                     cxid: hex::encode(contract.cxid()),
                     p1_id: player_wallet.player_id(),
@@ -191,6 +192,7 @@ fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), db: &db::DB) -> 
                     if c.cxid == a.value_of("cxid").unwrap() {
                         let contract = Contract::from_bytes(hex::decode(c.hex).unwrap());
                         println!("{:?}", contract);
+                        println!("payout_script {:?}", contract.payout_script);
                         break;
                     }
                 }
