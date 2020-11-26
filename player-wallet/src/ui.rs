@@ -138,7 +138,7 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                     name:       a.args["name"].vals[0].clone().into_string().unwrap(),
                 };
                 match wallet.db.insert_player(player.clone()) {
-                    Ok(()) => println!("added player {} named {}", player.id.0, player.name),
+                    Ok(_) => println!("added player {} named {}", player.id.0, player.name),
                     Err(e) => println!("{:?}", e),
                 }
             }
@@ -260,7 +260,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 };
 
                 match wallet.db.insert_contract(contract_record.clone()) {
-                    Ok(()) => println!("created contract {}", contract_record.cxid),
+                    Ok(_) => println!("created contract {}", contract_record.cxid),
                     Err(e) => println!("{:?}", e),
                 }
             }

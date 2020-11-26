@@ -114,10 +114,6 @@ fn main() -> Result<(), Error> {
     history_file.push("history.txt");
     let history_file = history_file.as_path();
 
-//    let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-//
-//    let wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
-
     let mut rl = Editor::<()>::new();
 
     if rl.load_history(history_file).is_err() {
@@ -177,9 +173,7 @@ fn main() -> Result<(), Error> {
 mod tests {
 
     use super::*;
-    use mock::{
-        BITCOIN_RPC_URL,
-    };
+    use mock::BITCOIN_RPC_URL;
     use bitcoincore_rpc::{Auth, Client as RpcClient, RpcApi, json::EstimateMode};
     use tglib::wallet::{
         create_payout_script,

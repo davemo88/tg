@@ -88,31 +88,33 @@ impl DB {
         )
     }
 
-    pub fn insert_player(&self, player: PlayerRecord) -> Result<()> {
-         match self.conn.execute(
+    pub fn insert_player(&self, player: PlayerRecord) -> Result<usize> {
+         self.conn.execute(
             "INSERT INTO player (id, name) VALUES (?1, ?2)",
             params![player.id.0, player.name],
-         ) {
-             Ok(_) => Ok(()),
-             Err(e) => Err(e),
-         }
+         )
+//         match self.conn.execute(
+//            "INSERT INTO player (id, name) VALUES (?1, ?2)",
+//            params![player.id.0, player.name],
+//         ) {
+//             Ok(_) => Ok(()),
+//             Err(e) => Err(e),
+//         }
     }
 
-    pub fn insert_contract(&self, contract: ContractRecord) -> Result<()> {
+    pub fn insert_contract(&self, contract: ContractRecord) -> Result<usize> {
         self.conn.execute(
             "INSERT INTO contract (cxid, p1_id, p2_id, hex, desc) VALUES (?1, ?2, ?3, ?4, ?5)",
             params![contract.cxid, contract.p1_id.0, contract.p2_id.0, contract.hex, contract.desc],
-        )?;
-        Ok(())
+        )
     }
 
-    pub fn add_signature(&self, cxid: String, hex: String) -> Result<()> {
+    pub fn add_signature(&self, cxid: String, hex: String) -> Result<usize> {
 // TODO: validation
         self.conn.execute(
             "UPDATE contract SET hex = ?1 WHERE cxid = ?2",
             params![hex, cxid],
-        )?;
-        Ok(())
+        )
     }
 
     pub fn all_contracts(&self) -> Result<Vec<ContractRecord>> {
@@ -141,13 +143,12 @@ impl DB {
         )
     }
 
-    pub fn insert_payout(&self, payout: PayoutRecord) -> Result<()> {
+    pub fn insert_payout(&self, payout: PayoutRecord) -> Result<usize> {
         self.conn.execute(
             "INSERT INTO payout (cxid, tx, sig) VALUES (?1, ?2, ?3) ON CONFLICT(cxid) DO UPDATE SET
             tx=?2, sig=?3",
             params![payout.cxid, payout.tx, payout.sig],
-        )?;
-        Ok(())
+        )
     }
 
     pub fn all_payouts(&self) -> Result<Vec<PayoutRecord>> {
