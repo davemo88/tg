@@ -70,26 +70,23 @@ use tglib::{
     script::TgScript,
     wallet::{
         SigningWallet,
-    }
+    },
+    mock::{
+        ArbiterService,
+        PlayerInfoService,
+        Trezor,
+        ARBITER_MNEMONIC,
+        DB_NAME,
+        NETWORK,
+        PLAYER_1_MNEMONIC,
+        PLAYER_2_MNEMONIC,
+        ESCROW_KIX,
+    },
 };
 
 mod db;
-mod mock;
 mod ui;
 mod wallet;
-use mock::{
-    ArbiterService,
-    PlayerInfoService,
-    Trezor,
-    ARBITER_MNEMONIC,
-    DB_NAME,
-    NETWORK,
-    PLAYER_1_MNEMONIC,
-    PLAYER_2_MNEMONIC,
-    BITCOIN_DERIVATION_PATH,
-    ESCROW_SUBACCOUNT,
-    ESCROW_KIX,
-};
 use wallet::{
     PlayerWallet,
 };
@@ -176,6 +173,8 @@ mod tests {
     use mock::BITCOIN_RPC_URL;
     use bitcoincore_rpc::{Auth, Client as RpcClient, RpcApi, json::EstimateMode};
     use tglib::wallet::{
+        BITCOIN_ACCOUNT_PATH,
+        ESCROW_SUBACCOUNT,
         create_payout_script,
         create_escrow_address,
     };
@@ -219,21 +218,20 @@ mod tests {
         
         let p1_sig = p1_signing_wallet.sign_message(
             Message::from_slice(&cxid).unwrap(),
-            DerivationPath::from_str(&format!("m/{}/{}/{}", BITCOIN_DERIVATION_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(),
+            DerivationPath::from_str(&format!("m/{}/{}/{}", BITCOIN_ACCOUNT_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(),
         ).unwrap();
-
         
         let p2_signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_2_MNEMONIC).unwrap()); 
         let p2_wallet = PlayerWallet::new(p2_signing_wallet.fingerprint(), p2_signing_wallet.xpubkey(), NETWORK);
         let p2_sig = p2_signing_wallet.sign_message(
             Message::from_slice(&cxid).unwrap(),
-            DerivationPath::from_str(&format!("m/{}/{}/{}", BITCOIN_DERIVATION_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(),
+            DerivationPath::from_str(&format!("m/{}/{}/{}", BITCOIN_ACCOUNT_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(),
         ).unwrap();
 
         let arbiter_wallet = Trezor::new(Mnemonic::parse(ARBITER_MNEMONIC).unwrap()); 
         let arbiter_sig = arbiter_wallet.sign_message(
             Message::from_slice(&cxid).unwrap(),
-            DerivationPath::from_str(&format!("m/{}/{}/{}", BITCOIN_DERIVATION_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(),
+            DerivationPath::from_str(&format!("m/{}/{}/{}", BITCOIN_ACCOUNT_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(),
         ).unwrap();
 
         contract.sigs.push(p1_sig);

@@ -1,4 +1,5 @@
 use std::{
+    str::FromStr,
     convert::{
         TryInto,
     }
@@ -26,12 +27,14 @@ use bdk::bitcoin::{
     util::{
         bip32::{
             ExtendedPubKey,
+            ExtendedPrivKey,
             DerivationPath,
             Fingerprint,
         },
         psbt::PartiallySignedTransaction,
     }
 };
+use bip39::Mnemonic;
 use crate::{
     arbiter::ArbiterId,
     contract::{Contract, PlayerContractInfo},
@@ -40,6 +43,9 @@ use crate::{
     script::TgScript,
     Result as TgResult,
 };
+
+pub const BITCOIN_ACCOUNT_PATH: &'static str = "44'/0'/0'";
+pub const ESCROW_SUBACCOUNT: &'static str = "7";
 
 // TODO: need to clarify. this is signing in the normal bitcoin / crypto sense
 // and the Signing trait is for signing our contracts and payouts only
@@ -56,13 +62,16 @@ pub trait SigningWallet {
     fn sign_message(&self, msg: Message, path: DerivationPath) -> TgResult<Signature>;
 }
 
+pub trait EscrowWallet {
+    fn get_escrow_pubkey(&self) -> PublicKey;
+}
+
 pub fn create_escrow_address(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pubkey: &PublicKey, network: Network) -> TgResult<Address> {
     let escrow_address = Address::p2wsh(
         &create_escrow_script(p1_pubkey, p2_pubkey, arbiter_pubkey),
         network,
     );
     Ok(escrow_address)
-
 }
 
 fn create_escrow_script(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pubkey: &PublicKey) -> Script {
@@ -152,4 +161,16 @@ fn create_payout_tx(funding_tx: &Transaction, escrow_address: &Address, payout_a
             script_pubkey: payout_address.script_pubkey() 
         })
     })
+}
+
+pub fn derive_account_xprivkey(mnemonic: &Mnemonic, network: Network) -> ExtendedPrivKey {
+        let xprivkey = ExtendedPrivKey::new_master(network, &mnemonic.to_seed("")).unwrap();
+        let secp = Secp256k1::new();
+        let path = DerivationPath::from_str(&String::from(format!("m/{}", BITCOIN_ACCOUNT_PATH))).unwrap();
+        xprivkey.derive_priv(&secp, &path).unwrap()
+}
+
+pub fn derive_account_xpubkey(mnemonic: &Mnemonic, network: Network) -> ExtendedPubKey {
+        let secp = Secp256k1::new();
+        ExtendedPubKey::from_private(&secp, &derive_account_xprivkey(mnemonic, network))
 }

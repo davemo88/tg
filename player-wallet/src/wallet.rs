@@ -63,21 +63,22 @@ use tglib::{
     wallet::{
         create_escrow_address,
         create_payout_script,
-    }
+        EscrowWallet,
+        BITCOIN_ACCOUNT_PATH,
+    },
+    mock::{
+        PlayerInfoService,
+        ArbiterService,
+        DB_NAME,
+        ELECTRS_SERVER,
+        ESCROW_SUBACCOUNT,
+        ESCROW_KIX,
+    },
 };
 use crate::{
     db::{
         ContractRecord,
         DB,
-    },
-    mock::{
-        PlayerInfoService,
-        ArbiterService,
-        BITCOIN_DERIVATION_PATH,
-        DB_NAME,
-        ELECTRS_SERVER,
-        ESCROW_SUBACCOUNT,
-        ESCROW_KIX,
     },
 };
 
@@ -91,7 +92,7 @@ pub struct PlayerWallet {
 
 impl PlayerWallet {
     pub fn new(fingerprint: Fingerprint, xpubkey: ExtendedPubKey, network: Network) -> Self {
-        let descriptor_key = format!("[{}/{}]{}", fingerprint, BITCOIN_DERIVATION_PATH, xpubkey);
+        let descriptor_key = format!("[{}/{}]{}", fingerprint, BITCOIN_ACCOUNT_PATH, xpubkey);
         let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
         let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
         let client = Client::new(ELECTRS_SERVER, None).unwrap();
@@ -129,17 +130,9 @@ impl PlayerWallet {
         self.wallet.get_new_address().unwrap()
     }
 
-    pub fn new_escrow_pubkey(&self) -> PublicKey {
-// TODO: need to store escrow_kix somewhere and increment for new contracts
-        let secp = Secp256k1::new();
-        let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
-        let escrow_pubkey = self.xpubkey.derive_pub(&secp, &path).unwrap();
-        escrow_pubkey.public_key
-    }
-
     pub fn create_contract(&self, p2_contract_info: PlayerContractInfo, amount: Amount, arbiter_pubkey: PublicKey ) -> Contract {
 
-        let p1_pubkey = self.new_escrow_pubkey();
+        let p1_pubkey = self.get_escrow_pubkey();
         let escrow_address = create_escrow_address(&p1_pubkey, &p2_contract_info.escrow_pubkey, &arbiter_pubkey, self.network).unwrap();
         let funding_tx = self.create_funding_tx(&p2_contract_info, amount, &escrow_address);
         let payout_script = create_payout_script(&p1_pubkey, &p2_contract_info.escrow_pubkey, &arbiter_pubkey, &funding_tx, self.network);
@@ -219,5 +212,14 @@ impl PlayerWallet {
             input,
             output,
         }
+    }
+}
+
+impl EscrowWallet for PlayerWallet {
+    fn get_escrow_pubkey(&self) -> PublicKey {
+        let secp = Secp256k1::new();
+        let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
+        let escrow_pubkey = self.xpubkey.derive_pub(&secp, &path).unwrap();
+        escrow_pubkey.public_key
     }
 }
