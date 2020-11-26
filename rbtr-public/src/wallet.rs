@@ -79,6 +79,17 @@ impl Wallet {
             escrow_kix: ESCROW_KIX,
         }
     }
+
+    pub fn validate_contract(&self, contract: &Contract) -> Result<()> {
+        Err(TgError("invalid contract"))
+    }
+
+    pub fn validate_payout(&self, payout: &Payout) -> Result<()> {
+        if self.validate_contract(&payout.contract).is_ok() {
+
+        }
+        Err(TgError("invalid payout"))
+    }
 }
 
 impl EscrowWallet for Wallet {

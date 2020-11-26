@@ -44,10 +44,6 @@ impl From<ExtendedPubKey> for ArbiterId {
     }
 }
 
-pub struct Arbiter {
-    id:     ArbiterId,
-}
-
 pub trait ArbiterService {
     fn get_escrow_pubkey(&self) -> Result<PublicKey>;
     fn get_fee_address(&self) -> Result<Address>;

@@ -47,7 +47,7 @@ async fn main() {
 
     let escrow_pubkey = wallet().get_escrow_pubkey();
     let fee_address = warp::any().map(move || Address::p2wpkh(&escrow_pubkey, NETWORK).unwrap());
-    let escrow_pubkey = warp::any().map(move || hex::encode(escrow_pubkey.to_bytes()));
+    let escrow_pubkey = warp::any().map(move || escrow_pubkey.clone());
 
     let get_escrow_pubkey = warp::path("escrow-pubkey")
         .and(escrow_pubkey)
@@ -58,11 +58,15 @@ async fn main() {
         .map(|f| format!("fee address:   {:?}", f)); 
 
     let submit_contract = warp::path("submit-contract")
-        .and(escrow_pubkey)
         .and(warp::path::param::<String>())
-        .map(|e, contract_hex| {
+        .map(|contract_hex| {
             match Contract::from_bytes(hex::decode(contract_hex).unwrap()) {
-                Ok(c) => format!("contract: {:?}", c),
+                Ok(c) => {
+                    match wallet().validate_contract(&c) {
+                        Ok(_) => format!("contract: {:?}", c),
+                        Err(e) => format!("err: {:?}", e)
+                    }
+                },
                 Err(e) => format!("err:      {:?}", e),
             }
         });
@@ -71,7 +75,12 @@ async fn main() {
         .and(warp::path::param::<String>())
         .map(|payout_hex| {
             match Payout::from_bytes(hex::decode(payout_hex).unwrap()) {
-                Ok(p) => format!("payout: {:?}", p),
+                Ok(p) => {
+                    match wallet().validate_payout(&p) {
+                        Ok(_) => format!("payout: {:?}", p),
+                        Err(e) => format!("err: {:?}", e)
+                    }
+                },
                 Err(e) => format!("err:    {:?}", e),
             }
         });

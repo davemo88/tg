@@ -108,10 +108,6 @@ impl Contract {
             Err(TgError("couldn't parse contract"))
         }
     }
-
-    pub fn validate(&self) -> Result<ArbiterId> {
-        Err(TgError("invalid contract"))
-    }
 //
 }
 fn contract(input: &[u8]) ->IResult<&[u8], Contract> {
