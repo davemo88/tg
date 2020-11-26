@@ -271,7 +271,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 let contracts = wallet.db.all_contracts().unwrap();
                 for c in contracts {
                     if c.cxid == a.value_of("cxid").unwrap() {
-                        let contract = Contract::from_bytes(hex::decode(c.hex).unwrap());
+                        let contract = Contract::from_bytes(hex::decode(c.hex).unwrap()).unwrap();
                         println!("{:?}", contract);
                         break;
                     }
@@ -286,7 +286,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                             Message::from_slice(&hex::decode(c.cxid.clone()).unwrap()).unwrap(),
                             DerivationPath::from_str(&format!("m/{}/{}/{}", BITCOIN_ACCOUNT_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(),
                         ).unwrap();
-                        let mut contract = Contract::from_bytes(hex::decode(c.hex.clone()).unwrap());
+                        let mut contract = Contract::from_bytes(hex::decode(c.hex.clone()).unwrap()).unwrap();
                         contract.sigs.push(sig);
                         wallet.db.add_signature(c.cxid, hex::encode(contract.to_bytes()));
                         assert_ne!(hex::encode(contract.to_bytes()), c.hex);
@@ -375,7 +375,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 let contracts = wallet.db.all_contracts().unwrap();
                 for c in contracts {
                     if c.cxid == a.value_of("cxid").unwrap() {
-                        let contract = Contract::from_bytes(hex::decode(c.hex).unwrap());
+                        let contract = Contract::from_bytes(hex::decode(c.hex).unwrap()).unwrap();
                         let payout = tglib::wallet::create_payout(&contract, &Address::from_str(a.value_of("address").unwrap()).unwrap());
                         wallet.db.insert_payout(db::PayoutRecord::from(payout));
                         break;

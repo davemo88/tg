@@ -5,12 +5,14 @@ use bdk::bitcoin::{
     }
 };
 use crate::{
+    Result,
+    TgError,
     contract::{
         Contract,
     },
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Payout {
     pub contract:        Contract,
     pub tx:              Transaction,
@@ -24,6 +26,10 @@ impl Payout {
             tx,
             script_sig: None,
         }
+    }
+
+    pub fn from_bytes(bytes: Vec<u8>) -> Result<Payout> {
+        Err(TgError("couldn't parse payout"))
     }
 }
 

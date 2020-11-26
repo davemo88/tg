@@ -25,6 +25,7 @@ use bdk::bitcoin::{
 };
 use crate::{
     Result,
+    TgError,
     contract::Contract,
     payout::Payout,
 };

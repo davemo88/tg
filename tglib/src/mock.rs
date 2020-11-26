@@ -64,8 +64,8 @@ pub const ESCROW_KIX: &'static str = "0";
 pub const PLAYER_1_MNEMONIC: &'static str = "deny income tiger glove special recycle cup surface unusual sleep speed scene enroll finger protect dice powder unit";
 pub const PLAYER_2_MNEMONIC: &'static str = "carry tooth vague volcano refuse purity bike owner diary dignity toe body notable foil hedgehog mesh dream shock";
 pub const ARBITER_MNEMONIC: &'static str = "meadow found language where fringe casual print marine segment throw old tackle industry chest screen group huge output";
-pub const ARBITER_FINGERPRINT: &'static str = "";
-pub const ARBITER_XPUBKEY: &'static str = "";
+pub const ARBITER_FINGERPRINT: &'static str = "1af44eee";
+pub const ARBITER_XPUBKEY: &'static str = "tpubDCoCzmZtfuft3oM8Y5RnaT5GFq27NR7iYLbj5r1HZyfbgMAT1AAeAxCoyMnKGQ67GAeZDcekJgsaSMTb7SpmRJ3vGbPXZxDToKHTRa3mBS2";
 
 pub struct MockWallet {
     fingerprint: Fingerprint,

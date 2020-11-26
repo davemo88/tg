@@ -1,10 +1,12 @@
 use std::{
     str::FromStr,
-    env::current_dir,
 };
 use bdk::{
     Wallet as BdkWallet,
-    database::MemoryDatabase,
+    database::{
+        BatchDatabase,
+        MemoryDatabase,
+    },
     electrum_client::Client,
     bitcoin::{
         Address,
@@ -27,6 +29,7 @@ use bdk::{
         ElectrumBlockchain,
     },
 };
+use sled;
 use tglib::{
     Result,
     TgError,
@@ -50,7 +53,8 @@ pub struct Wallet {
     xpubkey: ExtendedPubKey,
     network: Network,
     escrow_kix: u64,
-    pub wallet: BdkWallet<ElectrumBlockchain, MemoryDatabase>,
+//    pub wallet: BdkWallet<ElectrumBlockchain, MemoryDatabase>,
+    pub wallet: BdkWallet<ElectrumBlockchain, sled::Tree>,
 }
 
 impl Wallet {
@@ -59,7 +63,6 @@ impl Wallet {
         let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
         let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
         let client = Client::new(ELECTRS_SERVER, None).unwrap();
-        let mut db_path = current_dir().unwrap();
 
         Wallet {
             fingerprint,
@@ -69,7 +72,8 @@ impl Wallet {
                 &external_descriptor,
                 Some(&internal_descriptor),
                 network,
-                MemoryDatabase::default(),
+                sled::open("wallet").unwrap().open_tree("wallet-db").unwrap(),
+//                MemoryDatabase::default(),
                 ElectrumBlockchain::from(client)
             ).unwrap(),
             escrow_kix: ESCROW_KIX,
@@ -92,14 +96,14 @@ impl ArbiterService for Wallet {
     }
 
     fn get_fee_address(&self) -> Result<Address> {
-        Ok((self.wallet.get_new_address().unwrap()))
+        Ok(self.wallet.get_new_address().unwrap())
     }
 
-    fn submit_contract(&self, contract: &Contract) -> Result<Signature> {
+    fn submit_contract(&self, _contract: &Contract) -> Result<Signature> {
         Err(TgError("invalid contract"))
     }
 
-    fn submit_payout(&self, payout: &Payout) -> Result<Transaction> {
+    fn submit_payout(&self, _payout: &Payout) -> Result<Transaction> {
         Err(TgError("invalid payout"))
     }
 }

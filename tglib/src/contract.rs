@@ -99,10 +99,18 @@ impl Contract {
         v
     }
 
-    pub fn from_bytes(bytes: Vec<u8>) ->Contract {
+    pub fn from_bytes(bytes: Vec<u8>) -> Result<Contract> {
         let (i, c) = contract(&bytes).unwrap();
-        assert_eq!(i.len(),0);
-        c
+        if i.len() == 0 {
+            Ok(c)
+        }
+        else {
+            Err(TgError("couldn't parse contract"))
+        }
+    }
+
+    pub fn validate(&self) -> Result<ArbiterId> {
+        Err(TgError("invalid contract"))
     }
 //
 }
