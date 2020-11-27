@@ -1,6 +1,8 @@
-FROM rust:alpine
+FROM rust:buster
 
 ADD tglib/ tglib/
 ADD rbtr-public/ rbtr-public/
 
 RUN cargo build --manifest-path=rbtr-public/Cargo.toml
+
+CMD ["cargo", "run", "--manifiest-path", "rbtr-public/Cargo.toml"]

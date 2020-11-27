@@ -271,8 +271,9 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 let contracts = wallet.db.all_contracts().unwrap();
                 for c in contracts {
                     if c.cxid == a.value_of("cxid").unwrap() {
-                        let contract = Contract::from_bytes(hex::decode(c.hex).unwrap()).unwrap();
+                        let contract = Contract::from_bytes(hex::decode(c.hex.clone()).unwrap()).unwrap();
                         println!("{:?}", contract);
+                        println!("hex: {}", c.hex);
                         break;
                     }
                 }

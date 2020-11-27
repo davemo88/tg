@@ -22,3 +22,4 @@ player-app/*.key
 player-app/*.mobileprovision
 player-app/*.orig.*
 player-app/web-build/
+wallet-db/

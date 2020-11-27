@@ -61,8 +61,8 @@ pub struct Wallet {
     xpubkey: ExtendedPubKey,
     network: Network,
     escrow_kix: u64,
-//    pub wallet: BdkWallet<ElectrumBlockchain, MemoryDatabase>,
-    pub wallet: BdkWallet<ElectrumBlockchain, sled::Tree>,
+    pub wallet: BdkWallet<ElectrumBlockchain, MemoryDatabase>,
+//    pub wallet: BdkWallet<ElectrumBlockchain, sled::Tree>,
 }
 
 impl Wallet {
@@ -80,8 +80,8 @@ impl Wallet {
                 &external_descriptor,
                 Some(&internal_descriptor),
                 network,
-                sled::open("wallet").unwrap().open_tree("wallet-db").unwrap(),
-//                MemoryDatabase::default(),
+//                sled::open("wallet-db").unwrap().open_tree("wallet-db").unwrap(),
+                MemoryDatabase::default(),
                 ElectrumBlockchain::from(client)
             ).unwrap(),
             escrow_kix: ESCROW_KIX,

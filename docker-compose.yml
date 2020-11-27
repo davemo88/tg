@@ -11,6 +11,7 @@ services:
       - logvolume01:/var/log
     links:
       - redis
+      - electrs
   rbtr-private:
     build: 
         context: .
@@ -24,5 +25,10 @@ services:
       - redis
   redis:
     image: redis
+  electrs:
+    image: bitcoindevkit/electrs
+    ports:
+      - "18443-18444:18443-18444"
+      - "60401:60401"
 volumes:
   logvolume01: {}
