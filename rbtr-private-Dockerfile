@@ -1,0 +1,7 @@
+FROM rust:alpine
+
+ADD tglib/ tglib/
+ADD rbtr-private/ rbtr-private/
+
+RUN cargo build --manifest-path=rbtr-private/Cargo.toml
+

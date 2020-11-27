@@ -93,13 +93,6 @@ impl DB {
             "INSERT INTO player (id, name) VALUES (?1, ?2)",
             params![player.id.0, player.name],
          )
-//         match self.conn.execute(
-//            "INSERT INTO player (id, name) VALUES (?1, ?2)",
-//            params![player.id.0, player.name],
-//         ) {
-//             Ok(_) => Ok(()),
-//             Err(e) => Err(e),
-//         }
     }
 
     pub fn insert_contract(&self, contract: ContractRecord) -> Result<usize> {
