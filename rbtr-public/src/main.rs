@@ -19,7 +19,10 @@ use bip39::Mnemonic;
 use hex::decode;
 use redis::{
     self,
-    Commands,
+    AsyncCommands,
+    FromRedisValue,
+    RedisResult,
+    aio::Connection,
 };
 use tokio::{
     sync::{
@@ -29,8 +32,12 @@ use tokio::{
 };
 use warp::{
     Filter,
+    Reply,
+    Rejection,
 };
 use tglib::{
+    Result,
+    TgError,
     contract::Contract,
     payout::Payout,
     wallet::{
@@ -49,15 +56,46 @@ use tglib::{
 mod wallet;
 use wallet::Wallet;
 
-type RedisClient = Arc<RwLock<redis::Client>>;
+type WebResult<T> = std::result::Result<T, Rejection>;
+#[derive(Debug)]
+struct Error;
+impl warp::reject::Reject for Error {}
 
 fn wallet() -> Wallet {
     Wallet::new(Fingerprint::from_str(ARBITER_FINGERPRINT).unwrap(), ExtendedPubKey::from_str(ARBITER_XPUBKEY).unwrap(), NETWORK)
 }
 
-async fn push_contract(client: RedisClient, contract: &Contract, hex: String) {
-    let mut conn: redis::Connection = client.read().await.get_connection().unwrap();
-    let _: () = conn.set(hex::encode(contract.cxid()), hex).unwrap();
+async fn get_con(client: redis::Client) -> Connection {
+    client
+        .get_async_connection()
+        .await
+        .unwrap()
+}
+
+async fn push_contract(con: &mut Connection, cxid: &str, hex: &str, ttl_seconds: usize) -> RedisResult<String> {
+    con.set(cxid, hex).await?;
+    Ok(String::from(cxid))
+}
+
+async fn push_payout(con: &mut Connection, cxid: &str, hex: &str, ttl_seconds: usize) -> RedisResult<String> {
+    con.set(cxid, hex).await?;
+    Ok(String::from(cxid))
+}
+
+async fn contract_handler(contract_hex: String, client: redis::Client) -> WebResult<impl Reply> {
+    let mut con = get_con(client).await;
+    let cxid = push_contract(&mut con, "hello", "direct_world", 60)
+    .await
+    .unwrap();
+    Ok(cxid)
+}
+
+async fn payout_handler(payout_hex: String, client: redis::Client) -> WebResult<impl Reply> {
+    let mut con = get_con(client).await;
+    let cxid = push_payout(&mut con, "hello", "direct_world", 60)
+    .await
+    .unwrap();
+    Ok(cxid)
 }
 
 #[tokio::main]
@@ -66,8 +104,8 @@ async fn main() {
     let escrow_pubkey = wallet().get_escrow_pubkey();
     let fee_address = warp::any().map(move || Address::p2wpkh(&escrow_pubkey, NETWORK).unwrap());
     let escrow_pubkey = warp::any().map(move || escrow_pubkey.clone());
-    let client = Arc::from(RwLock::from(redis::Client::open(REDIS_SERVER).unwrap()));
-    let redis = warp::any().map(move || client.clone());
+    let redis_client = redis::Client::open(REDIS_SERVER).unwrap();
+    let redis_client = warp::any().map(move || redis_client.clone());
 
     let get_escrow_pubkey = warp::path("escrow-pubkey")
         .and(escrow_pubkey)
@@ -79,35 +117,13 @@ async fn main() {
 
     let submit_contract = warp::path("submit-contract")
         .and(warp::path::param::<String>())
-        .and(redis)
-        .map(|contract_hex: String, r: RedisClient| {
-            match Contract::from_bytes(hex::decode(contract_hex.clone()).unwrap()) {
-                Ok(c) => {
-                    match wallet().validate_contract(&c) {
-                        Ok(()) => {
-                            push_contract(r.clone(), &c.clone(), contract_hex).await;
-                            format!("contract {:?} submitted", c.cxid())
-                        }
-                        Err(e) => format!("err: {:?}", e)
-                    }
-                },
-                Err(e) => format!("err:      {:?}", e),
-            }
-        });
+        .and(redis_client.clone())
+        .and_then(contract_handler);
 
     let submit_payout = warp::path("submit-payout")
         .and(warp::path::param::<String>())
-        .map(|payout_hex| {
-            match Payout::from_bytes(hex::decode(payout_hex).unwrap()) {
-                Ok(p) => {
-                    match wallet().validate_payout(&p) {
-                        Ok(_) => format!("payout: {:?}", p),
-                        Err(e) => format!("err: {:?}", e)
-                    }
-                },
-                Err(e) => format!("err:    {:?}", e),
-            }
-        });
+        .and(redis_client.clone())
+        .and_then(payout_handler);
 
     let routes = get_escrow_pubkey
         .or(get_fee_address)

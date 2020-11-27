@@ -2,7 +2,7 @@ version: "3.8"
 services:
   rbtr-public:
     build:
-        context: ./
+        context: .
         dockerfile: rbtr-public-Dockerfile
     ports:
       - "5000:5000"
@@ -13,7 +13,7 @@ services:
       - redis
   rbtr-private:
     build: 
-        context: ./
+        context: .
         dockerfile: rbtr-private-Dockerfile
     ports:
       - "35000:35000"
