@@ -57,24 +57,24 @@ mod wallet;
 use wallet::Wallet;
 
 type WebResult<T> = std::result::Result<T, Rejection>;
-#[derive(Debug)]
-struct Error;
-impl warp::reject::Reject for Error {}
 
 fn wallet() -> Wallet {
     Wallet::new(Fingerprint::from_str(ARBITER_FINGERPRINT).unwrap(), ExtendedPubKey::from_str(ARBITER_XPUBKEY).unwrap(), NETWORK)
 }
 
 async fn get_con(client: redis::Client) -> Connection {
-    client
-        .get_async_connection()
-        .await
-        .unwrap()
+    client.get_async_connection().await.unwrap()
 }
 
-async fn push_contract(con: &mut Connection, cxid: &str, hex: &str, ttl_seconds: usize) -> RedisResult<String> {
-    con.set(cxid, hex).await?;
-    Ok(String::from(cxid))
+async fn payout_handler(payout_hex: String, client: redis::Client) -> WebResult<impl Reply> {
+    let payout = Payout::from_bytes(hex::decode(payout_hex.clone()).unwrap()).unwrap();
+    if wallet().validate_payout(&payout).is_ok() {
+        let mut con = get_con(client).await;
+        let cxid = push_payout(&mut con, &hex::encode(payout.contract.cxid()), &payout_hex, 60).await.unwrap();
+        Ok(cxid)
+    } else {
+        Err(warp::reject())
+    }
 }
 
 async fn push_payout(con: &mut Connection, cxid: &str, hex: &str, ttl_seconds: usize) -> RedisResult<String> {
@@ -83,19 +83,19 @@ async fn push_payout(con: &mut Connection, cxid: &str, hex: &str, ttl_seconds: u
 }
 
 async fn contract_handler(contract_hex: String, client: redis::Client) -> WebResult<impl Reply> {
-    let mut con = get_con(client).await;
-    let cxid = push_contract(&mut con, "hello", "direct_world", 60)
-    .await
-    .unwrap();
-    Ok(cxid)
+    let contract = Contract::from_bytes(hex::decode(contract_hex.clone()).unwrap()).unwrap();
+    if wallet().validate_contract(&contract).is_ok() {
+        let mut con = get_con(client).await;
+        let cxid = push_contract(&mut con, &hex::encode(contract.cxid()), &contract_hex, 60).await.unwrap();
+        Ok(cxid)
+    } else {
+        Err(warp::reject())
+    }
 }
 
-async fn payout_handler(payout_hex: String, client: redis::Client) -> WebResult<impl Reply> {
-    let mut con = get_con(client).await;
-    let cxid = push_payout(&mut con, "hello", "direct_world", 60)
-    .await
-    .unwrap();
-    Ok(cxid)
+async fn push_contract(con: &mut Connection, cxid: &str, hex: &str, ttl_seconds: usize) -> RedisResult<String> {
+    con.set(cxid, hex).await?;
+    Ok(String::from(cxid))
 }
 
 #[tokio::main]
