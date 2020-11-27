@@ -42,6 +42,12 @@ use crate::{
     script::{
         parser::tg_script,
         TgScript,
+    },
+    wallet::{
+        create_escrow_address,
+    },
+    mock::{
+        NETWORK,
     }
 };
 
@@ -107,6 +113,16 @@ impl Contract {
         else {
             Err(TgError("couldn't parse contract"))
         }
+    }
+
+    pub fn amount(&self) -> Result<Amount> {
+        let escrow_address = create_escrow_address(&self.p1_pubkey, &self.p2_pubkey, &self.arbiter_pubkey, NETWORK).unwrap();
+        for (i, txout) in self.funding_tx.output.iter().enumerate() {
+            if txout.script_pubkey == escrow_address.script_pubkey() {
+                return Ok(Amount::from_sat(txout.value))
+            }
+        }
+        Err(TgError("couldn't determine amount"))
     }
 //
 }

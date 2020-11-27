@@ -14,6 +14,7 @@ use bdk::{
         PublicKey,
         Transaction,
         secp256k1::{
+            Message,
             Secp256k1,
             Signature,
         },
@@ -36,13 +37,20 @@ use tglib::{
     arbiter::ArbiterService,
     contract::Contract,
     payout::Payout,
+    script::{
+        TgScriptEnv,
+    },
     wallet::{
+        create_escrow_address,
+        create_payout_script,
+        create_payout,
         EscrowWallet,
         BITCOIN_ACCOUNT_PATH,
         ESCROW_SUBACCOUNT,
     },
     mock::{
         ELECTRS_SERVER,
+        NETWORK,
     }
 };
 
@@ -81,12 +89,67 @@ impl Wallet {
     }
 
     pub fn validate_contract(&self, contract: &Contract) -> Result<()> {
-        Err(TgError("invalid contract"))
+        if contract.arbiter_pubkey != EscrowWallet::get_escrow_pubkey(self) {
+            return Err(TgError("unexpected arbiter pubkey"));
+        }
+        let escrow_address = create_escrow_address(
+            &contract.p1_pubkey,
+            &contract.p2_pubkey,
+            &contract.arbiter_pubkey,
+            NETWORK,
+        ).unwrap();
+        let escrow_script_pubkey = escrow_address.script_pubkey();
+        let amount = contract.amount()?;
+        let fee_address = self.get_fee_address()?;
+        let fee_script_pubkey = fee_address.script_pubkey();
+        let fee_amount = amount/100;
+
+        let mut correct_fee = false;
+
+        for txout in contract.funding_tx.clone().output {
+            correct_fee = (txout.script_pubkey == fee_script_pubkey && txout.value == fee_amount.as_sat()) || correct_fee; 
+        }
+
+        if !correct_fee {
+            return Err(TgError("funding transaction does not contain correct fee"));
+        }
+
+        let payout_script = create_payout_script(
+            &contract.p1_pubkey,
+            &contract.p2_pubkey,
+            &contract.arbiter_pubkey,
+            &contract.funding_tx,
+            NETWORK,
+        );
+
+        if contract.payout_script != payout_script {
+            return Err(TgError("invalid payout script"));
+        }
+
+        let secp = Secp256k1::new();
+        let msg = Message::from_slice(&contract.cxid()).unwrap();
+
+        for (i, sig) in contract.sigs.iter().enumerate() {
+            let pubkey = match i {
+                0 => &contract.p1_pubkey.key,
+                1 => &contract.p2_pubkey.key,
+                2 => &contract.arbiter_pubkey.key,
+                _ => return Err(TgError("too many signatures")),
+            };
+            if secp.verify(&msg, &sig, &pubkey).is_err() {
+                return Err(TgError("invalid signature"))
+            }
+        }
+        Ok(())
     }
 
     pub fn validate_payout(&self, payout: &Payout) -> Result<()> {
         if self.validate_contract(&payout.contract).is_ok() {
-
+            if payout.tx.txid() != create_payout(&payout.contract, &payout.address().unwrap()).tx.txid() {
+                return Err(TgError("invalid payout"));
+            }
+            let mut env = TgScriptEnv::new(payout.clone());
+            return env.validate_payout()
         }
         Err(TgError("invalid payout"))
     }
@@ -94,9 +157,8 @@ impl Wallet {
 
 impl EscrowWallet for Wallet {
     fn get_escrow_pubkey(&self) -> PublicKey {
-        let secp = Secp256k1::new();
         let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, self.escrow_kix))).unwrap();
-        let escrow_pubkey = self.xpubkey.derive_pub(&secp, &path).unwrap();
+        let escrow_pubkey = self.xpubkey.derive_pub(&Secp256k1::new(), &path).unwrap();
         escrow_pubkey.public_key
     }
 }
@@ -107,7 +169,8 @@ impl ArbiterService for Wallet {
     }
 
     fn get_fee_address(&self) -> Result<Address> {
-        Ok(self.wallet.get_new_address().unwrap())
+        let a = self.xpubkey.derive_pub(&Secp256k1::new(), &DerivationPath::from_str("m/0/0").unwrap()).unwrap();
+        Ok(Address::p2wpkh(&a.public_key, self.network).unwrap())
     }
 
     fn submit_contract(&self, _contract: &Contract) -> Result<Signature> {

@@ -1,4 +1,5 @@
 use bdk::bitcoin::{
+    Address,
     Transaction,
     secp256k1::{
         Signature,
@@ -10,6 +11,9 @@ use crate::{
     contract::{
         Contract,
     },
+    mock::{
+        NETWORK,
+    }
 };
 
 #[derive(Clone, Debug)]
@@ -30,6 +34,16 @@ impl Payout {
 
     pub fn from_bytes(bytes: Vec<u8>) -> Result<Payout> {
         Err(TgError("couldn't parse payout"))
+    }
+
+    pub fn address(&self) -> Result<Address> {
+        let amount = self.contract.amount()?;
+        for txout in self.tx.output.clone() {
+            if txout.value == amount.as_sat() {
+                return Ok(Address::from_script(&txout.script_pubkey, NETWORK).unwrap())
+            }
+        };
+        Err(TgError("couldn't determine payout address"))
     }
 }
 
