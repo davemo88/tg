@@ -8,6 +8,8 @@
 /player-wallet/Cargo.lock
 /rbtr-public/target
 /rbtr-public/Cargo.lock
+/rbtr-private/target
+/rbtr-private/Cargo.lock
 testnet/
 regtest/
 player-app/node_modules/**/*

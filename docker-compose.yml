@@ -1,0 +1,24 @@
+version: "3.8"
+services:
+  rbtr-public:
+    build: ./rbtr-public
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/code
+      - logvolume01:/var/log
+    links:
+      - redis
+  rbtr-private:
+    build: ./rbtr-private
+    ports:
+      - "35000:35000"
+    volumes:
+      - .:/code
+      - logvolume01:/var/log
+    links:
+      - redis
+  redis:
+    image: redis
+volumes:
+  logvolume01: {}
