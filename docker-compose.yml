@@ -9,9 +9,6 @@ services:
     volumes:
       - .:/code
       - logvolume01:/var/log
-    links:
-      - redis
-      - electrs
   rbtr-private:
     build: 
         context: .
@@ -21,8 +18,6 @@ services:
     volumes:
       - .:/code
       - logvolume01:/var/log
-    links:
-      - redis
   redis:
     image: redis
   electrs:

@@ -3,6 +3,8 @@ use std::{
     sync::{
         Arc,
     },
+    thread::sleep,
+    time::Duration,
 };
 use bdk::{
     bitcoin::{
@@ -14,6 +16,13 @@ use bdk::{
             }
         }
     },
+    blockchain::{
+        ElectrumBlockchain,
+    },
+    database::{
+        MemoryDatabase,
+    },
+    electrum_client::Client,
 };
 use bip39::Mnemonic;
 use hex::decode;
@@ -38,6 +47,7 @@ use warp::{
 use tglib::{
     Result,
     TgError,
+    arbiter::ArbiterService,
     contract::Contract,
     payout::Payout,
     wallet::{
@@ -48,6 +58,7 @@ use tglib::{
         Trezor,
         ARBITER_FINGERPRINT,
         ARBITER_XPUBKEY,
+        ELECTRS_SERVER,
         NETWORK,
         REDIS_SERVER,
     },
@@ -58,8 +69,15 @@ use wallet::Wallet;
 
 type WebResult<T> = std::result::Result<T, Rejection>;
 
-fn wallet() -> Wallet {
-    Wallet::new(Fingerprint::from_str(ARBITER_FINGERPRINT).unwrap(), ExtendedPubKey::from_str(ARBITER_XPUBKEY).unwrap(), NETWORK)
+fn wallet() -> Wallet<ElectrumBlockchain, MemoryDatabase> {
+    let mut client = Client::new(ELECTRS_SERVER, None);
+    while client.is_err() {
+        println!("connection to electrs failed");
+        sleep(Duration::from_secs(1));
+        client = Client::new(ELECTRS_SERVER, None);
+    }
+    println!("connection to electrs succeeded");
+    Wallet::<ElectrumBlockchain, MemoryDatabase>::new(Fingerprint::from_str(ARBITER_FINGERPRINT).unwrap(), ExtendedPubKey::from_str(ARBITER_XPUBKEY).unwrap(), ElectrumBlockchain::from(client.unwrap()), NETWORK).unwrap()
 }
 
 async fn get_con(client: redis::Client) -> Connection {
@@ -101,8 +119,10 @@ async fn push_contract(con: &mut Connection, cxid: &str, hex: &str, ttl_seconds:
 #[tokio::main]
 async fn main() {
 
-    let escrow_pubkey = wallet().get_escrow_pubkey();
-    let fee_address = warp::any().map(move || Address::p2wpkh(&escrow_pubkey, NETWORK).unwrap());
+    let wallet = wallet();
+    let escrow_pubkey = EscrowWallet::get_escrow_pubkey(&wallet);
+    let fee_address = wallet.get_fee_address().unwrap();
+    let fee_address = warp::any().map(move || fee_address.clone());
     let escrow_pubkey = warp::any().map(move || escrow_pubkey.clone());
     let redis_client = redis::Client::open(REDIS_SERVER).unwrap();
     let redis_client = warp::any().map(move || redis_client.clone());
@@ -130,5 +150,5 @@ async fn main() {
         .or(submit_contract)
         .or(submit_payout);
 
-    warp::serve(routes).run(([127, 0, 0, 1], 5000)).await;
+    warp::serve(routes).run(([0, 0, 0, 0], 5000)).await;
 }
