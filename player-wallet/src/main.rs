@@ -57,6 +57,7 @@ use tglib::{
     TgError,
     arbiter::{
         ArbiterId,
+        ArbiterService,
     },
     contract::{
         Contract,
@@ -72,10 +73,9 @@ use tglib::{
         SigningWallet,
     },
     mock::{
-        ArbiterService,
-        PlayerInfoService,
         Trezor,
         ARBITER_MNEMONIC,
+        ARBITER_PUBLIC_URL,
         DB_NAME,
         NETWORK,
         PLAYER_1_MNEMONIC,
@@ -84,12 +84,14 @@ use tglib::{
     },
 };
 
+mod arbiter;
 mod db;
 mod ui;
 mod wallet;
 use wallet::{
     PlayerWallet,
 };
+use arbiter::ArbiterClient;
 use ui::wallet_subcommand;
 
 fn repl<'a, 'b>() -> App<'a, 'b> {
@@ -170,7 +172,7 @@ fn main() -> Result<(), Error> {
 mod tests {
 
     use super::*;
-    use mock::BITCOIN_RPC_URL;
+    use tglib::mock::BITCOIN_RPC_URL;
     use bitcoincore_rpc::{Auth, Client as RpcClient, RpcApi, json::EstimateMode};
     use tglib::wallet::{
         BITCOIN_ACCOUNT_PATH,
@@ -191,7 +193,7 @@ mod tests {
         let p2_wallet = PlayerWallet::new(p2_signing_wallet.fingerprint(), p2_signing_wallet.xpubkey(), NETWORK);
         let p2_addr = p2_wallet.new_address();
 
-        let rpc = RpcClient::new(BITCOIN_RPC_URL.to_string(), Auth::UserPass("admin".to_string(), "passw".to_string())).unwrap();
+        let rpc = RpcClient::new("http://127.0.0.1:18443".to_string(), Auth::UserPass("admin".to_string(), "passw".to_string())).unwrap();
         let coinbase_addr = rpc.get_new_address(None, None).unwrap();
         let txid1 = rpc.send_to_address(&p1_addr, Amount::ONE_BTC, None, None, None, None, None, Some(EstimateMode::Conservative)).unwrap();
         let txid2 = rpc.send_to_address(&p2_addr, Amount::ONE_BTC, None, None, None, None, None,Some(EstimateMode::Conservative)).unwrap();
@@ -203,16 +205,18 @@ mod tests {
     fn create_contract() -> Contract {
         let p1_signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap()); 
         let p1_wallet = PlayerWallet::new(p1_signing_wallet.fingerprint(), p1_signing_wallet.xpubkey(), NETWORK);
-        let p2_contract_info = PlayerInfoService::get_contract_info(&PlayerId(String::from("player 2")));
-        let arbiter_pubkey = ArbiterService::get_escrow_pubkey();
+        let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
+        let arbiter_pubkey = arbiter_client.get_escrow_pubkey().unwrap();
+        let p2_contract_info = arbiter_client.get_player_info(PlayerId(String::from("player 2"))).unwrap();
         p1_wallet.create_contract(p2_contract_info, Amount::from_sat(SATS), arbiter_pubkey)
     }
 
     fn create_signed_contract() -> Contract {
         let p1_signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap()); 
         let p1_wallet = PlayerWallet::new(p1_signing_wallet.fingerprint(), p1_signing_wallet.xpubkey(), NETWORK);
-        let p2_contract_info = PlayerInfoService::get_contract_info(&PlayerId(String::from("player 2")));
-        let arbiter_pubkey = ArbiterService::get_escrow_pubkey();
+        let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
+        let arbiter_pubkey = arbiter_client.get_escrow_pubkey().unwrap();
+        let p2_contract_info = arbiter_client.get_player_info(PlayerId(String::from("player 2"))).unwrap();
         let mut contract = p1_wallet.create_contract(p2_contract_info, Amount::from_sat(SATS), arbiter_pubkey);
         let cxid = contract.cxid();
         
@@ -254,7 +258,8 @@ mod tests {
 // verify signatures
         let contract = create_signed_contract();
 
-        let arbiter_pubkey = ArbiterService::get_escrow_pubkey();
+        let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
+        let arbiter_pubkey = arbiter_client.get_escrow_pubkey().unwrap();
 
         let escrow_address = create_escrow_address(
             &contract.p1_pubkey,
@@ -264,7 +269,7 @@ mod tests {
         ).unwrap();
         let escrow_script_pubkey = escrow_address.script_pubkey();
         let amount = SATS;
-        let fee_address = ArbiterService::get_fee_address();
+        let fee_address = arbiter_client.get_fee_address().unwrap();
         let fee_script_pubkey = fee_address.script_pubkey();
         let fee_amount = amount/100;
 

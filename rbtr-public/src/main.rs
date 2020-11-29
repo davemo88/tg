@@ -6,9 +6,11 @@ use std::{
     thread::sleep,
     time::Duration,
 };
+use serde_json;
 use bdk::{
     bitcoin::{
         Address,
+        PublicKey,
         util::{
             bip32::{
                 ExtendedPubKey,
@@ -50,6 +52,7 @@ use tglib::{
     arbiter::ArbiterService,
     contract::Contract,
     payout::Payout,
+    player::PlayerId,
     wallet::{
         EscrowWallet,
         SigningWallet,
@@ -80,6 +83,22 @@ fn wallet() -> Wallet<ElectrumBlockchain, MemoryDatabase> {
     Wallet::<ElectrumBlockchain, MemoryDatabase>::new(Fingerprint::from_str(ARBITER_FINGERPRINT).unwrap(), ExtendedPubKey::from_str(ARBITER_XPUBKEY).unwrap(), ElectrumBlockchain::from(client.unwrap()), NETWORK).unwrap()
 }
 
+async fn contract_handler(contract_hex: String, client: redis::Client) -> WebResult<impl Reply> {
+    let contract = Contract::from_bytes(hex::decode(contract_hex.clone()).unwrap()).unwrap();
+    if wallet().validate_contract(&contract).is_ok() {
+        let mut con = get_con(client).await;
+        let cxid = push_contract(&mut con, &contract_hex, 60).await.unwrap();
+        Ok(cxid)
+    } else {
+        Err(warp::reject())
+    }
+}
+
+async fn push_contract(con: &mut Connection, hex: &str, ttl_seconds: usize) -> RedisResult<String> {
+    con.rpush("contracts", hex).await?;
+    Ok(String::from("pushed contract"))
+}
+
 async fn get_con(client: redis::Client) -> Connection {
     client.get_async_connection().await.unwrap()
 }
@@ -100,20 +119,9 @@ async fn push_payout(con: &mut Connection, cxid: &str, hex: &str, ttl_seconds: u
     Ok(String::from(cxid))
 }
 
-async fn contract_handler(contract_hex: String, client: redis::Client) -> WebResult<impl Reply> {
-    let contract = Contract::from_bytes(hex::decode(contract_hex.clone()).unwrap()).unwrap();
-    if wallet().validate_contract(&contract).is_ok() {
-        let mut con = get_con(client).await;
-        let cxid = push_contract(&mut con, &hex::encode(contract.cxid()), &contract_hex, 60).await.unwrap();
-        Ok(cxid)
-    } else {
-        Err(warp::reject())
-    }
-}
-
-async fn push_contract(con: &mut Connection, cxid: &str, hex: &str, ttl_seconds: usize) -> RedisResult<String> {
-    con.set(cxid, hex).await?;
-    Ok(String::from(cxid))
+async fn player_info_handler(player_id: String) -> WebResult<impl Reply> {
+    let info = wallet().get_player_info(PlayerId(player_id)).unwrap();
+    Ok(serde_json::to_string(&info).unwrap())
 }
 
 #[tokio::main]
@@ -129,11 +137,11 @@ async fn main() {
 
     let get_escrow_pubkey = warp::path("escrow-pubkey")
         .and(escrow_pubkey)
-        .map(|e| format!("escrow_pubkey: {:?}", e)); 
+        .map(|e: PublicKey | e.to_string()); 
 
     let get_fee_address = warp::path("fee-address")
         .and(fee_address)
-        .map(|f| format!("fee address:   {:?}", f)); 
+        .map(|f: Address| f.to_string()); 
 
     let submit_contract = warp::path("submit-contract")
         .and(warp::path::param::<String>())
@@ -145,10 +153,15 @@ async fn main() {
         .and(redis_client.clone())
         .and_then(payout_handler);
 
+    let player_info = warp::path("info")
+        .and(warp::path::param::<String>())
+        .and_then(player_info_handler);
+
     let routes = get_escrow_pubkey
         .or(get_fee_address)
         .or(submit_contract)
-        .or(submit_payout);
+        .or(submit_payout)
+        .or(player_info);
 
     warp::serve(routes).run(([0, 0, 0, 0], 5000)).await;
 }

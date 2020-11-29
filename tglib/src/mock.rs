@@ -60,6 +60,9 @@ pub const BITCOIN_RPC_URL: &'static str = "http://electrs:18443";
 pub const ELECTRS_SERVER: &'static str = "tcp://electrs:60401";
 pub const REDIS_SERVER: &'static str = "redis://redis/";
 
+pub const CONTRACT_VERSION: u8 = 1;
+pub const PAYOUT_VERSION: u8 = 1;
+//pub const PLAYER_VERSION: u64 = 1;
 pub const ESCROW_KIX: &'static str = "0";
 
 pub const PLAYER_1_MNEMONIC: &'static str = "deny income tiger glove special recycle cup surface unusual sleep speed scene enroll finger protect dice powder unit";
@@ -67,6 +70,7 @@ pub const PLAYER_2_MNEMONIC: &'static str = "carry tooth vague volcano refuse pu
 pub const ARBITER_MNEMONIC: &'static str = "meadow found language where fringe casual print marine segment throw old tackle industry chest screen group huge output";
 pub const ARBITER_FINGERPRINT: &'static str = "1af44eee";
 pub const ARBITER_XPUBKEY: &'static str = "tpubDCoCzmZtfuft3oM8Y5RnaT5GFq27NR7iYLbj5r1HZyfbgMAT1AAeAxCoyMnKGQ67GAeZDcekJgsaSMTb7SpmRJ3vGbPXZxDToKHTRa3mBS2";
+pub const ARBITER_PUBLIC_URL: &'static str = "http://localhost:5000";
 
 pub struct MockWallet {
     fingerprint: Fingerprint,
@@ -103,42 +107,6 @@ impl MockWallet {
                 ElectrumBlockchain::from(client)
             ).unwrap(),
         }
-    }
-}
-
-
-pub struct PlayerInfoService;
-
-impl PlayerInfoService {
-    pub fn get_contract_info(player_id: &PlayerId) -> PlayerContractInfo {
-        let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_2_MNEMONIC).unwrap());
-        let player_wallet = MockWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
-        player_wallet.wallet.sync(noop_progress(), None).unwrap();
-        let escrow_pubkey = player_wallet.get_escrow_pubkey();
-        PlayerContractInfo {
-            escrow_pubkey,
-// TODO: send to internal descriptor, no immediate way to do so atm
-            change_address: player_wallet.wallet.get_new_address().unwrap(),
-            utxos: player_wallet.wallet.list_unspent().unwrap(),
-        }
-    }
-}
-
-pub struct ArbiterService;
-
-impl ArbiterService {
-    pub fn get_escrow_pubkey() -> PublicKey {
-        let signing_wallet = Trezor::new(Mnemonic::parse(ARBITER_MNEMONIC).unwrap());
-        let arbiter_wallet = MockWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
-        arbiter_wallet.get_escrow_pubkey()
-    }
-
-    pub fn get_fee_address() -> Address {
-        let root_key = ExtendedPrivKey::new_master(NETWORK, &Mnemonic::parse(ARBITER_MNEMONIC).unwrap().to_seed("")).unwrap();
-        let secp = Secp256k1::new();
-        let path = DerivationPath::from_str("m/44'/0'/0'/0/0").unwrap();
-        let fee_address_key = root_key.derive_priv(&secp, &path).unwrap();
-        Address::p2wpkh(&PublicKey::from_private_key(&secp, &fee_address_key.private_key), NETWORK).unwrap()
     }
 }
 

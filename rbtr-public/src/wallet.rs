@@ -27,18 +27,24 @@ use bdk::{
         }
     },
     blockchain::{
+        noop_progress,
         Blockchain,
         BlockchainMarker,
         ElectrumBlockchain,
     },
 };
+use bip39::Mnemonic;
 use sled;
 use tglib::{
     Result,
     TgError,
     arbiter::ArbiterService,
-    contract::Contract,
+    contract::{
+        Contract,
+        PlayerContractInfo,
+    },
     payout::Payout,
+    player::PlayerId,
     script::{
         TgScriptEnv,
     },
@@ -47,11 +53,15 @@ use tglib::{
         create_payout_script,
         create_payout,
         EscrowWallet,
+        SigningWallet,
         BITCOIN_ACCOUNT_PATH,
         ESCROW_SUBACCOUNT,
     },
     mock::{
+        MockWallet,
+        Trezor,
         ELECTRS_SERVER,
+        PLAYER_2_MNEMONIC,
         NETWORK,
     }
 };
@@ -64,8 +74,6 @@ pub struct Wallet<B, D> where B: BlockchainMarker, D: BatchDatabase {
     network: Network,
     escrow_kix: u64,
     pub wallet: BdkWallet<B, D>,
-//    pub wallet: BdkWallet<ElectrumBlockchain, MemoryDatabase>,
-//    pub wallet: BdkWallet<ElectrumBlockchain, sled::Tree>,
 }
 
 impl<B, D> Wallet<B, D> 
@@ -213,5 +221,18 @@ where
 
     fn submit_payout(&self, _payout: &Payout) -> Result<Transaction> {
         Err(TgError("invalid payout"))
+    }
+
+    fn get_player_info(&self, playerId: PlayerId) -> Result<PlayerContractInfo> {
+        let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_2_MNEMONIC).unwrap());
+        let player_wallet = MockWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
+        player_wallet.wallet.sync(noop_progress(), None).unwrap();
+        let escrow_pubkey = player_wallet.get_escrow_pubkey();
+        Ok(PlayerContractInfo {
+            escrow_pubkey,
+// TODO: send to internal descriptor, no immediate way to do so atm
+            change_address: player_wallet.wallet.get_new_address().unwrap(),
+            utxos: player_wallet.wallet.list_unspent().unwrap(),
+        })
     }
 }

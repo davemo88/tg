@@ -48,6 +48,7 @@ use crate::{
     },
     mock::{
         NETWORK,
+        CONTRACT_VERSION,
     }
 };
 
@@ -59,11 +60,13 @@ pub struct Contract {
     pub funding_tx:         Transaction,
     pub payout_script:      TgScript,
     pub sigs:               Vec<Signature>, 
+    pub version:            u8,
 }
 
 impl Contract {
     pub fn new(p1_pubkey: PublicKey, p2_pubkey: PublicKey, arbiter_pubkey: PublicKey, funding_tx: Transaction, payout_script: TgScript) -> Self {
         Contract {
+            version: CONTRACT_VERSION,
             p1_pubkey,
             p2_pubkey,
             arbiter_pubkey,
@@ -86,6 +89,8 @@ impl Contract {
 
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut v = Vec::new();
+// version
+        v.write_u8(self.version);
 // 3 fixed-length pubkeys
         v.extend(self.p1_pubkey.to_bytes());
         v.extend(self.p2_pubkey.to_bytes());
@@ -128,15 +133,17 @@ impl Contract {
 }
 fn contract(input: &[u8]) ->IResult<&[u8], Contract> {
     let (input, (
+        version,
         p1_pubkey, 
         p2_pubkey, 
         arbiter_pubkey, 
         funding_tx, 
         payout_script, 
         sigs
-    )) = tuple((pubkey, pubkey, pubkey, funding_tx, payout_script, sigs))(input)?; 
+    )) = tuple((version, pubkey, pubkey, pubkey, funding_tx, payout_script, sigs))(input)?; 
 
     let c = Contract {
+        version,
         p1_pubkey,
         p2_pubkey,
         arbiter_pubkey,
@@ -147,6 +154,10 @@ fn contract(input: &[u8]) ->IResult<&[u8], Contract> {
 
     Ok((input, c))
     
+}
+
+fn version(input: &[u8]) -> IResult<&[u8], u8> {
+    be_u8(input)
 }
 
 fn pubkey(input: &[u8]) -> IResult<&[u8], PublicKey> {
@@ -186,6 +197,7 @@ pub enum ContractState {
     Invalid,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct PlayerContractInfo {
     pub escrow_pubkey: PublicKey,
     pub change_address: Address,

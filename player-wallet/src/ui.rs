@@ -16,6 +16,7 @@ use bip39::Mnemonic;
 use clap::{App, Arg, ArgMatches, SubCommand, AppSettings};
 use tglib::{
     Result as TgResult,
+    arbiter::ArbiterService,
     contract::{
         Contract,
     },
@@ -28,15 +29,15 @@ use tglib::{
         ESCROW_SUBACCOUNT,
     },
     mock::{
-        ArbiterService,
-        PlayerInfoService,
         Trezor,
+        ARBITER_PUBLIC_URL,
+        ESCROW_KIX,
         NETWORK,
         PLAYER_1_MNEMONIC,
-        ESCROW_KIX,
     },
 };
 use crate::{
+    arbiter::ArbiterClient,
     db,
     wallet::PlayerWallet,
 };
@@ -244,8 +245,9 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 let p2_id = PlayerId(a.value_of("player-2").unwrap().to_string());
                 let amount = Amount::from_sat(a.value_of("amount").unwrap().parse::<u64>().unwrap());
                 let desc = a.value_of("desc").unwrap_or("");
-                let p2_contract_info = PlayerInfoService::get_contract_info(&p2_id);
-                let arbiter_pubkey = ArbiterService::get_escrow_pubkey();
+                let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
+                let p2_contract_info = arbiter_client.get_player_info(p2_id.clone()).unwrap();
+                let arbiter_pubkey = arbiter_client.get_escrow_pubkey().unwrap();
 
                 let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
                 let player_wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);

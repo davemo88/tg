@@ -48,6 +48,7 @@ use tglib::{
     TgError,
     arbiter::{
         ArbiterId,
+        ArbiterService,
     },
     contract::{
         Contract,
@@ -67,8 +68,7 @@ use tglib::{
         BITCOIN_ACCOUNT_PATH,
     },
     mock::{
-        PlayerInfoService,
-        ArbiterService,
+        ARBITER_PUBLIC_URL,
         DB_NAME,
         ELECTRS_SERVER,
         ESCROW_SUBACCOUNT,
@@ -76,6 +76,7 @@ use tglib::{
     },
 };
 use crate::{
+    arbiter::ArbiterClient,
     db::{
         ContractRecord,
         DB,
@@ -95,7 +96,8 @@ impl PlayerWallet {
         let descriptor_key = format!("[{}/{}]{}", fingerprint, BITCOIN_ACCOUNT_PATH, xpubkey);
         let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
         let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
-        let client = Client::new(ELECTRS_SERVER, None).unwrap();
+//        let client = Client::new(ELECTRS_SERVER, None).unwrap();
+        let client = Client::new("tcp://localhost:60401", None).unwrap();
         let mut db_path = current_dir().unwrap();
         db_path.push(DB_NAME);
         let db = DB::new(&db_path).unwrap();
@@ -187,6 +189,9 @@ impl PlayerWallet {
         assert!(total > 2 * sats_per_player + p2_change);
         let p1_change = total - 2 * sats_per_player - p2_change;
 
+        let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
+        let fee_address = arbiter_client.get_fee_address().unwrap();
+
         let output = vec!(
             TxOut { 
                 value: amount.as_sat(),
@@ -194,7 +199,7 @@ impl PlayerWallet {
             },
             TxOut { 
                 value: arbiter_fee,
-                script_pubkey: ArbiterService::get_fee_address().script_pubkey(),
+                script_pubkey: fee_address.script_pubkey(),
             },
             TxOut { 
                 value: p2_change, 

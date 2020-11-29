@@ -13,6 +13,7 @@ use crate::{
     },
     mock::{
         NETWORK,
+        PAYOUT_VERSION,
     }
 };
 
@@ -21,6 +22,7 @@ pub struct Payout {
     pub contract:        Contract,
     pub tx:              Transaction,
     pub script_sig:      Option<Signature>,
+    pub version:         u8,
 }
 
 impl Payout {
@@ -29,6 +31,7 @@ impl Payout {
             contract,
             tx,
             script_sig: None,
+            version: PAYOUT_VERSION,
         }
     }
 
