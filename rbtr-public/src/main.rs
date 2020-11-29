@@ -55,10 +55,8 @@ use tglib::{
     player::PlayerId,
     wallet::{
         EscrowWallet,
-        SigningWallet,
     },
     mock::{
-        Trezor,
         ARBITER_FINGERPRINT,
         ARBITER_XPUBKEY,
         ELECTRS_SERVER,
@@ -66,7 +64,6 @@ use tglib::{
         REDIS_SERVER,
     },
 };
-
 mod wallet;
 use wallet::Wallet;
 
@@ -88,15 +85,20 @@ async fn contract_handler(contract_hex: String, client: redis::Client) -> WebRes
     if wallet().validate_contract(&contract).is_ok() {
         let mut con = get_con(client).await;
         let cxid = push_contract(&mut con, &contract_hex, 60).await.unwrap();
-        Ok(cxid)
-    } else {
-        Err(warp::reject())
+        for i in 1..15 as u32 {
+            let sig: RedisResult<String> = con.get(hex::encode(contract.cxid())).await;
+            if sig.is_ok() {
+                return Ok(sig.unwrap())
+            }
+            sleep(Duration::from_secs(1));
+        }
     }
+    Err(warp::reject())
 }
 
 async fn push_contract(con: &mut Connection, hex: &str, ttl_seconds: usize) -> RedisResult<String> {
     con.rpush("contracts", hex).await?;
-    Ok(String::from("pushed contract"))
+    Ok(String::from(hex))
 }
 
 async fn get_con(client: redis::Client) -> Connection {

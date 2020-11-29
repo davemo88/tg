@@ -88,7 +88,7 @@ mod arbiter;
 mod db;
 mod ui;
 mod wallet;
-use wallet::{
+pub use wallet::{
     PlayerWallet,
 };
 use arbiter::ArbiterClient;

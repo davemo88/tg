@@ -45,9 +45,7 @@ use tglib::{
     },
     payout::Payout,
     player::PlayerId,
-    script::{
-        TgScriptEnv,
-    },
+    script::TgScriptEnv,
     wallet::{
         create_escrow_address,
         create_payout_script,
@@ -58,13 +56,15 @@ use tglib::{
         ESCROW_SUBACCOUNT,
     },
     mock::{
-        MockWallet,
         Trezor,
         ELECTRS_SERVER,
         PLAYER_2_MNEMONIC,
         NETWORK,
     }
 };
+//use player_wallet::{
+//    PlayerWallet,
+//};
 
 const ESCROW_KIX: u64 = 0;
 
@@ -122,61 +122,6 @@ where
         }
     }
 
-    pub fn validate_contract(&self, contract: &Contract) -> Result<()> {
-        if contract.arbiter_pubkey != EscrowWallet::get_escrow_pubkey(self) {
-            return Err(TgError("unexpected arbiter pubkey"));
-        }
-        let escrow_address = create_escrow_address(
-            &contract.p1_pubkey,
-            &contract.p2_pubkey,
-            &contract.arbiter_pubkey,
-            NETWORK,
-        ).unwrap();
-        let escrow_script_pubkey = escrow_address.script_pubkey();
-        let amount = contract.amount()?;
-        let fee_address = self.get_fee_address()?;
-        let fee_script_pubkey = fee_address.script_pubkey();
-        let fee_amount = amount/100;
-
-        let mut correct_fee = false;
-
-        for txout in contract.funding_tx.clone().output {
-            correct_fee = (txout.script_pubkey == fee_script_pubkey && txout.value == fee_amount.as_sat()) || correct_fee; 
-        }
-
-        if !correct_fee {
-            return Err(TgError("funding transaction does not contain correct fee"));
-        }
-
-        let payout_script = create_payout_script(
-            &contract.p1_pubkey,
-            &contract.p2_pubkey,
-            &contract.arbiter_pubkey,
-            &contract.funding_tx,
-            NETWORK,
-        );
-
-        if contract.payout_script != payout_script {
-            return Err(TgError("invalid payout script"));
-        }
-
-        let secp = Secp256k1::new();
-        let msg = Message::from_slice(&contract.cxid()).unwrap();
-
-        for (i, sig) in contract.sigs.iter().enumerate() {
-            let pubkey = match i {
-                0 => &contract.p1_pubkey.key,
-                1 => &contract.p2_pubkey.key,
-                2 => &contract.arbiter_pubkey.key,
-                _ => return Err(TgError("too many signatures")),
-            };
-            if secp.verify(&msg, &sig, &pubkey).is_err() {
-                return Err(TgError("invalid signature"))
-            }
-        }
-        Ok(())
-    }
-
     pub fn validate_payout(&self, payout: &Payout) -> Result<()> {
         if self.validate_contract(&payout.contract).is_ok() {
             if payout.tx.txid() != create_payout(&payout.contract, &payout.address().unwrap()).tx.txid() {
@@ -199,6 +144,13 @@ where
         let escrow_pubkey = self.xpubkey.derive_pub(&Secp256k1::new(), &path).unwrap();
         escrow_pubkey.public_key
     }
+
+    fn validate_contract(&self, contract: &Contract) -> Result<()> {
+        if contract.arbiter_pubkey != EscrowWallet::get_escrow_pubkey(self) {
+            return Err(TgError("unexpected arbiter pubkey"));
+        }
+        contract.validate()
+    }
 }
 
 impl<B, D> ArbiterService for Wallet<B, D> 
@@ -216,7 +168,7 @@ where
     }
 
     fn submit_contract(&self, _contract: &Contract) -> Result<Signature> {
-        Err(TgError("invalid contract"))
+        Err(TgError("invalid payout"))
     }
 
     fn submit_payout(&self, _payout: &Payout) -> Result<Transaction> {
@@ -224,10 +176,12 @@ where
     }
 
     fn get_player_info(&self, playerId: PlayerId) -> Result<PlayerContractInfo> {
+// TODO: separate service e.g. namecoin
         let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_2_MNEMONIC).unwrap());
-        let player_wallet = MockWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
+        let client = Client::new(ELECTRS_SERVER, None).unwrap();
+        let player_wallet = Wallet::<ElectrumBlockchain, MemoryDatabase>::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), ElectrumBlockchain::from(client), NETWORK).unwrap();
+        let escrow_pubkey = EscrowWallet::get_escrow_pubkey(&player_wallet);
         player_wallet.wallet.sync(noop_progress(), None).unwrap();
-        let escrow_pubkey = player_wallet.get_escrow_pubkey();
         Ok(PlayerContractInfo {
             escrow_pubkey,
 // TODO: send to internal descriptor, no immediate way to do so atm

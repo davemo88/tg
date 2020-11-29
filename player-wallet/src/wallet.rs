@@ -70,9 +70,9 @@ use tglib::{
     mock::{
         ARBITER_PUBLIC_URL,
         DB_NAME,
-        ELECTRS_SERVER,
         ESCROW_SUBACCOUNT,
         ESCROW_KIX,
+        NETWORK,
     },
 };
 use crate::{
@@ -226,5 +226,18 @@ impl EscrowWallet for PlayerWallet {
         let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
         let escrow_pubkey = self.xpubkey.derive_pub(&secp, &path).unwrap();
         escrow_pubkey.public_key
+    }
+
+    fn validate_contract(&self, contract: &Contract) -> TgResult<()> {
+        let player_pubkey = self.get_escrow_pubkey();
+        if contract.p1_pubkey != player_pubkey && contract.p2_pubkey != player_pubkey {
+            return Err(TgError("contract doesn't contain our pubkey"));
+        }
+        let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
+        let arbiter_pubkey = arbiter_client.get_escrow_pubkey().unwrap();
+        if contract.arbiter_pubkey != arbiter_pubkey {
+            return Err(TgError("unexpected arbiter pubkey"));
+        }
+        contract.validate()
     }
 }

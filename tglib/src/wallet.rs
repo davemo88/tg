@@ -64,6 +64,7 @@ pub trait SigningWallet {
 
 pub trait EscrowWallet {
     fn get_escrow_pubkey(&self) -> PublicKey;
+    fn validate_contract(&self, contract: &Contract) -> TgResult<()>;
 }
 
 pub fn create_escrow_address(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pubkey: &PublicKey, network: Network) -> TgResult<Address> {

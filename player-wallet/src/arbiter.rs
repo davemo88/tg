@@ -21,15 +21,6 @@ use tglib::{
     },
     payout::Payout,
     player::PlayerId,
-    wallet::{
-        EscrowWallet,
-        SigningWallet,
-    },
-    mock::{
-        MockWallet,
-        Trezor,
-        NETWORK,
-    }
 };
 
 
@@ -45,19 +36,23 @@ impl ArbiterService for ArbiterClient {
     fn get_escrow_pubkey(&self) -> Result<PublicKey> {
         let response = reqwest::blocking::get(&format!("{}/escrow-pubkey", self.0)).unwrap();
         let body = String::from(response.text().unwrap());
-        println!("{}", body);
         Ok(PublicKey::from_str(&body).unwrap())
     }
 
     fn get_fee_address(&self) -> Result<Address> {
         let response = reqwest::blocking::get(&format!("{}/fee-address", self.0)).unwrap();
         let body = String::from(response.text().unwrap());
-        println!("{}", body);
         Ok(Address::from_str(&body).unwrap())
     }
 
     fn submit_contract(&self, contract: &Contract) -> Result<Signature> {
-        Err(TgError("invalid contract"))
+        let response = reqwest::blocking::get(&format!("{}/submit-contract/{}", self.0, hex::encode(contract.to_bytes()))).unwrap();
+        let body = String::from(response.text().unwrap());
+        if let Ok(sig) = Signature::from_str(&body) {
+            Ok(sig)
+        } else {
+            Err(TgError("invalid contract"))
+        }
     }
 
     fn submit_payout(&self, payout: &Payout) -> Result<Transaction> {
@@ -67,7 +62,6 @@ impl ArbiterService for ArbiterClient {
     fn get_player_info(&self, player_id: PlayerId) -> Result<PlayerContractInfo> {
         let response = reqwest::blocking::get(&format!("{}/info/{}", self.0, player_id.0)).unwrap();
         let body = String::from(response.text().unwrap());
-        println!("{}", body);
         let info: PlayerContractInfo = serde_json::from_str(&body).unwrap();
         Ok(info)
     }

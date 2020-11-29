@@ -72,44 +72,6 @@ pub const ARBITER_FINGERPRINT: &'static str = "1af44eee";
 pub const ARBITER_XPUBKEY: &'static str = "tpubDCoCzmZtfuft3oM8Y5RnaT5GFq27NR7iYLbj5r1HZyfbgMAT1AAeAxCoyMnKGQ67GAeZDcekJgsaSMTb7SpmRJ3vGbPXZxDToKHTRa3mBS2";
 pub const ARBITER_PUBLIC_URL: &'static str = "http://localhost:5000";
 
-pub struct MockWallet {
-    fingerprint: Fingerprint,
-    xpubkey: ExtendedPubKey,
-    network: Network,
-    pub wallet: Wallet<ElectrumBlockchain, MemoryDatabase>,
-}
-
-impl EscrowWallet for MockWallet {
-    fn get_escrow_pubkey(&self) -> PublicKey {
-        let secp = Secp256k1::new();
-        let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
-        let escrow_pubkey = self.xpubkey.derive_pub(&secp, &path).unwrap();
-        escrow_pubkey.public_key
-    }
-}
-
-impl MockWallet {
-    pub fn new(fingerprint: Fingerprint, xpubkey: ExtendedPubKey, network: Network) -> Self {
-        let descriptor_key = format!("[{}/{}]{}", fingerprint, BITCOIN_ACCOUNT_PATH, xpubkey);
-        let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
-        let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
-        let client = Client::new(ELECTRS_SERVER, None).unwrap();
-
-        MockWallet {
-            fingerprint,
-            xpubkey,
-            network,
-            wallet: Wallet::new(
-                &external_descriptor,
-                Some(&internal_descriptor),
-                network,
-                MemoryDatabase::default(),
-                ElectrumBlockchain::from(client)
-            ).unwrap(),
-        }
-    }
-}
-
 pub struct Trezor {
     mnemonic: Mnemonic,
     wallet: Wallet<OfflineBlockchain, MemoryDatabase>,

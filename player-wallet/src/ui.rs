@@ -207,6 +207,13 @@ pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
                     .help("contract id")
                     .required(true)
                     .takes_value(true)),
+            SubCommand::with_name("submit").about("submit contract to arbiter")
+                .arg(Arg::with_name("cxid")
+                    .index(1)
+                    .value_name("CXID")
+                    .help("contract id")
+                    .required(true)
+                    .takes_value(true)),
             SubCommand::with_name("delete").about("delete contract")
                 .arg(Arg::with_name("cxid")
                     .index(1)
@@ -274,6 +281,23 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                         wallet.db.add_signature(c.cxid, hex::encode(contract.to_bytes()));
                         assert_ne!(hex::encode(contract.to_bytes()), c.hex);
                         break;
+                    }
+                }
+            }
+            "submit" => {
+                let contracts = wallet.db.all_contracts().unwrap();
+                for c in contracts {
+                    if c.cxid == a.value_of("cxid").unwrap() {
+                        let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
+                        let mut contract = Contract::from_bytes(hex::decode(c.hex.clone()).unwrap()).unwrap();
+                        if let Ok(sig) = arbiter_client.submit_contract(&contract) {
+                           contract.sigs.push(sig);
+                           wallet.db.add_signature(c.cxid, hex::encode(contract.to_bytes()));
+                           println!("arbiter accepted and signed contract");
+                        }
+                        else {
+                           println!("arbiter rejected contract");
+                        }
                     }
                 }
             }

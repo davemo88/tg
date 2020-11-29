@@ -18,6 +18,8 @@ use bdk::{
             sha256::HashEngine as ShaHashEngine,
         },
         secp256k1::{
+            Message,
+            Secp256k1,
             Signature,
         },
     },
@@ -45,6 +47,7 @@ use crate::{
     },
     wallet::{
         create_escrow_address,
+        create_payout_script,
     },
     mock::{
         NETWORK,
@@ -128,6 +131,63 @@ impl Contract {
             }
         }
         Err(TgError("couldn't determine amount"))
+    }
+
+    pub fn fee(&self) -> Result<Address> {
+        let fee_amount = self.amount().unwrap().as_sat()/100;
+        for txout in self.funding_tx.clone().output {
+            if txout.value == fee_amount {
+               return Ok(Address::from_script(&txout.script_pubkey, NETWORK).unwrap())
+            }
+        }
+        Err(TgError("fee not found"))
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        self.validate_funding_tx()?;
+        self.validate_payout_script()?;
+        self.validate_sigs()?;
+        Ok(())
+    }
+
+    fn validate_funding_tx(&self) -> Result<()> {
+        self.amount()?;
+        self.fee()?;
+        Ok(())
+    }
+
+    fn validate_payout_script(&self) -> Result<()> {
+        let payout_script = create_payout_script(
+            &self.p1_pubkey,
+            &self.p2_pubkey,
+            &self.arbiter_pubkey,
+            &self.funding_tx,
+            NETWORK,
+        );
+        if self.payout_script != payout_script {
+            Err(TgError("invalid payout script"))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn validate_sigs(&self) -> Result<()> {
+        let secp = Secp256k1::new();
+        let msg = Message::from_slice(&self.cxid()).unwrap();
+
+        for (i, sig) in self.sigs.iter().enumerate() {
+            let pubkey = match i {
+                0 => &self.p1_pubkey.key,
+                1 => &self.p2_pubkey.key,
+                2 => &self.arbiter_pubkey.key,
+                _ => return Err(TgError("too many signatures")),
+            };
+            if secp.verify(&msg, &sig, &pubkey).is_err() {
+                return Err(TgError("invalid signature"))
+            }
+        };
+        Ok(())
+
     }
 //
 }
