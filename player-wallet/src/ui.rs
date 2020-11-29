@@ -60,15 +60,9 @@ pub fn wallet_ui<'a, 'b>() -> App<'a, 'b> {
                 .index(2)
                 .help("withdrawal address")
                 .required(true)))
-        .subcommand(player_ui())
-        .subcommand(contract_ui())
-        .subcommand(payout_ui())
 }
 
-pub fn wallet_subcommand(subcommand: (&str, Option<&ArgMatches>)) -> TgResult<()> {
-
-    let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-    let wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
+pub fn wallet_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &PlayerWallet) -> TgResult<()> {
 
     if let (c, Some(a)) = subcommand {
         match c {
@@ -81,15 +75,6 @@ pub fn wallet_subcommand(subcommand: (&str, Option<&ArgMatches>)) -> TgResult<()
             }
             "withdraw" => {
                 println!("withdraw tx");// id: {}, fee: {}", withdraw_tx.txid, withdraw_tx.fee);
-            }
-            "player" => {
-                player_subcommand(a.subcommand(), &wallet);
-            }
-            "contract" => {
-                contract_subcommand(a.subcommand(), &wallet);
-            }
-            "payout" => {
-                payout_subcommand(a.subcommand(), &wallet);
             }
             _ => {
                 println!("command '{}' is not implemented", c);
@@ -145,13 +130,8 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
             }
             "list" => {
                 let players = wallet.db.all_players().unwrap();
-                if (players.len() == 0) {
-                    println!("no players");
-                }
-                else {
-                    for p in players {
-                        println!("id: {}, name: {}", p.id.0, p.name);
-                    }
+                for p in players {
+                    println!("id: {}, name: {}", p.id.0, p.name);
                 }
             }
             "remove" => {
@@ -305,13 +285,8 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
             }
             "list" => {
                 let contracts = wallet.db.all_contracts().unwrap();
-                if (contracts.len() == 0) {
-                    println!("no players");
-                }
-                else {
-                    for c in contracts {
-                        println!("cxid: {:?}, p1: {:?}, p2: {:?}, desc: {}", c.cxid, c.p1_id.0, c.p2_id.0, c.desc);
-                    }
+                for c in contracts {
+                    println!("cxid: {:?}, p1: {:?}, p2: {:?}, desc: {}", c.cxid, c.p1_id.0, c.p2_id.0, c.desc);
                 }
             }
             _ => {
@@ -422,7 +397,6 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 }
             }
             "list" => {
-                println!("list {:?}", a);
                 let payouts = wallet.db.all_payouts().unwrap();
                 for p in payouts {
                     println!("{:?}", p);

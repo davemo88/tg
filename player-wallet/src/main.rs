@@ -92,7 +92,12 @@ use wallet::{
     PlayerWallet,
 };
 use arbiter::ArbiterClient;
-use ui::wallet_subcommand;
+use ui::{
+    contract_subcommand,
+    payout_subcommand,
+    player_subcommand,
+    wallet_subcommand,
+};
 
 fn repl<'a, 'b>() -> App<'a, 'b> {
     App::new("repl")
@@ -103,6 +108,9 @@ fn repl<'a, 'b>() -> App<'a, 'b> {
             AppSettings::VersionlessSubcommands])
         .subcommand(SubCommand::with_name("quit").about("quit the repl"))
         .subcommand(ui::wallet_ui())
+        .subcommand(ui::player_ui())
+        .subcommand(ui::contract_ui())
+        .subcommand(ui::payout_ui())
 }
 
 fn main() -> Result<(), Error> {
@@ -119,6 +127,9 @@ fn main() -> Result<(), Error> {
         println!("No previous history.");
     }
 
+    let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
+    let wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
+
     loop {
         let readline = rl.readline(">> ");
         match readline {
@@ -131,7 +142,16 @@ fn main() -> Result<(), Error> {
                         rl.add_history_entry(line.as_str());
                         match c {
                             "wallet" => {
-                                wallet_subcommand(a.subcommand());
+                                wallet_subcommand(a.subcommand(), &wallet);
+                            }
+                            "player" => {
+                                player_subcommand(a.subcommand(), &wallet);
+                            }
+                            "contract" => {
+                                contract_subcommand(a.subcommand(), &wallet);
+                            }
+                            "payout" => {
+                                payout_subcommand(a.subcommand(), &wallet);
                             }
                             "quit" => {
                                 break;
