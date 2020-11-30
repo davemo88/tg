@@ -39,7 +39,10 @@ use tglib::{
     Result as TgResult,
     TgError,
     contract::Contract,
+    payout::Payout,
+    script::TgScriptEnv,
     wallet::{
+        create_payout,
         SigningWallet,
         EscrowWallet,
     },
@@ -60,6 +63,17 @@ impl Wallet {
        Wallet {
            trezor: Trezor::new(Mnemonic::parse(ARBITER_MNEMONIC).unwrap())
        } 
+    }
+
+    pub fn validate_payout(&self, payout: &Payout) -> TgResult<()> {
+        if self.validate_contract(&payout.contract).is_ok() {
+            if payout.tx.txid() != create_payout(&payout.contract, &payout.address().unwrap()).tx.txid() {
+                return Err(TgError("invalid payout"));
+            }
+            let mut env = TgScriptEnv::new(payout.clone());
+            return env.validate_payout()
+        }
+        Err(TgError("invalid payout"))
     }
 }
 

@@ -62,16 +62,13 @@ use tglib::{
         NETWORK,
     }
 };
-//use player_wallet::{
-//    PlayerWallet,
-//};
 
 const ESCROW_KIX: u64 = 0;
 
 pub struct Wallet<B, D> where B: BlockchainMarker, D: BatchDatabase {
     fingerprint: Fingerprint,
-    xpubkey: ExtendedPubKey,
-    network: Network,
+    pub xpubkey: ExtendedPubKey,
+    pub network: Network,
     escrow_kix: u64,
     pub wallet: BdkWallet<B, D>,
 }
@@ -150,43 +147,5 @@ where
             return Err(TgError("unexpected arbiter pubkey"));
         }
         contract.validate()
-    }
-}
-
-impl<B, D> ArbiterService for Wallet<B, D> 
-where 
-    B: BlockchainMarker,
-    D: BatchDatabase + Default,
-{
-    fn get_escrow_pubkey(&self) -> Result<PublicKey> {
-        Ok(EscrowWallet::get_escrow_pubkey(self))
-    }
-
-    fn get_fee_address(&self) -> Result<Address> {
-        let a = self.xpubkey.derive_pub(&Secp256k1::new(), &DerivationPath::from_str("m/0/0").unwrap()).unwrap();
-        Ok(Address::p2wpkh(&a.public_key, self.network).unwrap())
-    }
-
-    fn submit_contract(&self, _contract: &Contract) -> Result<Signature> {
-        Err(TgError("invalid payout"))
-    }
-
-    fn submit_payout(&self, _payout: &Payout) -> Result<Transaction> {
-        Err(TgError("invalid payout"))
-    }
-
-    fn get_player_info(&self, playerId: PlayerId) -> Result<PlayerContractInfo> {
-// TODO: separate service e.g. namecoin
-        let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_2_MNEMONIC).unwrap());
-        let client = Client::new(ELECTRS_SERVER, None).unwrap();
-        let player_wallet = Wallet::<ElectrumBlockchain, MemoryDatabase>::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), ElectrumBlockchain::from(client), NETWORK).unwrap();
-        let escrow_pubkey = EscrowWallet::get_escrow_pubkey(&player_wallet);
-        player_wallet.wallet.sync(noop_progress(), None).unwrap();
-        Ok(PlayerContractInfo {
-            escrow_pubkey,
-// TODO: send to internal descriptor, no immediate way to do so atm
-            change_address: player_wallet.wallet.get_new_address().unwrap(),
-            utxos: player_wallet.wallet.list_unspent().unwrap(),
-        })
     }
 }
