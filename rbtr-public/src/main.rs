@@ -120,9 +120,9 @@ impl RbtrPublic {
         Ok(String::from(hex))
     }
 
-    fn push_payout(&self, con: &mut SyncConnection, cxid: &str, hex: &str, ttl_seconds: usize) -> RedisResult<String> {
+    fn push_payout(&self, con: &mut SyncConnection, hex: &str, ttl_seconds: usize) -> RedisResult<String> {
         con.rpush("payouts", hex)?;
-        Ok(String::from(cxid))
+        Ok(String::from(hex))
     }
 }
 
@@ -145,20 +145,20 @@ impl ArbiterService for RbtrPublic {
             for _ in 1..15 as u32 {
                 let r: RedisResult<String> = con.get(hex::encode(contract.cxid()));
                 if let Ok(sig) = r {
-                    println!("found the sig");
                     let _ : RedisResult<String> = con.del(cxid);
                     return Ok(Signature::from_compact(&hex::decode(sig).unwrap()).unwrap())
                 }
                 sleep(Duration::from_secs(1));
             }
         }
-        Err(TgError("invalid payout"))
+        Err(TgError("invalid contract"))
     }
 
     fn submit_payout(&self, payout: &Payout) -> Result<Transaction> {
         if wallet().validate_payout(&payout).is_ok() {
             let mut con = self.get_con();
-            let cxid = self.push_payout(&mut con, &hex::encode(payout.contract.cxid()), &hex::encode(payout.to_bytes()), 60).unwrap();
+            let hex = self.push_payout(&mut con, &hex::encode(payout.to_bytes()), 60).unwrap();
+            let cxid = hex::encode(payout.contract.cxid());
             for i in 1..15 as u32 {
                 let tx: RedisResult<String> = con.get(cxid.clone());
                 if let Ok(tx) = tx {
@@ -196,6 +196,7 @@ async fn contract_handler(contract_hex: String, rbtr: RbtrPublic) -> WebResult<i
     }
 }
 
+// TODO: somehow break out of serialize(decode( hell
 async fn payout_handler(payout_hex: String, rbtr: RbtrPublic) -> WebResult<impl Reply> {
     let payout = Payout::from_bytes(hex::decode(payout_hex.clone()).unwrap()).unwrap();
     if let Ok(tx) = rbtr.submit_payout(&payout) {
@@ -228,6 +229,7 @@ async fn main() {
         .and(fee_address)
         .map(|f: Address| f.to_string()); 
 
+// TODO: can add validation filters for the string params in the following paths?
     let submit_contract = warp::path("submit-contract")
         .and(warp::path::param::<String>())
         .and(rbtr_public.clone())

@@ -5,6 +5,7 @@ use bdk::{
         Address,
         PublicKey,
         Transaction,
+        consensus,
         secp256k1::Signature,
     },
     blockchain::noop_progress,
@@ -56,7 +57,13 @@ impl ArbiterService for ArbiterClient {
     }
 
     fn submit_payout(&self, payout: &Payout) -> Result<Transaction> {
-        Err(TgError("invalid payout"))
+        let response = reqwest::blocking::get(&format!("{}/submit-payout/{}", self.0, hex::encode(payout.to_bytes()))).unwrap();
+        let body = String::from(response.text().unwrap());
+        if let Ok(tx) = consensus::deserialize(&hex::decode(body).unwrap()) {
+            Ok(tx)
+        } else {
+            Err(TgError("invalid payout"))
+        }
     }
 
     fn get_player_info(&self, player_id: PlayerId) -> Result<PlayerContractInfo> {
