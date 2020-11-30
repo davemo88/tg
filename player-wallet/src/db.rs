@@ -13,6 +13,8 @@ use bdk::bitcoin::{
 };
 use rusqlite::{params, Connection, Result};
 use tglib::{
+    Result as TgResult,
+    TgError,
     player::PlayerId,
     payout::Payout,
 };
@@ -102,11 +104,26 @@ impl DB {
         )
     }
 
-    pub fn add_signature(&self, cxid: String, hex: String) -> Result<usize> {
-// TODO: validation
+    pub fn all_players(&self) -> Result<Vec<PlayerRecord>> {
+        let mut stmt = self.conn.prepare("SELECT * FROM player")?;
+        let player_iter = stmt.query_map(params![], |row| {
+            Ok(PlayerRecord {
+                id: PlayerId(row.get(0)?),
+                name: row.get(1)?,
+            })
+        })?;
+
+        let mut players = Vec::<PlayerRecord>::new();
+        for p in player_iter {
+            players.push(p.unwrap());
+        }
+        Ok(players)
+    }
+
+    pub fn delete_player(&self, id: PlayerId) -> Result<usize> {
         self.conn.execute(
-            "UPDATE contract SET hex = ?1 WHERE cxid = ?2",
-            params![hex, cxid],
+            "DELETE FROM player WHERE id = ?1",
+            params![id.0],
         )
     }
 
@@ -129,10 +146,36 @@ impl DB {
         Ok(contracts)
     }
 
+    pub fn get_contract(&self, cxid: &str) -> Option<ContractRecord> {
+        let mut stmt = self.conn.prepare("SELECT * FROM contract where cxid = ?1").unwrap();
+        let mut contract_iter = stmt.query_map(params![cxid], |row| {
+            Ok(ContractRecord {
+                cxid: row.get(0)?, 
+                p1_id: PlayerId(row.get(1)?),
+                p2_id: PlayerId(row.get(2)?),
+                hex: row.get(3)?,
+                desc: row.get(4)?,
+            })
+        }).unwrap();
+        if let Some(cr) = contract_iter.next() {
+            Some(cr.unwrap())
+        } else {
+            None
+        }
+    }
+
     pub fn delete_contract(&self, cxid: String) -> Result<usize> {
         self.conn.execute(
             "DELETE FROM contract WHERE cxid = ?1",
             params![cxid],
+        )
+    }
+
+    pub fn add_signature(&self, cxid: String, hex: String) -> Result<usize> {
+// TODO: validation
+        self.conn.execute(
+            "UPDATE contract SET hex = ?1 WHERE cxid = ?2",
+            params![hex, cxid],
         )
     }
 
@@ -161,33 +204,26 @@ impl DB {
         Ok(payouts)
     }
 
+    pub fn get_payout(&self, cxid: &str) -> Option<PayoutRecord> {
+        let mut stmt = self.conn.prepare("SELECT * FROM payout where cxid = ?1").unwrap();
+        let mut payout_iter = stmt.query_map(params![cxid], |row| {
+            Ok(PayoutRecord {
+                cxid: row.get(0)?, 
+                tx: row.get(1)?,
+                sig: row.get(2)?,
+            })
+        }).unwrap();
+        if let Some(pr) = payout_iter.next() {
+            Some(pr.unwrap())
+        } else {
+            None
+        }
+    }
+
     pub fn delete_payout(&self, cxid: String) -> Result<usize> {
         self.conn.execute(
             "DELETE FROM payout WHERE cxid = ?1",
             params![cxid],
-        )
-    }
-
-    pub fn all_players(&self) -> Result<Vec<PlayerRecord>> {
-        let mut stmt = self.conn.prepare("SELECT * FROM player")?;
-        let player_iter = stmt.query_map(params![], |row| {
-            Ok(PlayerRecord {
-                id: PlayerId(row.get(0)?),
-                name: row.get(1)?,
-            })
-        })?;
-
-        let mut players = Vec::<PlayerRecord>::new();
-        for p in player_iter {
-            players.push(p.unwrap());
-        }
-        Ok(players)
-    }
-
-    pub fn delete_player(&self, id: PlayerId) -> Result<usize> {
-        self.conn.execute(
-            "DELETE FROM player WHERE id = ?1",
-            params![id.0],
         )
     }
 }
