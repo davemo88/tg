@@ -48,7 +48,7 @@ impl ArbiterService for ArbiterClient {
     fn submit_contract(&self, contract: &Contract) -> Result<Signature> {
         let response = reqwest::blocking::get(&format!("{}/submit-contract/{}", self.0, hex::encode(contract.to_bytes()))).unwrap();
         let body = String::from(response.text().unwrap());
-        if let Ok(sig) = Signature::from_str(&body) {
+        if let Ok(sig) = Signature::from_compact(&hex::decode(body).unwrap()) {
             Ok(sig)
         } else {
             Err(TgError("invalid contract"))

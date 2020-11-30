@@ -142,9 +142,10 @@ impl ArbiterService for RbtrPublic {
         if wallet().validate_contract(&contract).is_ok() {
             let mut con = self.get_con();
             let cxid = self.push_contract(&mut con, &hex::encode(contract.to_bytes()), 60).unwrap();
-            for i in 1..15 as u32 {
-                let sig: RedisResult<String> = con.get(cxid.clone());
-                if let Ok(sig) = sig {
+            for _ in 1..15 as u32 {
+                let r: RedisResult<String> = con.get(hex::encode(contract.cxid()));
+                if let Ok(sig) = r {
+                    println!("found the sig");
                     let _ : RedisResult<String> = con.del(cxid);
                     return Ok(Signature::from_compact(&hex::decode(sig).unwrap()).unwrap())
                 }
