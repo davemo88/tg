@@ -5,6 +5,7 @@ use std::convert::{
 };
 use bdk::{
     bitcoin::{
+        PublicKey,
         util::bip32::{
             ExtendedPubKey,
         },
@@ -20,7 +21,7 @@ use bdk::{
             ToBase32,
         },
         secp256k1::{
-            PublicKey,
+//            PublicKey,
         },
     },
     descriptor::{
@@ -37,6 +38,17 @@ impl From<ExtendedPubKey> for PlayerId {
         let mut hash_engine = Sha2Engine::default();
 // extended pubkey -> bitcoin pubkey wrapper -> actual pubkey
         hash_engine.input(&xpubkey.public_key.key.serialize_uncompressed());
+        let pubkey_hash: &[u8] = &Sha2Hash::from_engine(hash_engine);
+        let encoded = bech32::encode("player", pubkey_hash.to_base32()).unwrap();
+        PlayerId(encoded)
+    }
+}
+
+impl From<PublicKey> for PlayerId {
+    fn from(pubkey: PublicKey) -> Self {
+        let mut hash_engine = Sha2Engine::default();
+// bitcoin pubkey wrapper -> actual pubkey
+        hash_engine.input(&pubkey.key.serialize_uncompressed());
         let pubkey_hash: &[u8] = &Sha2Hash::from_engine(hash_engine);
         let encoded = bech32::encode("player", pubkey_hash.to_base32()).unwrap();
         PlayerId(encoded)

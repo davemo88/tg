@@ -263,6 +263,21 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 }
             }
             "import" => {
+                if let Ok(contract) = Contract::from_bytes(hex::decode(a.value_of("hex").unwrap()).unwrap()) {
+                    let contract_record = db::ContractRecord {
+                        cxid: hex::encode(contract.cxid()),
+                        p1_id: PlayerId::from(contract.p1_pubkey),
+                        p2_id: PlayerId::from(contract.p2_pubkey),
+                        hex: hex::encode(contract.to_bytes()),
+                        desc: String::default(),
+                    };
+                    match wallet.db.insert_contract(contract_record.clone()) {
+                        Ok(_) => println!("imported contract {}", hex::encode(contract.cxid())),
+                        Err(e) => println!("{:?}", e),
+                    }
+                } else {
+                    println!("invalid contract");
+                }
 
             }
             "details" => {

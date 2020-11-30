@@ -191,7 +191,7 @@ impl Contract {
     }
 //
 }
-fn contract(input: &[u8]) ->IResult<&[u8], Contract> {
+pub fn contract(input: &[u8]) ->IResult<&[u8], Contract> {
     let (input, (
         version,
         p1_pubkey, 
@@ -216,7 +216,7 @@ fn contract(input: &[u8]) ->IResult<&[u8], Contract> {
     
 }
 
-fn version(input: &[u8]) -> IResult<&[u8], u8> {
+pub fn version(input: &[u8]) -> IResult<&[u8], u8> {
     be_u8(input)
 }
 
@@ -240,7 +240,7 @@ fn sigs(input: &[u8]) -> IResult<&[u8], Vec<Signature>> {
     many0(signature)(input)
 }
 
-fn signature(input: &[u8]) -> IResult<&[u8], Signature> {
+pub fn signature(input: &[u8]) -> IResult<&[u8], Signature> {
     let (input, b) = take(64u8)(input)?;
     let sig = Signature::from_compact(b).unwrap();
     Ok((input, sig))
