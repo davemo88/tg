@@ -373,11 +373,15 @@ pub fn payout_ui<'a, 'b>() -> App<'a, 'b> {
                     .help("contract id of payout")
                     .required(true)
                     .takes_value(true)),
-            SubCommand::with_name("sign").about("sign payout")
+            SubCommand::with_name("sign").about("sign payout tx and optionally set script sig")
                 .arg(Arg::with_name("cxid")
                     .index(1)
                     .help("contract id of payout to sign")
                     .required(true)
+                    .takes_value(true))
+                .arg(Arg::with_name("script-sig")
+                    .index(2)
+                    .help("payout script sig")
                     .takes_value(true)),
             SubCommand::with_name("submit").about("submit payout to arbiter")
                 .arg(Arg::with_name("cxid")
@@ -434,8 +438,8 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                     wallet.db.insert_payout(db::PayoutRecord {
                         cxid: pr.cxid, 
                         tx,
-                        sig: pr.sig}
-                    ).unwrap();
+                        sig: a.value_of("script-sig").unwrap_or_default().to_string(),
+                    }).unwrap();
                     println!("signed payout");
                 }
                 else {
@@ -450,7 +454,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                     version: PAYOUT_VERSION,
                     contract: Contract::from_bytes(hex::decode(cr.hex).unwrap()).unwrap(),
                     tx: consensus::deserialize(&hex::decode(pr.tx).unwrap()).unwrap(),
-                    script_sig: Some(Signature::from_compact(&hex::decode(pr.sig).unwrap()).unwrap()),
+                    script_sig: Signature::from_compact(&hex::decode(pr.sig).unwrap()).ok()
                 };
                 let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
                 if let Ok(tx) = arbiter_client.submit_payout(&p) {

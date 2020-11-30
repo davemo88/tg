@@ -61,6 +61,7 @@ impl TgScriptEnv {
         let payout = self.payout.as_ref().unwrap().clone();
 //confirm payout script hash sigs on contract
 // TODO: check funding_tx is signed by the correct parties and in the blockchain
+//        if payout.contract.state() != ContractState::Live {
         if payout.contract.state() != ContractState::ArbiterSigned {
             return Err(TgError("invalid payout request - contract is uncertified"))
         }
@@ -71,6 +72,7 @@ impl TgScriptEnv {
 
         let _result = self.eval(payout.contract.payout_script.clone());
 
+// TODO: this is weird
         match self.validity {
             None | Some(false)  => Err(TgError("invalid payout request")),
             Some(true) => Ok(())
