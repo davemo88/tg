@@ -8,9 +8,7 @@ use bdk::{
         consensus,
         secp256k1::Signature,
     },
-    blockchain::noop_progress,
 };
-use bip39::Mnemonic;
 use reqwest;
 use tglib::{
     Result,

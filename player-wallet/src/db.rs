@@ -1,20 +1,7 @@
-use std::{
-    convert::{
-        From,
-    },
-    path::{
-        Path, 
-        PathBuf
-    },
-    fs::remove_file,
-};
-use bdk::bitcoin::{
-    consensus,
-};
+use std::convert::From;
+use bdk::bitcoin::consensus;
 use rusqlite::{params, Connection, Result};
 use tglib::{
-    Result as TgResult,
-    TgError,
     player::PlayerId,
     payout::Payout,
 };

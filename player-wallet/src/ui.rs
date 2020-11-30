@@ -2,7 +2,6 @@ use std::str::FromStr;
 use bdk::bitcoin::{
     Address,
     Amount,
-    Transaction,
     consensus,
     secp256k1::{
         Message,
@@ -20,9 +19,7 @@ use tglib::{
     arbiter::ArbiterService,
     contract::Contract,
     payout::Payout,
-    player::{
-        PlayerId,
-    },
+    player::PlayerId,
     wallet::{
         EscrowWallet,
         SigningWallet,
@@ -66,7 +63,7 @@ pub fn wallet_ui<'a, 'b>() -> App<'a, 'b> {
 
 pub fn wallet_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &PlayerWallet) -> TgResult<()> {
 
-    if let (c, Some(a)) = subcommand {
+    if let (c, Some(_a)) = subcommand {
         match c {
             "balance" => {
                 println!("{}", wallet.balance().as_sat());
@@ -292,7 +289,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
             }
             "sign" => {
                 if let Some(contract_record) = wallet.db.get_contract(a.value_of("cxid").unwrap()) {
-                    let contract = Contract::from_bytes(hex::decode(contract_record.hex.clone()).unwrap()).unwrap();
+//                    let contract = Contract::from_bytes(hex::decode(contract_record.hex.clone()).unwrap()).unwrap();
                     let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
                     let sig = signing_wallet.sign_message(
                         Message::from_slice(&hex::decode(contract_record.cxid.clone()).unwrap()).unwrap(),
@@ -300,8 +297,8 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                     ).unwrap();
                     let mut contract = Contract::from_bytes(hex::decode(contract_record.hex.clone()).unwrap()).unwrap();
                     contract.sigs.push(sig);
-                    wallet.db.add_signature(contract_record.cxid, hex::encode(contract.to_bytes()));
-                    assert_ne!(hex::encode(contract.to_bytes()), contract_record.hex);
+                    let _r = wallet.db.add_signature(contract_record.cxid, hex::encode(contract.to_bytes()));
+//                    assert_ne!(hex::encode(contract.to_bytes()), contract_record.hex);
                     println!("signed contract");
 
                 } else {
@@ -314,7 +311,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                     let mut contract = Contract::from_bytes(hex::decode(cr.hex.clone()).unwrap()).unwrap();
                     if let Ok(sig) = arbiter_client.submit_contract(&contract) {
                        contract.sigs.push(sig);
-                       wallet.db.add_signature(cr.cxid, hex::encode(contract.to_bytes()));
+                       let _r = wallet.db.add_signature(cr.cxid, hex::encode(contract.to_bytes()));
                        println!("arbiter accepted and signed contract");
                     }
                     else {
@@ -324,8 +321,8 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
             }
             "broadcast" => {
                 if let Some(cr) = wallet.db.get_contract(a.value_of("cxid").unwrap()) {
-                    let mut contract = Contract::from_bytes(hex::decode(cr.hex.clone()).unwrap()).unwrap();
-                    wallet.wallet.broadcast(contract.funding_tx);
+                    let contract = Contract::from_bytes(hex::decode(cr.hex.clone()).unwrap()).unwrap();
+                    let _r = wallet.wallet.broadcast(contract.funding_tx);
                 }
 
             }
@@ -415,7 +412,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 let contract = Contract::from_bytes(hex::decode(contract_record.hex).unwrap()).unwrap();
                 let escrow_pubkey = wallet.get_escrow_pubkey();
                 let payout = tglib::wallet::create_payout(&contract, &Address::p2wpkh(&escrow_pubkey, NETWORK).unwrap());
-                wallet.db.insert_payout(db::PayoutRecord::from(payout.clone()));
+                let _r = wallet.db.insert_payout(db::PayoutRecord::from(payout.clone()));
                 println!("new payout {:?}", payout);
             }
             "import" => {
@@ -466,7 +463,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
             "broadcast" => {
                 if let Some(pr) = wallet.db.get_payout(a.value_of("cxid").unwrap()) {
                     let tx: PartiallySignedTransaction = consensus::deserialize(&hex::decode(pr.tx).unwrap()).unwrap();
-                    wallet.wallet.broadcast(tx.extract_tx());
+                    let _r = wallet.wallet.broadcast(tx.extract_tx());
                 }
                 else {
                     println!("no such payout");

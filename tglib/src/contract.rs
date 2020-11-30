@@ -1,4 +1,3 @@
-use std::convert::AsRef;
 use byteorder::{BigEndian, WriteBytesExt};
 use serde::{Serialize, Deserialize,};
 use bdk::{
@@ -29,18 +28,18 @@ use nom::{
     self,
     IResult,
     bytes::complete::take,
-    number::complete::{be_u8, be_u16, be_u32},
-    branch::alt,
+    number::complete::{be_u8, be_u32},
+//    branch::alt,
     multi::{many0, length_data, length_value},
-    combinator::opt,
-    sequence::{tuple, preceded, terminated},
+//    combinator::opt,
+    sequence::tuple,
 };
 
 use crate::{
     Result,
     TgError,
-    arbiter::ArbiterId,
-    player::PlayerId,
+//    arbiter::ArbiterId,
+//    player::PlayerId,
     script::{
         parser::tg_script,
         TgScript,
@@ -93,7 +92,7 @@ impl Contract {
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut v = Vec::new();
 // version
-        v.write_u8(self.version);
+        let _ = v.write_u8(self.version);
 // 3 fixed-length pubkeys
         v.extend(self.p1_pubkey.to_bytes());
         v.extend(self.p2_pubkey.to_bytes());
@@ -125,7 +124,7 @@ impl Contract {
 
     pub fn amount(&self) -> Result<Amount> {
         let escrow_address = create_escrow_address(&self.p1_pubkey, &self.p2_pubkey, &self.arbiter_pubkey, NETWORK).unwrap();
-        for (i, txout) in self.funding_tx.output.iter().enumerate() {
+        for txout in self.funding_tx.output.clone() {
             if txout.script_pubkey == escrow_address.script_pubkey() {
                 return Ok(Amount::from_sat(txout.value))
             }

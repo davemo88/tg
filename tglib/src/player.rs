@@ -1,33 +1,17 @@
-use std::convert::{
-    From,
-    Into,
-    TryInto,
-};
-use bdk::{
-    bitcoin::{
-        PublicKey,
-        util::bip32::{
-            ExtendedPubKey,
-        },
-        hashes::{
-            Hash,
-            HashEngine,
-            sha256::HashEngine as Sha2Engine,
-            sha256::Hash as Sha2Hash,
-        },
-        bech32::{
-            self,
-            FromBase32,
-            ToBase32,
-        },
-        secp256k1::{
-//            PublicKey,
-        },
+use std::convert::From;
+use bdk::bitcoin::{
+    PublicKey,
+    util::bip32::ExtendedPubKey,
+    hashes::{
+        Hash,
+        HashEngine,
+        sha256::HashEngine as Sha2Engine,
+        sha256::Hash as Sha2Hash,
     },
-    descriptor::{
-        Descriptor,
-        MiniscriptKey,
-    }
+    bech32::{
+        self,
+        ToBase32,
+    },
 };
 
 #[derive(Debug, Default, Clone)]

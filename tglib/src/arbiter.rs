@@ -1,13 +1,10 @@
-use std::convert::{
-    From,
-};
+use std::convert::From;
 use bdk::bitcoin::{
     Address,
     PublicKey,
     Transaction,
     bech32::{
         self,
-        FromBase32,
         ToBase32,
     },
     hashes::{
@@ -16,16 +13,11 @@ use bdk::bitcoin::{
         sha256::HashEngine as Sha2Engine,
         sha256::Hash as Sha2Hash,
     },
-    secp256k1::{
-        Signature,
-    },
-    util::bip32::{
-        ExtendedPubKey,
-    },
+    secp256k1::Signature,
+    util::bip32::ExtendedPubKey,
 };
 use crate::{
     Result,
-    TgError,
     contract::{
         Contract,
         PlayerContractInfo,

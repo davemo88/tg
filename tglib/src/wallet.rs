@@ -1,12 +1,9 @@
 use std::{
     str::FromStr,
-    convert::{
-        TryInto,
-    }
+    convert::TryInto,
 };
 use bdk::bitcoin::{
     Address,
-    Amount,
     Network,
     PublicKey,
     Script,
@@ -22,7 +19,6 @@ use bdk::bitcoin::{
         Secp256k1,
         Message,
         Signature,
-        All,
     },
     util::{
         bip32::{
@@ -36,10 +32,8 @@ use bdk::bitcoin::{
 };
 use bip39::Mnemonic;
 use crate::{
-    arbiter::ArbiterId,
-    contract::{Contract, PlayerContractInfo},
+    contract::Contract,
     payout::Payout,
-    player::PlayerId,
     script::TgScript,
     Result as TgResult,
 };
@@ -65,6 +59,7 @@ pub trait SigningWallet {
 pub trait EscrowWallet {
     fn get_escrow_pubkey(&self) -> PublicKey;
     fn validate_contract(&self, contract: &Contract) -> TgResult<()>;
+    fn validate_payout(&self, payout: &Payout) -> TgResult<()>;
 }
 
 pub fn create_escrow_address(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pubkey: &PublicKey, network: Network) -> TgResult<Address> {

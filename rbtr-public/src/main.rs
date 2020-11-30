@@ -1,8 +1,5 @@
 use std::{
     str::FromStr,
-    sync::{
-        Arc,
-    },
     thread::sleep,
     time::Duration,
 };
@@ -14,7 +11,6 @@ use bdk::{
         Transaction,
         consensus::{
             self,
-            Decodable,
         },
         util::{
             bip32::{
@@ -32,27 +28,15 @@ use bdk::{
         noop_progress,
         ElectrumBlockchain,
     },
-    database::{
-        MemoryDatabase,
-    },
+    database::MemoryDatabase,
     electrum_client::Client,
 };
 use bip39::Mnemonic;
-use hex::decode;
 use redis::{
     self,
     Commands,
-    AsyncCommands,
-    FromRedisValue,
     RedisResult,
     Connection as SyncConnection,
-    aio::Connection,
-};
-use tokio::{
-    sync::{
-        Mutex,
-        RwLock
-    }
 };
 use warp::{
     Filter,
@@ -115,12 +99,12 @@ impl RbtrPublic {
         self.redis_client.get_connection().unwrap()
     }
 
-    fn push_contract(&self, con: &mut SyncConnection, hex: &str, ttl_seconds: usize) -> RedisResult<String> {
+    fn push_contract(&self, con: &mut SyncConnection, hex: &str) -> RedisResult<String> {
         con.rpush("contracts", hex)?;
         Ok(String::from(hex))
     }
 
-    fn push_payout(&self, con: &mut SyncConnection, hex: &str, ttl_seconds: usize) -> RedisResult<String> {
+    fn push_payout(&self, con: &mut SyncConnection, hex: &str) -> RedisResult<String> {
         con.rpush("payouts", hex)?;
         Ok(String::from(hex))
     }
@@ -141,7 +125,7 @@ impl ArbiterService for RbtrPublic {
     fn submit_contract(&self, contract: &Contract) -> Result<Signature> {
         if wallet().validate_contract(&contract).is_ok() {
             let mut con = self.get_con();
-            let cxid = self.push_contract(&mut con, &hex::encode(contract.to_bytes()), 60).unwrap();
+            let cxid = self.push_contract(&mut con, &hex::encode(contract.to_bytes())).unwrap();
             for _ in 1..15 as u32 {
                 let r: RedisResult<String> = con.get(hex::encode(contract.cxid()));
                 if let Ok(sig) = r {
@@ -157,9 +141,9 @@ impl ArbiterService for RbtrPublic {
     fn submit_payout(&self, payout: &Payout) -> Result<Transaction> {
         if wallet().validate_payout(&payout).is_ok() {
             let mut con = self.get_con();
-            let hex = self.push_payout(&mut con, &hex::encode(payout.to_bytes()), 60).unwrap();
+            let _ = self.push_payout(&mut con, &hex::encode(payout.to_bytes())).unwrap();
             let cxid = hex::encode(payout.contract.cxid());
-            for i in 1..15 as u32 {
+            for _ in 1..15 as u32 {
                 let tx: RedisResult<String> = con.get(cxid.clone());
                 if let Ok(tx) = tx {
                     let _ : RedisResult<String> = con.del(cxid);
@@ -171,7 +155,7 @@ impl ArbiterService for RbtrPublic {
         Err(TgError("invalid payout"))
     }
 
-    fn get_player_info(&self, playerId: PlayerId) -> Result<PlayerContractInfo> {
+    fn get_player_info(&self, _player_id: PlayerId) -> Result<PlayerContractInfo> {
 // TODO: separate service e.g. namecoin
         let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_2_MNEMONIC).unwrap());
         let client = Client::new(ELECTRS_SERVER, None).unwrap();

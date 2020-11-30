@@ -3,20 +3,12 @@ use std::{
 };
 use bdk::{
     Wallet as BdkWallet,
-    database::{
-        BatchDatabase,
-        MemoryDatabase,
-    },
-    electrum_client::Client,
+    database::BatchDatabase,
     bitcoin::{
-        Address,
         Network,
         PublicKey,
-        Transaction,
         secp256k1::{
-            Message,
             Secp256k1,
-            Signature,
         },
         util::{
             bip32::{
@@ -27,46 +19,28 @@ use bdk::{
         }
     },
     blockchain::{
-        noop_progress,
         Blockchain,
         BlockchainMarker,
-        ElectrumBlockchain,
     },
 };
-use bip39::Mnemonic;
-use sled;
 use tglib::{
     Result,
     TgError,
-    arbiter::ArbiterService,
-    contract::{
-        Contract,
-        PlayerContractInfo,
-    },
+    contract::Contract,
     payout::Payout,
-    player::PlayerId,
     script::TgScriptEnv,
     wallet::{
-        create_escrow_address,
-        create_payout_script,
         create_payout,
         EscrowWallet,
-        SigningWallet,
         BITCOIN_ACCOUNT_PATH,
         ESCROW_SUBACCOUNT,
     },
-    mock::{
-        Trezor,
-        ELECTRS_SERVER,
-        PLAYER_2_MNEMONIC,
-        NETWORK,
-    }
 };
 
 const ESCROW_KIX: u64 = 0;
 
 pub struct Wallet<B, D> where B: BlockchainMarker, D: BatchDatabase {
-    fingerprint: Fingerprint,
+//    fingerprint: Fingerprint,
     pub xpubkey: ExtendedPubKey,
     pub network: Network,
     escrow_kix: u64,
@@ -84,7 +58,7 @@ where
         let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
 
         Ok(Wallet {
-            fingerprint,
+//            fingerprint,
             xpubkey,
             network,
             wallet: BdkWallet::new(
@@ -99,14 +73,14 @@ where
         })
     }
     
+    #[allow(dead_code)]
     pub fn new_offline(fingerprint: Fingerprint, xpubkey: ExtendedPubKey, network: Network) -> Self {
         let descriptor_key = format!("[{}/{}]{}", fingerprint, BITCOIN_ACCOUNT_PATH, xpubkey);
         let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
         let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
-        let client = Client::new(ELECTRS_SERVER, None).unwrap();
 
         Wallet {
-            fingerprint,
+//            fingerprint,
             xpubkey,
             network,
             wallet: BdkWallet::new_offline(
@@ -117,17 +91,6 @@ where
             ).unwrap(),
             escrow_kix: ESCROW_KIX,
         }
-    }
-
-    pub fn validate_payout(&self, payout: &Payout) -> Result<()> {
-        if self.validate_contract(&payout.contract).is_ok() {
-            if payout.tx.txid() != create_payout(&payout.contract, &payout.address().unwrap()).tx.txid() {
-                return Err(TgError("invalid payout"));
-            }
-            let mut env = TgScriptEnv::new(payout.clone());
-            return env.validate_payout()
-        }
-        Err(TgError("invalid payout"))
     }
 }
 
@@ -147,5 +110,16 @@ where
             return Err(TgError("unexpected arbiter pubkey"));
         }
         contract.validate()
+    }
+
+    fn validate_payout(&self, payout: &Payout) -> Result<()> {
+        if self.validate_contract(&payout.contract).is_ok() {
+            if payout.tx.txid() != create_payout(&payout.contract, &payout.address().unwrap()).tx.txid() {
+                return Err(TgError("invalid payout"));
+            }
+            let mut env = TgScriptEnv::new(payout.clone());
+            return env.validate_payout()
+        }
+        Err(TgError("invalid payout"))
     }
 }

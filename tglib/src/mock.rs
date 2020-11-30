@@ -1,12 +1,5 @@
-use std::str::FromStr;
 use crate::{
-    contract::{
-        PlayerContractInfo,
-    },
-    player::PlayerId,
-    wallet::{
-        SigningWallet,
-    },
+    wallet::SigningWallet,
     Result as TgResult,
     TgError,
 };
@@ -26,20 +19,12 @@ use bdk::{
             Secp256k1,
             Message,
             Signature,
-            All,
         },
-        Address,
         Network,
-        PublicKey,
         Transaction,
     },
-    blockchain::{
-        OfflineBlockchain,
-        ElectrumBlockchain,
-        noop_progress,
-    },
+    blockchain::OfflineBlockchain,
     database::MemoryDatabase,
-    electrum_client::Client,
 };
 use bip39::Mnemonic;
 pub use crate::{
@@ -112,7 +97,7 @@ impl SigningWallet for Trezor {
         derive_account_xpubkey(&self.mnemonic, NETWORK)
     }
 
-    fn sign_tx(&self, pstx: PartiallySignedTransaction, kdp: String) -> TgResult<Transaction> {
+    fn sign_tx(&self, pstx: PartiallySignedTransaction, _kdp: String) -> TgResult<Transaction> {
         match self.wallet.sign(pstx, None) {
             Ok((signed_tx, _)) => {
                 Ok(signed_tx.extract_tx())

@@ -2,9 +2,9 @@ use byteorder::{BigEndian, WriteBytesExt};
 use nom::{
     IResult,
     combinator::opt,
-    multi::{length_data},
-    number::complete::{be_u8, be_u32},
-    sequence::{tuple},
+    multi::length_data,
+    number::complete::be_u32,
+    sequence::tuple,
 };
 use bdk::bitcoin::{
     Address,
@@ -13,9 +13,7 @@ use bdk::bitcoin::{
         self,
         encode::Decodable,
     },
-    secp256k1::{
-        Signature,
-    },
+    secp256k1::Signature,
 };
 use crate::{
     Result,
@@ -52,7 +50,7 @@ impl Payout {
 
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut v = Vec::new();
-        v.write_u8(self.version);
+        let _ = v.write_u8(self.version);
 // payout length + contract
         let contract_bytes = self.contract.to_bytes();
         v.write_u32::<BigEndian>(contract_bytes.len() as u32).unwrap();
@@ -70,7 +68,13 @@ impl Payout {
     }
 
     pub fn from_bytes(bytes: Vec<u8>) -> Result<Payout> {
-        Err(TgError("couldn't parse payout"))
+        let (i, p) = payout(&bytes).unwrap();
+        if i.len() == 0 {
+            Ok(p)
+        }
+        else {
+            Err(TgError("couldn't parse contract"))
+        }
     }
 
     pub fn address(&self) -> Result<Address> {

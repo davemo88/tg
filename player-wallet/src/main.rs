@@ -1,86 +1,21 @@
 use std::{
-    cmp::max,
-    collections::HashMap,
-    convert::{
-        Into,
-        TryFrom,
-    },
     env::current_dir,
-    net::{
-        AddrParseError, 
-        SocketAddr
-    },
-    path::{
-        PathBuf, 
-        Path,
-    },
-    process::ChildStderr,
-    str::FromStr,
-    thread,
-    time::Duration,
+    path::PathBuf,
 };
-use hex::{decode, encode};
+//use hex::{decode, encode};
 use log::debug;
-use serde::{
-    Serialize,
-};
-use bdk::{
-    bitcoin::{
-        Address,
-        Amount,
-        secp256k1::{
-            Secp256k1,
-            Message,
-        },
-        util::{
-            psbt::PartiallySignedTransaction,
-            bip32::{
-                DerivationPath,
-            }
-        },
-        hashes::sha256
-    },
-    blockchain::{
-        noop_progress,
-    },
-    Error,
-};
-use bip39::{
-    Mnemonic, 
-};
-use clap::{App, Arg, ArgMatches, SubCommand, AppSettings};
+use bdk::Error;
+use bip39::Mnemonic;
+use clap::{App, SubCommand, AppSettings};
 use rustyline::Editor;
 use rustyline::error::ReadlineError;
 use shell_words;
 use tglib::{
-    Result as TgResult,
-    TgError,
-    arbiter::{
-        ArbiterId,
-        ArbiterService,
-    },
-    contract::{
-        Contract,
-    },
-    payout::{
-        Payout,
-    },
-    player::{
-        PlayerId,
-    },
-    script::TgScript,
-    wallet::{
-        SigningWallet,
-    },
+    wallet::SigningWallet,
     mock::{
         Trezor,
-        ARBITER_MNEMONIC,
-        ARBITER_PUBLIC_URL,
-        DB_NAME,
         NETWORK,
         PLAYER_1_MNEMONIC,
-        PLAYER_2_MNEMONIC,
-        ESCROW_KIX,
     },
 };
 
@@ -88,10 +23,7 @@ mod arbiter;
 mod db;
 mod ui;
 mod wallet;
-pub use wallet::{
-    PlayerWallet,
-};
-use arbiter::ArbiterClient;
+pub use wallet::PlayerWallet;
 use ui::{
     contract_subcommand,
     payout_subcommand,
@@ -142,16 +74,16 @@ fn main() -> Result<(), Error> {
                         rl.add_history_entry(line.as_str());
                         match c {
                             "wallet" => {
-                                wallet_subcommand(a.subcommand(), &wallet);
+                                let _ = wallet_subcommand(a.subcommand(), &wallet);
                             }
                             "player" => {
-                                player_subcommand(a.subcommand(), &wallet);
+                                let _ = player_subcommand(a.subcommand(), &wallet);
                             }
                             "contract" => {
-                                contract_subcommand(a.subcommand(), &wallet);
+                                let _ = contract_subcommand(a.subcommand(), &wallet);
                             }
                             "payout" => {
-                                payout_subcommand(a.subcommand(), &wallet);
+                                let _ = payout_subcommand(a.subcommand(), &wallet);
                             }
                             "quit" => {
                                 break;

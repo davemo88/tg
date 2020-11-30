@@ -1,20 +1,11 @@
 use std::{
-    str::FromStr,
     thread::sleep,
     time::Duration,
 };
-use bip39::Mnemonic;
 use bdk::bitcoin::{
     Transaction,
     consensus,
-    secp256k1::{
-        Message,
-        Signature,
-    },
-    util::{
-        bip32::DerivationPath,
-        psbt::PartiallySignedTransaction,
-    }
+    secp256k1::Signature,
 };
 use redis::{
     self,
@@ -22,20 +13,10 @@ use redis::{
     AsyncCommands,
 };
 use tglib::{
-    Result as TgResult,
     contract::Contract,
     payout::Payout,
-    wallet::{
-        EscrowWallet,
-        SigningWallet,
-    },
-    mock::{
-        Trezor,
-        ARBITER_MNEMONIC,
-        ESCROW_SUBACCOUNT,
-        ESCROW_KIX,
-        REDIS_SERVER,
-    },
+    wallet::EscrowWallet,
+    mock::REDIS_SERVER,
 };
 
 mod wallet;
@@ -47,7 +28,7 @@ async fn maybe_sign_contract(con: &mut Connection, wallet: &Wallet) {
         if wallet.validate_contract(&contract).is_ok() {
             if let Ok(sig) = wallet.sign_contract(&contract) {
                 println!("signed contract {}", hex::encode(contract.cxid()));
-                set_contract_signature(con, contract, sig).await;
+                let _ = set_contract_signature(con, contract, sig).await;
             }
         }
     }
@@ -72,7 +53,7 @@ async fn maybe_sign_payout(con: &mut Connection, wallet: &Wallet) {
         if wallet.validate_payout(&payout).is_ok() {
             if let Ok(tx) = wallet.sign_payout(&payout) {
                 println!("signed transaction for payout for contract {}", hex::encode(payout.contract.cxid()));
-                set_payout_tx(con, payout, tx).await;
+                let _ = set_payout_tx(con, payout, tx).await;
             }
         }
     }

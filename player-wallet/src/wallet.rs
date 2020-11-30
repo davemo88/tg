@@ -1,7 +1,6 @@
 use std::{
     env::current_dir,
     str::FromStr,
-    convert::TryInto,
 };
 use bdk::{
     bitcoin::{
@@ -13,24 +12,13 @@ use bdk::{
         TxIn,
         TxOut,
         Script,
-        blockdata::{
-            script::Builder,
-            opcodes::all as Opcodes,
-            transaction::OutPoint,
-        },
-        secp256k1::{
-            Secp256k1,
-            Message,
-            Signature,
-            All,
-        },
+        secp256k1::Secp256k1,
         util::{
             bip32::{
                 ExtendedPubKey,
                 DerivationPath,
                 Fingerprint,
             },
-            psbt::PartiallySignedTransaction,
         }
     },
     blockchain::{
@@ -39,30 +27,22 @@ use bdk::{
     },
     database::MemoryDatabase,
     electrum_client::Client,
-    Error,
-    ScriptType,
     Wallet,
 };
 use tglib::{
     Result as TgResult,
     TgError,
-    arbiter::{
-        ArbiterId,
-        ArbiterService,
-    },
+    arbiter::ArbiterService,
     contract::{
         Contract,
         PlayerContractInfo,
     },
-    payout::{
-        Payout,
-    },
-    player::{
-        PlayerId,
-    },
-    script::TgScript,
+    payout::Payout,
+    player::PlayerId,
+    script::TgScriptEnv,
     wallet::{
         create_escrow_address,
+        create_payout,
         create_payout_script,
         EscrowWallet,
         BITCOIN_ACCOUNT_PATH,
@@ -72,19 +52,15 @@ use tglib::{
         DB_NAME,
         ESCROW_SUBACCOUNT,
         ESCROW_KIX,
-        NETWORK,
     },
 };
 use crate::{
     arbiter::ArbiterClient,
-    db::{
-        ContractRecord,
-        DB,
-    },
+    db::DB,
 };
 
 pub struct PlayerWallet {
-    fingerprint: Fingerprint,
+//    fingerprint: Fingerprint,
     xpubkey: ExtendedPubKey,
     network: Network,
     pub wallet: Wallet<ElectrumBlockchain, MemoryDatabase>,
@@ -101,10 +77,10 @@ impl PlayerWallet {
         let mut db_path = current_dir().unwrap();
         db_path.push(DB_NAME);
         let db = DB::new(&db_path).unwrap();
-        db.create_tables();
+        let _ = db.create_tables();
 
         PlayerWallet {
-            fingerprint,
+//            fingerprint,
             xpubkey,
             network,
             wallet: Wallet::new(
@@ -239,5 +215,16 @@ impl EscrowWallet for PlayerWallet {
             return Err(TgError("unexpected arbiter pubkey"));
         }
         contract.validate()
+    }
+
+    fn validate_payout(&self, payout: &Payout) -> TgResult<()> {
+        if self.validate_contract(&payout.contract).is_ok() {
+            if payout.tx.txid() != create_payout(&payout.contract, &payout.address().unwrap()).tx.txid() {
+                return Err(TgError("invalid payout"));
+            }
+            let mut env = TgScriptEnv::new(payout.clone());
+            return env.validate_payout()
+        }
+        Err(TgError("invalid payout"))
     }
 }
