@@ -13,6 +13,7 @@ use bdk::{
         Network,
         PublicKey,
         Transaction,
+        consensus,
         secp256k1::{
             Message,
             Secp256k1,
@@ -75,6 +76,16 @@ impl Wallet {
         }
         Err(TgError("invalid payout"))
     }
+
+    pub fn sign_contract(&self, contract: &Contract) -> TgResult<Signature> {
+        Ok(self.sign_message(Message::from_slice(&contract.cxid()).unwrap(), 
+                    DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap()).unwrap())
+    }
+
+    pub fn sign_payout(&self, payout: &Payout) -> TgResult<Transaction> {
+        let psbt: PartiallySignedTransaction = consensus::deserialize(&consensus::serialize(&payout.tx)).unwrap();
+        self.sign_tx(psbt, "".to_string())
+    }
 }
 
 impl SigningWallet for Wallet {
@@ -104,7 +115,7 @@ impl EscrowWallet for Wallet {
 
     fn validate_contract(&self, contract: &Contract) -> TgResult<()> {
 // TODO: better fee validation
-        if contract.arbiter_pubkey != EscrowWallet::get_escrow_pubkey(self) {
+        if contract.arbiter_pubkey != self.get_escrow_pubkey() {
             return Err(TgError("unexpected arbiter pubkey"));
         }
         contract.validate()
