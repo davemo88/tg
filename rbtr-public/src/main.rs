@@ -9,15 +9,11 @@ use bdk::{
         Address,
         PublicKey,
         Transaction,
-        consensus::{
-            self,
-        },
-        util::{
-            bip32::{
-                ExtendedPubKey,
-                DerivationPath,
-                Fingerprint,
-            }
+        consensus,
+        util::bip32::{
+            ExtendedPubKey,
+            DerivationPath,
+            Fingerprint,
         },
         secp256k1::{
             Secp256k1,
@@ -144,8 +140,8 @@ impl ArbiterService for RbtrPublic {
             let _ = self.push_payout(&mut con, &hex::encode(payout.to_bytes())).unwrap();
             let cxid = hex::encode(payout.contract.cxid());
             for _ in 1..15 as u32 {
-                let tx: RedisResult<String> = con.get(cxid.clone());
-                if let Ok(tx) = tx {
+                let r: RedisResult<String> = con.get(cxid.clone());
+                if let Ok(tx) = r {
                     let _ : RedisResult<String> = con.del(cxid);
                     return Ok(consensus::deserialize::<Transaction>(&hex::decode(tx).unwrap()).unwrap())
                 }

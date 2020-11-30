@@ -32,9 +32,13 @@ use bdk::bitcoin::{
 };
 use bip39::Mnemonic;
 use crate::{
+    TgError,
     contract::Contract,
     payout::Payout,
-    script::TgScript,
+    script::{
+        TgScript,
+        TgScriptEnv,
+    },
     Result as TgResult,
 };
 
@@ -59,7 +63,17 @@ pub trait SigningWallet {
 pub trait EscrowWallet {
     fn get_escrow_pubkey(&self) -> PublicKey;
     fn validate_contract(&self, contract: &Contract) -> TgResult<()>;
-    fn validate_payout(&self, payout: &Payout) -> TgResult<()>;
+    fn validate_payout(&self, payout: &Payout) -> TgResult<()> {
+        if self.validate_contract(&payout.contract).is_ok() {
+            if payout.tx.txid() != create_payout(&payout.contract, &payout.address().unwrap()).tx.txid() {
+                return Err(TgError("invalid payout"));
+            }
+            let mut env = TgScriptEnv::new(payout.clone());
+            env.validate_payout()
+        } else {
+            Err(TgError("invalid payout"))
+        }
+    }
 }
 
 pub fn create_escrow_address(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pubkey: &PublicKey, network: Network) -> TgResult<Address> {
