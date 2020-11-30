@@ -32,7 +32,7 @@ impl From<Payout> for PayoutRecord {
     fn from(p: Payout) -> PayoutRecord {
         let sig = match p.script_sig {
            Some(sig) => hex::encode(sig.serialize_compact().to_vec()),
-           None => String::default(),
+           None => "".to_string(),
         };
         PayoutRecord {
             cxid: hex::encode(p.contract.cxid()),

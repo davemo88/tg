@@ -434,11 +434,11 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 if let Some(pr) = wallet.db.get_payout(a.value_of("cxid").unwrap()) {
                     let tx: PartiallySignedTransaction = consensus::deserialize(&hex::decode(pr.tx).unwrap()).unwrap();
                     let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-                    let tx = signing_wallet.sign_tx(tx, String::from("")).unwrap(); let tx = hex::encode(consensus::serialize(&tx));
+                    let tx = signing_wallet.sign_tx(tx, "".to_string()).unwrap(); let tx = hex::encode(consensus::serialize(&tx));
                     wallet.db.insert_payout(db::PayoutRecord {
                         cxid: pr.cxid, 
                         tx,
-                        sig: a.value_of("script-sig").unwrap_or_default().to_string(),
+                        sig: a.value_of("script-sig").unwrap_or("").to_string(),
                     }).unwrap();
                     println!("signed payout");
                 }
