@@ -220,7 +220,11 @@ impl DB {
 mod test {
 
     use super::*;
-    use std::env::current_dir;
+    use std::{
+        env::current_dir,
+        fs::remove_file,
+        path::PathBuf,
+    };
 
     #[test]
     fn test_create_tables() -> Result<()> {

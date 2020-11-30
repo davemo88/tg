@@ -124,14 +124,39 @@ fn main() -> Result<(), Error> {
 mod tests {
 
     use super::*;
-    use tglib::mock::BITCOIN_RPC_URL;
-    use bitcoincore_rpc::{Auth, Client as RpcClient, RpcApi, json::EstimateMode};
-    use tglib::wallet::{
-        BITCOIN_ACCOUNT_PATH,
-        ESCROW_SUBACCOUNT,
-        create_payout_script,
-        create_escrow_address,
+    use std::{
+        str::FromStr,
+        thread,
+        time::Duration,
     };
+    use bdk::bitcoin::{
+        Amount,
+        secp256k1::{
+            Message,
+            Secp256k1,
+        },
+        util::bip32::DerivationPath,
+    };
+    use bitcoincore_rpc::{Auth, Client as RpcClient, RpcApi, json::EstimateMode};
+    use tglib::{
+        arbiter::ArbiterService,
+        contract::Contract,
+        player::PlayerId,
+        wallet::{
+            SigningWallet,
+            BITCOIN_ACCOUNT_PATH,
+            ESCROW_SUBACCOUNT,
+            create_payout_script,
+            create_escrow_address,
+        },
+        mock::{
+            ARBITER_MNEMONIC,
+            ARBITER_PUBLIC_URL,
+            ESCROW_KIX,
+            PLAYER_2_MNEMONIC,
+        }
+    };
+    use crate::arbiter::ArbiterClient;
 
     const SATS: u64 = 1000000;
 
