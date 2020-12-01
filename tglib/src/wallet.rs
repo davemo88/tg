@@ -68,11 +68,22 @@ pub trait EscrowWallet {
     fn validate_contract(&self, contract: &Contract) -> TgResult<()>;
     fn validate_payout(&self, payout: &Payout) -> TgResult<()> {
         if self.validate_contract(&payout.contract).is_ok() {
-            if payout.contract.sigs.len() != 3 as usize {
-                return Err(TgError("invalid signatures"));
+// payouts require fully signed contracts
+            let fully_signed = payout.contract.sigs.len() == 3 as usize;
+// the payout tx must be an expected one
+            let payout_address = &payout.address().unwrap();
+            let matching_tx = payout.tx.txid() != create_payout(&payout.contract, &payout_address).tx.txid();
+// the payout tx must be signed by the recipient
+            let secp = Secp256k1::new();
+// this is tricky because the witness is a raw byte vec
+            if let Some(bytes) = payout.tx.input[0].witness.first() {
+// need to parse witness here, should go to nom                
             }
-            if payout.tx.txid() != create_payout(&payout.contract, &payout.address().unwrap()).tx.txid() {
-                return Err(TgError("invalid payout"));
+            if payout_address == &Address::p2wpkh(&payout.contract.p1_pubkey, payout_address.network).unwrap() {
+
+            } 
+            else if payout_address == &Address::p2wpkh(&payout.contract.p2_pubkey, payout_address.network).unwrap() {
+
             }
             let mut env = TgScriptEnv::new(payout.clone());
             env.validate_payout()
