@@ -62,12 +62,14 @@ impl TgScriptEnv {
 //confirm payout script hash sigs on contract
 // TODO: check funding_tx is signed by the correct parties and in the blockchain
 //        if payout.contract.state() != ContractState::Live {
-        if payout.contract.state() != ContractState::ArbiterSigned {
-            return Err(TgError("invalid payout request - contract is uncertified"))
-        }
+//        if payout.contract.state() != ContractState::ArbiterSigned {
+//            return Err(TgError("invalid payout request - contract is uncertified"))
+//        }
 //push script sig to stack then evaluate the payout script
         if payout.script_sig.is_some() {
             self.stack.push(payout.script_sig.unwrap().serialize_compact().to_vec());
+        } else {
+            return Err(TgError("no script sig"));
         };
 
         let _result = self.eval(payout.contract.payout_script.clone());

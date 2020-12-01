@@ -68,15 +68,13 @@ pub trait EscrowWallet {
     fn validate_contract(&self, contract: &Contract) -> TgResult<()>;
     fn validate_payout(&self, payout: &Payout) -> TgResult<()> {
         println!("begin payout validation");
-        let r = self.validate_contract(&payout.contract);
-        println!("{:?}", r);
-        if r.is_ok() {
-            println!("contract ok");
+        if self.validate_contract(&payout.contract).is_ok() {
+            if payout.contract.sigs.len() != 3 as usize {
+                return Err(TgError("invalid signatures"));
+            }
             if payout.tx.txid() != create_payout(&payout.contract, &payout.address().unwrap()).tx.txid() {
-                println!("invalid payout tx");
                 return Err(TgError("invalid payout"));
             }
-            println!("begin payout script evaluation");
             let mut env = TgScriptEnv::new(payout.clone());
             env.validate_payout()
         } else {
@@ -87,7 +85,6 @@ pub trait EscrowWallet {
 
 pub fn sign_contract<T>(wallet: &T, contract: &mut Contract) -> TgResult<Signature> 
 where T: EscrowWallet + SigningWallet {
-    println!("signing contract {}", hex::encode(contract.cxid()));
     Ok(wallet.sign_message(Message::from_slice(&contract.cxid()).unwrap(), 
                 DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap()).unwrap())
 }
@@ -231,17 +228,11 @@ mod tests {
         let p1_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
         let p2_wallet = Trezor::new(Mnemonic::parse(PLAYER_2_MNEMONIC).unwrap());
         let arbiter_wallet = Trezor::new(Mnemonic::parse(ARBITER_MNEMONIC).unwrap());
-        println!("p1 signing contract");
         let sig = sign_contract(&p1_wallet, contract).unwrap();
-        println!("{}",hex::encode(sig.serialize_compact()));
         contract.sigs.push(sig);
-        println!("p2 signing contract");
         let sig = sign_contract(&p2_wallet, contract).unwrap();
-        println!("{}",hex::encode(sig.serialize_compact()));
         contract.sigs.push(sig);
-        println!("arbiter signing contract");
         let sig = sign_contract(&arbiter_wallet, contract).unwrap();
-        println!("{}",hex::encode(sig.serialize_compact()));
         contract.sigs.push(sig);
     }
 

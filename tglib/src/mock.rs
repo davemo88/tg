@@ -106,9 +106,10 @@ impl SigningWallet for Trezor {
         }
     }
 
-    fn sign_message(&self, msg: Message, path: DerivationPath) -> TgResult<Signature> {
+    fn sign_message(&self, msg: Message, _path: DerivationPath) -> TgResult<Signature> {
         let root_key = ExtendedPrivKey::new_master(NETWORK, &self.mnemonic.to_seed("")).unwrap();
         let secp = Secp256k1::new();
+        let path = DerivationPath::from_str(&String::from(format!("m/{}/{}/{}", BITCOIN_ACCOUNT_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
         let signing_key = root_key.derive_priv(&secp, &path).unwrap();
         Ok(secp.sign(&msg, &signing_key.private_key.key))
     }
