@@ -67,7 +67,6 @@ pub trait EscrowWallet {
     fn get_escrow_pubkey(&self) -> PublicKey;
     fn validate_contract(&self, contract: &Contract) -> TgResult<()>;
     fn validate_payout(&self, payout: &Payout) -> TgResult<()> {
-        println!("begin payout validation");
         if self.validate_contract(&payout.contract).is_ok() {
             if payout.contract.sigs.len() != 3 as usize {
                 return Err(TgError("invalid signatures"));
