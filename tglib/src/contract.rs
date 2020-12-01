@@ -173,8 +173,10 @@ impl Contract {
     fn validate_sigs(&self) -> Result<()> {
         let secp = Secp256k1::new();
         let msg = Message::from_slice(&self.cxid()).unwrap();
+        println!("validating sigs for contract {}", hex::encode(self.cxid()));
 
         for (i, sig) in self.sigs.iter().enumerate() {
+            println!("sig {}: {}", i, hex::encode(sig.serialize_compact()));
             let pubkey = match i {
                 0 => &self.p1_pubkey.key,
                 1 => &self.p2_pubkey.key,
@@ -186,7 +188,6 @@ impl Contract {
             }
         };
         Ok(())
-
     }
 //
 }

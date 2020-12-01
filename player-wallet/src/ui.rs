@@ -23,7 +23,6 @@ use tglib::{
     wallet::{
         EscrowWallet,
         SigningWallet,
-        BITCOIN_ACCOUNT_PATH,
         ESCROW_SUBACCOUNT,
     },
     mock::{
@@ -293,7 +292,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                     let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
                     let sig = signing_wallet.sign_message(
                         Message::from_slice(&hex::decode(contract_record.cxid.clone()).unwrap()).unwrap(),
-                        DerivationPath::from_str(&format!("m/{}/{}/{}", BITCOIN_ACCOUNT_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(),
+                        DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(),
                     ).unwrap();
                     let mut contract = Contract::from_bytes(hex::decode(contract_record.hex.clone()).unwrap()).unwrap();
                     contract.sigs.push(sig);

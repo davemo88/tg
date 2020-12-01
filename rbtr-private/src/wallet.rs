@@ -5,7 +5,6 @@ use bdk::{
     bitcoin::{
         PublicKey,
         Transaction,
-        consensus,
         secp256k1::{
             Message,
             Secp256k1,
@@ -26,7 +25,6 @@ use tglib::{
     Result as TgResult,
     TgError,
     contract::Contract,
-    payout::Payout,
     wallet::{
         SigningWallet,
         EscrowWallet,
@@ -48,16 +46,6 @@ impl Wallet {
        Wallet {
            trezor: Trezor::new(Mnemonic::parse(ARBITER_MNEMONIC).unwrap())
        } 
-    }
-
-    pub fn sign_contract(&self, contract: &Contract) -> TgResult<Signature> {
-        Ok(self.sign_message(Message::from_slice(&contract.cxid()).unwrap(), 
-                    DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap()).unwrap())
-    }
-
-    pub fn sign_payout(&self, payout: &Payout) -> TgResult<Transaction> {
-        let psbt: PartiallySignedTransaction = consensus::deserialize(&consensus::serialize(&payout.tx)).unwrap();
-        self.sign_tx(psbt, "".to_string())
     }
 }
 

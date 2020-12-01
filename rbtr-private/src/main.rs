@@ -15,7 +15,11 @@ use redis::{
 use tglib::{
     contract::Contract,
     payout::Payout,
-    wallet::EscrowWallet,
+    wallet::{
+        sign_contract,
+        sign_payout,
+        EscrowWallet,
+    },
     mock::REDIS_SERVER,
 };
 
@@ -23,10 +27,10 @@ mod wallet;
 use wallet::Wallet;
 
 async fn maybe_sign_contract(con: &mut Connection, wallet: &Wallet) {
-    if let Some(contract) = next_contract(con).await {
+    if let Some(mut contract) = next_contract(con).await {
         println!("retrieved contract:\n{:?}", contract);
         if wallet.validate_contract(&contract).is_ok() {
-            if let Ok(sig) = wallet.sign_contract(&contract) {
+            if let Ok(sig) = sign_contract(wallet, &mut contract) {
                 println!("signed contract {}", hex::encode(contract.cxid()));
                 let _ = set_contract_signature(con, contract, sig).await;
             }
@@ -48,10 +52,10 @@ async fn set_contract_signature(con: &mut Connection, contract: Contract, sig: S
 }
 
 async fn maybe_sign_payout(con: &mut Connection, wallet: &Wallet) {
-    if let Some(payout) = next_payout(con).await {
+    if let Some(mut payout) = next_payout(con).await {
         println!("retrieved payout:\n{:?}", payout);
         if wallet.validate_payout(&payout).is_ok() {
-            if let Ok(tx) = wallet.sign_payout(&payout) {
+            if let Ok(tx) = sign_payout(wallet, &mut payout) {
                 println!("signed transaction for payout for contract {}", hex::encode(payout.contract.cxid()));
                 let _ = set_payout_tx(con, payout, tx).await;
             }

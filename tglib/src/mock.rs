@@ -1,11 +1,8 @@
-use crate::{
-    wallet::SigningWallet,
-    Result as TgResult,
-    TgError,
-};
+use std::str::FromStr;
 use bdk::{
     Wallet,
     bitcoin::{
+        PublicKey,
         util::{
             bip32::{
                 DerivationPath,
@@ -28,9 +25,13 @@ use bdk::{
 };
 use bip39::Mnemonic;
 pub use crate::{
+    Result as TgResult,
+    TgError,
+    contract::Contract,
     wallet::{ 
         derive_account_xpubkey,
         derive_account_xprivkey,
+        SigningWallet,
         EscrowWallet,
         BITCOIN_ACCOUNT_PATH,
         ESCROW_SUBACCOUNT,
@@ -47,7 +48,6 @@ pub const REDIS_SERVER: &'static str = "redis://redis/";
 
 pub const CONTRACT_VERSION: u8 = 1;
 pub const PAYOUT_VERSION: u8 = 1;
-//pub const PLAYER_VERSION: u64 = 1;
 pub const ESCROW_KIX: &'static str = "0";
 
 pub const PLAYER_1_MNEMONIC: &'static str = "deny income tiger glove special recycle cup surface unusual sleep speed scene enroll finger protect dice powder unit";
@@ -59,7 +59,7 @@ pub const ARBITER_PUBLIC_URL: &'static str = "http://localhost:5000";
 
 pub struct Trezor {
     mnemonic: Mnemonic,
-    wallet: Wallet<OfflineBlockchain, MemoryDatabase>,
+    pub wallet: Wallet<OfflineBlockchain, MemoryDatabase>,
 }
 
 impl Trezor {
@@ -111,6 +111,21 @@ impl SigningWallet for Trezor {
         let secp = Secp256k1::new();
         let signing_key = root_key.derive_priv(&secp, &path).unwrap();
         Ok(secp.sign(&msg, &signing_key.private_key.key))
+    }
+}
+
+impl EscrowWallet for Trezor {
+    fn get_escrow_pubkey(&self) -> PublicKey {
+        let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
+        let escrow_pubkey = self.xpubkey().derive_pub(&Secp256k1::new(), &path).unwrap();
+        escrow_pubkey.public_key
+    }
+
+    fn validate_contract(&self, contract: &Contract) -> TgResult<()> {
+        if contract.arbiter_pubkey != self.get_escrow_pubkey() {
+            return Err(TgError("unexpected arbiter pubkey"));
+        }
+        contract.validate()
     }
 }
 

@@ -121,4 +121,3 @@ pub enum PayoutState {
     Resolved,
     Invalid,
 }
-
