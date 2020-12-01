@@ -274,7 +274,7 @@ mod tests {
     }
 
     #[test]
-    fn fail_invalid_contract() {
+    fn fail_missing_contract_sigs() {
         let contract = Contract::from_bytes(hex::decode(CONTRACT).unwrap()).unwrap();
 
         let address = Address::p2wpkh(&contract.p1_pubkey, NETWORK).unwrap();
@@ -286,7 +286,6 @@ mod tests {
                 DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap()).unwrap());
 
         assert!(arbiter_wallet.validate_payout(&payout).is_err())
-
     }
 
     #[test]
