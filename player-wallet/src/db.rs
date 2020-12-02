@@ -1,7 +1,8 @@
 use std::convert::From;
-use bdk::bitcoin::consensus;
 use rusqlite::{params, Connection, Result};
 use tglib::{
+    bdk::bitcoin::consensus,
+    hex,
     player::PlayerId,
     payout::Payout,
 };

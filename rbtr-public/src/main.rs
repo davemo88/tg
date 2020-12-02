@@ -4,32 +4,6 @@ use std::{
     time::Duration,
 };
 use serde_json;
-use bdk::{
-    bitcoin::{
-        Address,
-        PublicKey,
-        consensus,
-        util::{
-            bip32::{
-                ExtendedPubKey,
-                DerivationPath,
-                Fingerprint,
-            },
-            psbt::PartiallySignedTransaction,
-        },
-        secp256k1::{
-            Secp256k1,
-            Signature,
-        }
-    },
-    blockchain::{
-        noop_progress,
-        ElectrumBlockchain,
-    },
-    database::MemoryDatabase,
-    electrum_client::Client,
-};
-use bip39::Mnemonic;
 use redis::{
     self,
     Commands,
@@ -42,6 +16,33 @@ use warp::{
     Rejection,
 };
 use tglib::{
+    bdk::{
+        bitcoin::{
+            Address,
+            PublicKey,
+            consensus,
+            util::{
+                bip32::{
+                    ExtendedPubKey,
+                    DerivationPath,
+                    Fingerprint,
+                },
+                psbt::PartiallySignedTransaction,
+            },
+            secp256k1::{
+                Secp256k1,
+                Signature,
+            }
+        },
+        blockchain::{
+            noop_progress,
+            ElectrumBlockchain,
+        },
+        database::MemoryDatabase,
+        electrum_client::Client,
+    },
+    bip39::Mnemonic,
+    hex,
     Result,
     TgError,
     arbiter::ArbiterService,
@@ -71,11 +72,11 @@ use wallet::Wallet;
 type WebResult<T> = std::result::Result<T, Rejection>;
 
 fn wallet() -> Wallet<ElectrumBlockchain, MemoryDatabase> {
-    let mut client = Client::new(ELECTRS_SERVER, None);
+    let mut client = Client::new(ELECTRS_SERVER);
     while client.is_err() {
         println!("connection to electrs failed");
         sleep(Duration::from_secs(1));
-        client = Client::new(ELECTRS_SERVER, None);
+        client = Client::new(ELECTRS_SERVER);
     }
     println!("connection to electrs succeeded");
     Wallet::<ElectrumBlockchain, MemoryDatabase>::new(Fingerprint::from_str(ARBITER_FINGERPRINT).unwrap(), ExtendedPubKey::from_str(ARBITER_XPUBKEY).unwrap(), ElectrumBlockchain::from(client.unwrap()), NETWORK).unwrap()
@@ -156,7 +157,7 @@ impl ArbiterService for RbtrPublic {
     fn get_player_info(&self, _player_id: PlayerId) -> Result<PlayerContractInfo> {
 // TODO: separate service e.g. namecoin
         let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_2_MNEMONIC).unwrap());
-        let client = Client::new(ELECTRS_SERVER, None).unwrap();
+        let client = Client::new(ELECTRS_SERVER).unwrap();
         let player_wallet = Wallet::<ElectrumBlockchain, MemoryDatabase>::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), ElectrumBlockchain::from(client), NETWORK).unwrap();
         let escrow_pubkey = EscrowWallet::get_escrow_pubkey(&player_wallet);
         player_wallet.wallet.sync(noop_progress(), None).unwrap();

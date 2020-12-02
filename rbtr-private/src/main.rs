@@ -2,17 +2,18 @@ use std::{
     thread::sleep,
     time::Duration,
 };
-use bdk::bitcoin::{
-    consensus,
-    secp256k1::Signature,
-    util::psbt::PartiallySignedTransaction,
-};
 use redis::{
     self,
     aio::Connection,
     AsyncCommands,
 };
 use tglib::{
+    bdk::bitcoin::{
+        consensus,
+        secp256k1::Signature,
+        util::psbt::PartiallySignedTransaction,
+    },
+    hex,
     contract::Contract,
     payout::Payout,
     wallet::{

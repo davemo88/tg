@@ -1,16 +1,17 @@
 use std::str::FromStr;
 use serde_json;
-use bdk::{
-    bitcoin::{
-        Address,
-        PublicKey,
-        consensus,
-        secp256k1::Signature,
-        util::psbt::PartiallySignedTransaction,
-    },
-};
 use reqwest;
 use tglib::{
+    bdk::{
+        bitcoin::{
+            Address,
+            PublicKey,
+            consensus,
+            secp256k1::Signature,
+            util::psbt::PartiallySignedTransaction,
+        },
+    },
+    hex,
     Result,
     TgError,
     arbiter::ArbiterService,

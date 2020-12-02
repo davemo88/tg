@@ -1,20 +1,21 @@
 use std::str::FromStr;
-use bdk::bitcoin::{
-    Address,
-    Amount,
-    consensus,
-    secp256k1::{
-        Message,
-        Signature,
-    },
-    util::{
-        bip32::DerivationPath,
-        psbt::PartiallySignedTransaction,
-    },
-};
-use bip39::Mnemonic;
 use clap::{App, Arg, ArgMatches, SubCommand, AppSettings};
 use tglib::{
+    bdk::bitcoin::{
+        Address,
+        Amount,
+        consensus,
+        secp256k1::{
+            Message,
+            Signature,
+        },
+        util::{
+            bip32::DerivationPath,
+            psbt::PartiallySignedTransaction,
+        },
+    },
+    hex,
+    bip39::Mnemonic,
     Result as TgResult,
     arbiter::ArbiterService,
     contract::Contract,

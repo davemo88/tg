@@ -137,7 +137,12 @@ pub fn create_payout(contract: &Contract, payout_address: &Address) -> Payout {
         &contract.arbiter_pubkey,
         payout_address.network,
         ).unwrap();
-    Payout::new(contract.clone(), PartiallySignedTransaction::from_unsigned_tx(create_payout_tx(&contract.funding_tx, &escrow_address, &payout_address).unwrap()).unwrap())
+    let mut escrow_txout = contract.funding_tx.output.iter().filter(|txout| txout.script_pubkey == escrow_address.script_pubkey());
+    let mut psbt: PartiallySignedTransaction = PartiallySignedTransaction::from_unsigned_tx(create_payout_tx(&contract.funding_tx, &escrow_address, &payout_address).unwrap()).unwrap();
+    if let Some(txout) = escrow_txout.next() {
+        psbt.inputs[0].witness_utxo = Some(txout.clone());
+    }
+    Payout::new(contract.clone(), psbt)
 }
 
 // we are ignoring specification of the game master pubkey and substituting
@@ -269,20 +274,16 @@ mod tests {
     fn pass_p2_payout() {
         let mut contract = Contract::from_bytes(hex::decode(CONTRACT).unwrap()).unwrap();
         all_sign(&mut contract);
-        println!("{:?}", contract);
 
         let address = Address::p2wpkh(&contract.p2_pubkey, NETWORK).unwrap();
         let mut payout = create_payout(&contract, &address);
         let wallet = Trezor::new(Mnemonic::parse(PLAYER_2_MNEMONIC).unwrap());
-        println!("player signing payout");
         payout.psbt = sign_payout(&wallet, &mut payout).unwrap();
         let arbiter_wallet = Trezor::new(Mnemonic::parse(ARBITER_MNEMONIC).unwrap());
         payout.script_sig = Some(arbiter_wallet.sign_message(Message::from_slice(&payout.psbt.clone().extract_tx().txid()).unwrap(), 
                 DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap()).unwrap());
 
-        println!("arbiter validating payout");
         let r = arbiter_wallet.validate_payout(&payout);
-        println!("{:?}", r);
         assert!(r.is_ok())
     }
 

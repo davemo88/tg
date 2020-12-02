@@ -1,8 +1,6 @@
-use std::{
-    str::FromStr,
-};
-use bdk::{
-    bitcoin::{
+use std::str::FromStr;
+use tglib::{
+    bdk::bitcoin::{
         PublicKey,
         secp256k1::{
             Message,
@@ -18,9 +16,7 @@ use bdk::{
             psbt::PartiallySignedTransaction,
         }
     },
-};
-use bip39::Mnemonic;
-use tglib::{
+    bip39::Mnemonic,
     Result as TgResult,
     TgError,
     contract::Contract,

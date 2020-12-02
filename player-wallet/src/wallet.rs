@@ -2,34 +2,34 @@ use std::{
     env::current_dir,
     str::FromStr,
 };
-use bdk::{
-    bitcoin::{
-        Address,
-        Amount,
-        Network,
-        PublicKey,
-        Transaction,
-        TxIn,
-        TxOut,
-        Script,
-        secp256k1::Secp256k1,
-        util::{
-            bip32::{
-                ExtendedPubKey,
-                DerivationPath,
-                Fingerprint,
-            },
-        }
-    },
-    blockchain::{
-        noop_progress,
-        ElectrumBlockchain,
-    },
-    database::MemoryDatabase,
-    electrum_client::Client,
-    Wallet,
-};
 use tglib::{
+    bdk::{
+        bitcoin::{
+            Address,
+            Amount,
+            Network,
+            PublicKey,
+            Transaction,
+            TxIn,
+            TxOut,
+            Script,
+            secp256k1::Secp256k1,
+            util::{
+                bip32::{
+                    ExtendedPubKey,
+                    DerivationPath,
+                    Fingerprint,
+                },
+            }
+        },
+        blockchain::{
+            noop_progress,
+            ElectrumBlockchain,
+        },
+        database::MemoryDatabase,
+        electrum_client::Client,
+        Wallet,
+    },
     Result as TgResult,
     TgError,
     arbiter::ArbiterService,
@@ -70,7 +70,7 @@ impl PlayerWallet {
         let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
         let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
 //        let client = Client::new(ELECTRS_SERVER, None).unwrap();
-        let client = Client::new("tcp://localhost:60401", None).unwrap();
+        let client = Client::new("tcp://localhost:60401").unwrap();
         let mut db_path = current_dir().unwrap();
         db_path.push(DB_NAME);
         let db = DB::new(&db_path).unwrap();

@@ -1,25 +1,23 @@
-use std::{
-    str::FromStr,
-};
-use bdk::{
-    Wallet as BdkWallet,
-    database::BatchDatabase,
-    bitcoin::{
-        Network,
-        PublicKey,
-        secp256k1::Secp256k1,
-        util::bip32::{
-            ExtendedPubKey,
-            DerivationPath,
-            Fingerprint,
-        }
-    },
-    blockchain::{
-        Blockchain,
-        BlockchainMarker,
-    },
-};
+use std::str::FromStr;
 use tglib::{
+    bdk::{
+        Wallet as BdkWallet,
+        database::BatchDatabase,
+        bitcoin::{
+            Network,
+            PublicKey,
+            secp256k1::Secp256k1,
+            util::bip32::{
+                ExtendedPubKey,
+                DerivationPath,
+                Fingerprint,
+            }
+        },
+        blockchain::{
+            Blockchain,
+            BlockchainMarker,
+        },
+    },
     Result,
     TgError,
     contract::Contract,

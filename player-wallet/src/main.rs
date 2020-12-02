@@ -4,13 +4,13 @@ use std::{
 };
 //use hex::{decode, encode};
 use log::debug;
-use bdk::Error;
-use bip39::Mnemonic;
 use clap::{App, SubCommand, AppSettings};
 use rustyline::Editor;
 use rustyline::error::ReadlineError;
 use shell_words;
 use tglib::{
+    bdk::Error,
+    bip39::Mnemonic,
     wallet::SigningWallet,
     mock::{
         Trezor,
@@ -129,16 +129,16 @@ mod tests {
         thread,
         time::Duration,
     };
-    use bdk::bitcoin::{
-        Amount,
-        secp256k1::{
-            Message,
-            Secp256k1,
-        },
-        util::bip32::DerivationPath,
-    };
     use bitcoincore_rpc::{Auth, Client as RpcClient, RpcApi, json::EstimateMode};
     use tglib::{
+        bdk::bitcoin::{
+            Amount,
+            secp256k1::{
+                Message,
+                Secp256k1,
+            },
+            util::bip32::DerivationPath,
+        },
         arbiter::ArbiterService,
         contract::Contract,
         player::PlayerId,

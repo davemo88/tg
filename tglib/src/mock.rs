@@ -21,6 +21,7 @@ use bdk::{
     },
     blockchain::OfflineBlockchain,
     database::MemoryDatabase,
+    signer::Signer,
 };
 use bip39::Mnemonic;
 pub use crate::{
@@ -96,14 +97,22 @@ impl SigningWallet for Trezor {
         derive_account_xpubkey(&self.mnemonic, NETWORK)
     }
 
-    fn sign_tx(&self, pstx: PartiallySignedTransaction, _kdp: String) -> TgResult<PartiallySignedTransaction> {
-// this doesn't sign with the escrow pubkey by default, it signs with the normal account descriptor
-// i.e. m/0/*
-        match self.wallet.sign(pstx, None) {
-            Ok((signed_tx, _)) => {
-                Ok(signed_tx)
+    fn sign_tx(&self, psbt: PartiallySignedTransaction, _kdp: String) -> TgResult<PartiallySignedTransaction> {
+        let secp = Secp256k1::new();
+        let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
+        let account_key = derive_account_xprivkey(&self.mnemonic, NETWORK);
+        let escrow_key = account_key.derive_priv(&secp, &path).unwrap();
+        let mut maybe_signed = psbt.clone();
+        println!("psbt to sign: {:?}", psbt);
+//        match Signer::sign(&escrow_key.private_key, &mut maybe_signed, Some(0)) {
+        match Signer::sign(&escrow_key.private_key, &mut maybe_signed, Some(0), &secp) {
+            Ok(()) => {
+                Ok(maybe_signed)
             }
-            _ => Err(TgError("cannot sign transaction"))
+            Err(e) => {
+                println!("err: {:?}", e);
+                Err(TgError("cannot sign transaction"))
+            }
         }
     }
 
