@@ -72,10 +72,16 @@ pub trait EscrowWallet {
             let fully_signed = payout.contract.sigs.len() == 3 as usize;
 // the payout tx must be an expected one
             let payout_address = &payout.address().unwrap();
-            let matching_tx = payout.tx.txid() != create_payout(&payout.contract, &payout_address).tx.txid();
+            let matching_tx = payout.tx.txid() == create_payout(&payout.contract, &payout_address).tx.txid();
+            if !fully_signed {
+                return Err(TgError("invalid payout - not fully signed"))
+            }
+            if !matching_tx {
+                return Err(TgError("invalid payout - no matching tx"))
+            }
 // the payout tx must be signed by the recipient
             let secp = Secp256k1::new();
-// this is tricky because the witness is a raw byte vec
+// this is tricky because the witness is a raw byte vec Vec<Vec<u8>>
             if let Some(bytes) = payout.tx.input[0].witness.first() {
 // need to parse witness here, should go to nom                
             }
