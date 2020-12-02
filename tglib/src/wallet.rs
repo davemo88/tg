@@ -1,6 +1,6 @@
 use std::{
-    str::FromStr,
     convert::TryInto,
+    str::FromStr,
 };
 use bdk::bitcoin::{
     Address,
@@ -59,7 +59,7 @@ pub const ESCROW_SUBACCOUNT: &'static str = "7";
 pub trait SigningWallet {
     fn fingerprint(&self) -> Fingerprint;
     fn xpubkey(&self) -> ExtendedPubKey;
-    fn sign_tx(&self, pstx: PartiallySignedTransaction, descriptor: String) -> TgResult<Transaction>;
+    fn sign_tx(&self, pstx: PartiallySignedTransaction, descriptor: String) -> TgResult<PartiallySignedTransaction>;
     fn sign_message(&self, msg: Message, path: DerivationPath) -> TgResult<Signature>;
 }
 
@@ -72,25 +72,23 @@ pub trait EscrowWallet {
             let fully_signed = payout.contract.sigs.len() == 3 as usize;
 // the payout tx must be an expected one
             let payout_address = &payout.address().unwrap();
-            let matching_tx = payout.tx.txid() == create_payout(&payout.contract, &payout_address).tx.txid();
+            let payout_tx = payout.psbt.clone().extract_tx();
+            let matching_tx = payout_tx.txid() == create_payout(&payout.contract, &payout_address).psbt.clone().extract_tx().txid();
             if !fully_signed {
                 return Err(TgError("invalid payout - not fully signed"))
             }
             if !matching_tx {
                 return Err(TgError("invalid payout - no matching tx"))
             }
-// the payout tx must be signed by the recipient
-            let secp = Secp256k1::new();
-// this is tricky because the witness is a raw byte vec Vec<Vec<u8>>
-            if let Some(bytes) = payout.tx.input[0].witness.first() {
-// need to parse witness here, should go to nom                
+            let recipient_pubkey = payout.recipient_pubkey();
+            if recipient_pubkey.is_err() {
+                return Err(TgError("invalid payout - invalid recipient"))
             }
-            if payout_address == &Address::p2wpkh(&payout.contract.p1_pubkey, payout_address.network).unwrap() {
-
-            } 
-            else if payout_address == &Address::p2wpkh(&payout.contract.p2_pubkey, payout_address.network).unwrap() {
-
-            }
+            println!("{:?}", payout.psbt);
+            if payout.psbt.inputs[0].partial_sigs.len() != 1 { //|| 
+//                !payout.psbt.inputs[0].partial_sigs.contains_key(&recipient_pubkey.unwrap()) {
+                return Err(TgError("invalid payout - psbt signed improperly"))
+            };
             let mut env = TgScriptEnv::new(payout.clone());
             env.validate_payout()
         } else {
@@ -105,10 +103,9 @@ where T: EscrowWallet + SigningWallet {
                 DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap()).unwrap())
 }
 
-pub fn sign_payout<T>(wallet: &T, payout: &mut Payout) -> TgResult<Transaction> 
+pub fn sign_payout<T>(wallet: &T, payout: &mut Payout) -> TgResult<PartiallySignedTransaction> 
 where T: EscrowWallet + SigningWallet{
-    let psbt = PartiallySignedTransaction::from_unsigned_tx(payout.clone().tx).unwrap();
-    wallet.sign_tx(psbt, "".to_string())
+    wallet.sign_tx(payout.psbt.clone(), "".to_string())
 }
 
 
@@ -140,7 +137,7 @@ pub fn create_payout(contract: &Contract, payout_address: &Address) -> Payout {
         &contract.arbiter_pubkey,
         payout_address.network,
         ).unwrap();
-    Payout::new(contract.clone(), create_payout_tx(&contract.funding_tx, &escrow_address, &payout_address).unwrap())
+    Payout::new(contract.clone(), PartiallySignedTransaction::from_unsigned_tx(create_payout_tx(&contract.funding_tx, &escrow_address, &payout_address).unwrap()).unwrap())
 }
 
 // we are ignoring specification of the game master pubkey and substituting
@@ -260,9 +257,9 @@ mod tests {
         let address = Address::p2wpkh(&contract.p1_pubkey, NETWORK).unwrap();
         let mut payout = create_payout(&contract, &address);
         let wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-        let _r = sign_payout(&wallet, &mut payout);
+        payout.psbt = sign_payout(&wallet, &mut payout).unwrap();
         let arbiter_wallet = Trezor::new(Mnemonic::parse(ARBITER_MNEMONIC).unwrap());
-        payout.script_sig = Some(arbiter_wallet.sign_message(Message::from_slice(&payout.tx.txid()).unwrap(), 
+        payout.script_sig = Some(arbiter_wallet.sign_message(Message::from_slice(&payout.psbt.clone().extract_tx().txid()).unwrap(), 
                 DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap()).unwrap());
 
         assert!(arbiter_wallet.validate_payout(&payout).is_ok())
@@ -278,9 +275,9 @@ mod tests {
         let mut payout = create_payout(&contract, &address);
         let wallet = Trezor::new(Mnemonic::parse(PLAYER_2_MNEMONIC).unwrap());
         println!("player signing payout");
-        let _r = sign_payout(&wallet, &mut payout);
+        payout.psbt = sign_payout(&wallet, &mut payout).unwrap();
         let arbiter_wallet = Trezor::new(Mnemonic::parse(ARBITER_MNEMONIC).unwrap());
-        payout.script_sig = Some(arbiter_wallet.sign_message(Message::from_slice(&payout.tx.txid()).unwrap(), 
+        payout.script_sig = Some(arbiter_wallet.sign_message(Message::from_slice(&payout.psbt.clone().extract_tx().txid()).unwrap(), 
                 DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap()).unwrap());
 
         println!("arbiter validating payout");
@@ -296,9 +293,9 @@ mod tests {
         let address = Address::p2wpkh(&contract.p1_pubkey, NETWORK).unwrap();
         let mut payout = create_payout(&contract, &address);
         let wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-        let _r = sign_payout(&wallet, &mut payout);
+        payout.psbt = sign_payout(&wallet, &mut payout).unwrap();
         let arbiter_wallet = Trezor::new(Mnemonic::parse(ARBITER_MNEMONIC).unwrap());
-        payout.script_sig = Some(arbiter_wallet.sign_message(Message::from_slice(&payout.tx.txid()).unwrap(), 
+        payout.script_sig = Some(arbiter_wallet.sign_message(Message::from_slice(&payout.psbt.clone().extract_tx().txid()).unwrap(), 
                 DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap()).unwrap());
 
         assert!(arbiter_wallet.validate_payout(&payout).is_err())
@@ -312,7 +309,7 @@ mod tests {
         let address = Address::p2wpkh(&contract.p1_pubkey, NETWORK).unwrap();
         let mut payout = create_payout(&contract, &address);
         let wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-        let _r = sign_payout(&wallet, &mut payout);
+        payout.psbt = sign_payout(&wallet, &mut payout).unwrap();
         let arbiter_wallet = Trezor::new(Mnemonic::parse(ARBITER_MNEMONIC).unwrap());
 
         assert!(arbiter_wallet.validate_payout(&payout).is_err())
@@ -326,10 +323,10 @@ mod tests {
         let address = Address::p2wpkh(&contract.p1_pubkey, NETWORK).unwrap();
         let mut payout = create_payout(&contract, &address);
         let wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-        let _r = sign_payout(&wallet, &mut payout);
+        payout.psbt = sign_payout(&wallet, &mut payout).unwrap();
         let arbiter_wallet = Trezor::new(Mnemonic::parse(ARBITER_MNEMONIC).unwrap());
 // signing with the player's wallet incorrectly
-        payout.script_sig = Some(wallet.sign_message(Message::from_slice(&payout.tx.txid()).unwrap(), 
+        payout.script_sig = Some(wallet.sign_message(Message::from_slice(&payout.psbt.clone().extract_tx().txid()).unwrap(), 
                 DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap()).unwrap());
 
         assert!(arbiter_wallet.validate_payout(&payout).is_err())
@@ -343,7 +340,7 @@ mod tests {
         let address = Address::p2wpkh(&contract.p1_pubkey, NETWORK).unwrap();
         let mut payout = create_payout(&contract, &address);
         let arbiter_wallet = Trezor::new(Mnemonic::parse(ARBITER_MNEMONIC).unwrap());
-        payout.script_sig = Some(arbiter_wallet.sign_message(Message::from_slice(&payout.tx.txid()).unwrap(), 
+        payout.script_sig = Some(arbiter_wallet.sign_message(Message::from_slice(&payout.psbt.clone().extract_tx().txid()).unwrap(), 
                 DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap()).unwrap());
 
         assert!(arbiter_wallet.validate_payout(&payout).is_err())
@@ -358,9 +355,9 @@ mod tests {
         let wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
 // giving a new address for the payout tx instead of the ones baked into the payout script
         let mut payout = create_payout(&contract, &wallet.wallet.get_new_address().unwrap());
-        let _r = sign_payout(&wallet, &mut payout);
+        payout.psbt = sign_payout(&wallet, &mut payout).unwrap();
         let arbiter_wallet = Trezor::new(Mnemonic::parse(ARBITER_MNEMONIC).unwrap());
-        payout.script_sig = Some(arbiter_wallet.sign_message(Message::from_slice(&payout.tx.txid()).unwrap(), 
+        payout.script_sig = Some(arbiter_wallet.sign_message(Message::from_slice(&payout.psbt.clone().extract_tx().txid()).unwrap(), 
                 DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap()).unwrap());
 
         assert!(arbiter_wallet.validate_payout(&payout).is_err())

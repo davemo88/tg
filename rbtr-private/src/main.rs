@@ -3,9 +3,9 @@ use std::{
     time::Duration,
 };
 use bdk::bitcoin::{
-    Transaction,
     consensus,
     secp256k1::Signature,
+    util::psbt::PartiallySignedTransaction,
 };
 use redis::{
     self,
@@ -55,9 +55,9 @@ async fn maybe_sign_payout(con: &mut Connection, wallet: &Wallet) {
     if let Some(mut payout) = next_payout(con).await {
         println!("retrieved payout:\n{:?}", payout);
         if wallet.validate_payout(&payout).is_ok() {
-            if let Ok(tx) = sign_payout(wallet, &mut payout) {
+            if let Ok(psbt) = sign_payout(wallet, &mut payout) {
                 println!("signed transaction for payout for contract {}", hex::encode(payout.contract.cxid()));
-                let _ = set_payout_tx(con, payout, tx).await;
+                let _ = set_payout_psbt(con, payout, psbt).await;
             }
         }
     }
@@ -72,8 +72,8 @@ async fn next_payout(con: &mut Connection) -> Option<Payout> {
     }
 }
 
-async fn set_payout_tx(con: &mut Connection, payout: Payout, tx: Transaction) -> redis::RedisResult<String> {
-    con.set(hex::encode(payout.contract.cxid()), hex::encode(consensus::serialize(&tx))).await
+async fn set_payout_psbt(con: &mut Connection, payout: Payout, psbt: PartiallySignedTransaction) -> redis::RedisResult<String> {
+    con.set(hex::encode(payout.contract.cxid()), hex::encode(consensus::serialize(&psbt))).await
 }
 
 #[tokio::main]

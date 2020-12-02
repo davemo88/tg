@@ -18,7 +18,6 @@ use bdk::{
             Signature,
         },
         Network,
-        Transaction,
     },
     blockchain::OfflineBlockchain,
     database::MemoryDatabase,
@@ -97,10 +96,12 @@ impl SigningWallet for Trezor {
         derive_account_xpubkey(&self.mnemonic, NETWORK)
     }
 
-    fn sign_tx(&self, pstx: PartiallySignedTransaction, _kdp: String) -> TgResult<Transaction> {
+    fn sign_tx(&self, pstx: PartiallySignedTransaction, _kdp: String) -> TgResult<PartiallySignedTransaction> {
+// this doesn't sign with the escrow pubkey by default, it signs with the normal account descriptor
+// i.e. m/0/*
         match self.wallet.sign(pstx, None) {
             Ok((signed_tx, _)) => {
-                Ok(signed_tx.extract_tx())
+                Ok(signed_tx)
             }
             _ => Err(TgError("cannot sign transaction"))
         }

@@ -8,11 +8,12 @@ use nom::{
 };
 use bdk::bitcoin::{
     Address,
-    Transaction,
+    PublicKey,
     consensus::{
         self,
-        encode::Decodable,
+        Decodable,
     },
+    util::psbt::PartiallySignedTransaction,
     secp256k1::Signature,
 };
 use crate::{
@@ -34,16 +35,18 @@ use crate::{
 pub struct Payout {
     pub version:         u8,
     pub contract:        Contract,
-    pub tx:              Transaction,
+//    pub tx:              Transaction,
+    pub psbt:            PartiallySignedTransaction,
     pub script_sig:      Option<Signature>,
 }
 
 impl Payout {
-    pub fn new(contract: Contract, tx: Transaction) -> Self {
+//    pub fn new(contract: Contract, tx: Transaction) -> Self {
+    pub fn new(contract: Contract, psbt: PartiallySignedTransaction) -> Self {
         Payout {
             version: PAYOUT_VERSION,
             contract,
-            tx,
+            psbt,
             script_sig: None,
         }
     }
@@ -56,7 +59,7 @@ impl Payout {
         v.write_u32::<BigEndian>(contract_bytes.len() as u32).unwrap();
         v.extend(contract_bytes);
 // payout tx length  + bytes
-        let payout_tx = consensus::serialize(&self.tx);
+        let payout_tx = consensus::serialize(&self.psbt);
         v.write_u32::<BigEndian>(payout_tx.len() as u32).unwrap();
         v.extend(payout_tx);
 // payout script sig
@@ -79,12 +82,24 @@ impl Payout {
 
     pub fn address(&self) -> Result<Address> {
         let amount = self.contract.amount()?;
-        for txout in self.tx.output.clone() {
+        let tx = self.psbt.clone().extract_tx();
+        for txout in tx.output {
             if txout.value == amount.as_sat() {
                 return Ok(Address::from_script(&txout.script_pubkey, NETWORK).unwrap())
             }
         };
         Err(TgError("couldn't determine payout address"))
+    }
+
+    pub fn recipient_pubkey(&self) -> Result<PublicKey> {
+        let address = self.address()?;
+        if address == Address::p2wpkh(&self.contract.p1_pubkey, address.network).unwrap() {
+            Ok(self.contract.p1_pubkey.clone())
+        } else if address == Address::p2wpkh(&self.contract.p2_pubkey, address.network).unwrap() {
+            Ok(self.contract.p2_pubkey.clone())
+        } else {
+            Err(TgError("couldn't determine recipient pubkey"))
+        }
     }
 }
 
@@ -92,24 +107,24 @@ fn payout(input: &[u8]) ->IResult<&[u8], Payout> {
     let (input, (
         version,
         contract,
-        tx,
+        psbt,
         script_sig,
-    )) = tuple((version, contract, payout_tx, opt(signature)))(input)?;
+    )) = tuple((version, contract, payout_psbt, opt(signature)))(input)?;
 
     let p = Payout {
         version,
         contract,
-        tx,
+        psbt,
         script_sig,
     };
 
     Ok((input, p))
 }
 
-fn payout_tx(input: &[u8]) ->IResult<&[u8], Transaction> {
+fn payout_psbt(input: &[u8]) ->IResult<&[u8], PartiallySignedTransaction> {
     let (input, b) = length_data(be_u32)(input)?;
-    let tx = Transaction::consensus_decode(b).unwrap();
-    Ok((input, tx))
+    let psbt = PartiallySignedTransaction::consensus_decode(b).unwrap();
+    Ok((input, psbt))
     
 }
 

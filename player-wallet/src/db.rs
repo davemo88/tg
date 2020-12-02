@@ -24,7 +24,7 @@ pub struct ContractRecord {
 #[derive(Debug, Clone)]
 pub struct PayoutRecord {
     pub cxid:           String,
-    pub tx:             String,
+    pub psbt:           String,
     pub sig:            String,
 }
 
@@ -36,7 +36,7 @@ impl From<Payout> for PayoutRecord {
         };
         PayoutRecord {
             cxid: hex::encode(p.contract.cxid()),
-            tx: hex::encode(consensus::serialize(&p.tx)),
+            psbt: hex::encode(consensus::serialize(&p.psbt)),
             sig,
         }
     }
@@ -69,7 +69,7 @@ impl DB {
                 );
                 CREATE TABLE IF NOT EXISTS payout (
                     cxid            TEXT PRIMARY KEY,
-                    tx              TEXT NOT NULL UNIQUE,
+                    psbt              TEXT NOT NULL UNIQUE,
                     sig             TEXT NOT NULL UNIQUE,
                     FOREIGN KEY(cxid) REFERENCES contract(cxid)
                 );
@@ -168,9 +168,9 @@ impl DB {
 
     pub fn insert_payout(&self, payout: PayoutRecord) -> Result<usize> {
         self.conn.execute(
-            "INSERT INTO payout (cxid, tx, sig) VALUES (?1, ?2, ?3) ON CONFLICT(cxid) DO UPDATE SET
-            tx=?2, sig=?3",
-            params![payout.cxid, payout.tx, payout.sig],
+            "INSERT INTO payout (cxid, psbt, sig) VALUES (?1, ?2, ?3) ON CONFLICT(cxid) DO UPDATE SET
+            psbt=?2, sig=?3",
+            params![payout.cxid, payout.psbt, payout.sig],
         )
     }
 
@@ -179,7 +179,7 @@ impl DB {
         let payout_iter = stmt.query_map(params![], |row| {
             Ok(PayoutRecord {
                 cxid: row.get(0)?,
-                tx: row.get(1)?,
+                psbt: row.get(1)?,
                 sig: row.get(2)?,
             })
         })?;
@@ -196,7 +196,7 @@ impl DB {
         let mut payout_iter = stmt.query_map(params![cxid], |row| {
             Ok(PayoutRecord {
                 cxid: row.get(0)?, 
-                tx: row.get(1)?,
+                psbt: row.get(1)?,
                 sig: row.get(2)?,
             })
         }).unwrap();

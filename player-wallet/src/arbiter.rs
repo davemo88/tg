@@ -4,9 +4,9 @@ use bdk::{
     bitcoin::{
         Address,
         PublicKey,
-        Transaction,
         consensus,
         secp256k1::Signature,
+        util::psbt::PartiallySignedTransaction,
     },
 };
 use reqwest;
@@ -54,11 +54,11 @@ impl ArbiterService for ArbiterClient {
         }
     }
 
-    fn submit_payout(&self, payout: &Payout) -> Result<Transaction> {
+    fn submit_payout(&self, payout: &Payout) -> Result<PartiallySignedTransaction> {
         let response = reqwest::blocking::get(&format!("{}/submit-payout/{}", self.0, hex::encode(payout.to_bytes()))).unwrap();
         let body = String::from(response.text().unwrap());
-        if let Ok(tx) = consensus::deserialize(&hex::decode(body).unwrap()) {
-            Ok(tx)
+        if let Ok(psbt) = consensus::deserialize(&hex::decode(body).unwrap()) {
+            Ok(psbt)
         } else {
             Err(TgError("invalid payout"))
         }

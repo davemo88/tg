@@ -2,7 +2,6 @@ use std::convert::From;
 use bdk::bitcoin::{
     Address,
     PublicKey,
-    Transaction,
     bech32::{
         self,
         ToBase32,
@@ -14,7 +13,10 @@ use bdk::bitcoin::{
         sha256::Hash as Sha2Hash,
     },
     secp256k1::Signature,
-    util::bip32::ExtendedPubKey,
+    util::{
+        bip32::ExtendedPubKey,
+        psbt::PartiallySignedTransaction,
+    }
 };
 use crate::{
     Result,
@@ -44,6 +46,6 @@ pub trait ArbiterService {
     fn get_escrow_pubkey(&self) -> Result<PublicKey>;
     fn get_fee_address(&self) -> Result<Address>;
     fn submit_contract(&self, contract: &Contract) -> Result<Signature>;
-    fn submit_payout(&self, payout: &Payout) -> Result<Transaction>;
+    fn submit_payout(&self, payout: &Payout) -> Result<PartiallySignedTransaction>;
     fn get_player_info(&self, player_id: PlayerId) -> Result<PlayerContractInfo>;
 }

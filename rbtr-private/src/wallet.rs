@@ -4,7 +4,6 @@ use std::{
 use bdk::{
     bitcoin::{
         PublicKey,
-        Transaction,
         secp256k1::{
             Message,
             Secp256k1,
@@ -58,7 +57,7 @@ impl SigningWallet for Wallet {
         self.trezor.xpubkey()
     }
 
-    fn sign_tx(&self, pstx: PartiallySignedTransaction, descriptor: String) -> TgResult<Transaction> {
+    fn sign_tx(&self, pstx: PartiallySignedTransaction, descriptor: String) -> TgResult<PartiallySignedTransaction> {
         self.trezor.sign_tx(pstx, descriptor)
     }
 

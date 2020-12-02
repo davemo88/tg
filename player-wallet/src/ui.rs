@@ -431,12 +431,13 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
             }
             "sign" => {
                 if let Some(pr) = wallet.db.get_payout(a.value_of("cxid").unwrap()) {
-                    let tx: PartiallySignedTransaction = consensus::deserialize(&hex::decode(pr.tx).unwrap()).unwrap();
+                    let psbt: PartiallySignedTransaction = consensus::deserialize(&hex::decode(pr.psbt).unwrap()).unwrap();
                     let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-                    let tx = signing_wallet.sign_tx(tx, "".to_string()).unwrap(); let tx = hex::encode(consensus::serialize(&tx));
+                    let psbt = signing_wallet.sign_tx(psbt, "".to_string()).unwrap();
+                    let psbt = hex::encode(consensus::serialize(&psbt));
                     wallet.db.insert_payout(db::PayoutRecord {
                         cxid: pr.cxid, 
-                        tx,
+                        psbt,
                         sig: a.value_of("script-sig").unwrap_or("").to_string(),
                     }).unwrap();
                     println!("signed payout");
@@ -452,12 +453,12 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 let p = Payout {
                     version: PAYOUT_VERSION,
                     contract: Contract::from_bytes(hex::decode(cr.hex).unwrap()).unwrap(),
-                    tx: consensus::deserialize(&hex::decode(pr.tx).unwrap()).unwrap(),
+                    psbt: consensus::deserialize(&hex::decode(pr.psbt).unwrap()).unwrap(),
                     script_sig: Signature::from_compact(&hex::decode(pr.sig).unwrap()).ok()
                 };
                 let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
-                if let Ok(tx) = arbiter_client.submit_payout(&p) {
-                   println!("arbiter signed tx: {:?}", tx);
+                if let Ok(psbt) = arbiter_client.submit_payout(&p) {
+                   println!("arbiter signed tx: {:?}", psbt.extract_tx().txid());
                 }
                 else {
                    println!("arbiter rejected payout");
@@ -465,7 +466,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
             }
             "broadcast" => {
                 if let Some(pr) = wallet.db.get_payout(a.value_of("cxid").unwrap()) {
-                    let tx: PartiallySignedTransaction = consensus::deserialize(&hex::decode(pr.tx).unwrap()).unwrap();
+                    let tx: PartiallySignedTransaction = consensus::deserialize(&hex::decode(pr.psbt).unwrap()).unwrap();
                     let _r = wallet.wallet.broadcast(tx.extract_tx());
                 }
                 else {

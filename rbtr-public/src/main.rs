@@ -8,12 +8,14 @@ use bdk::{
     bitcoin::{
         Address,
         PublicKey,
-        Transaction,
         consensus,
-        util::bip32::{
-            ExtendedPubKey,
-            DerivationPath,
-            Fingerprint,
+        util::{
+            bip32::{
+                ExtendedPubKey,
+                DerivationPath,
+                Fingerprint,
+            },
+            psbt::PartiallySignedTransaction,
         },
         secp256k1::{
             Secp256k1,
@@ -134,7 +136,7 @@ impl ArbiterService for RbtrPublic {
         Err(TgError("invalid contract"))
     }
 
-    fn submit_payout(&self, payout: &Payout) -> Result<Transaction> {
+    fn submit_payout(&self, payout: &Payout) -> Result<PartiallySignedTransaction> {
         if wallet().validate_payout(&payout).is_ok() {
             let mut con = self.get_con();
             let _ = self.push_payout(&mut con, &hex::encode(payout.to_bytes())).unwrap();
@@ -143,7 +145,7 @@ impl ArbiterService for RbtrPublic {
                 let r: RedisResult<String> = con.get(cxid.clone());
                 if let Ok(tx) = r {
                     let _ : RedisResult<String> = con.del(cxid);
-                    return Ok(consensus::deserialize::<Transaction>(&hex::decode(tx).unwrap()).unwrap())
+                    return Ok(consensus::deserialize::<PartiallySignedTransaction>(&hex::decode(tx).unwrap()).unwrap())
                 }
                 sleep(Duration::from_secs(1));
             }
