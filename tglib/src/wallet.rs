@@ -299,7 +299,7 @@ mod tests {
     }
 
     #[test]
-    fn fail_missing_contract_sigs() {
+    fn fail_unsigned_contract() {
         let contract = Contract::from_bytes(hex::decode(CONTRACT).unwrap()).unwrap();
 
         let address = Address::p2wpkh(&contract.p1_pubkey, NETWORK).unwrap();
