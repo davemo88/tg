@@ -87,6 +87,16 @@ pub trait EscrowWallet {
             println!("{:?}", payout.psbt);
             if payout.psbt.inputs[0].partial_sigs.len() != 1 { //|| 
 //                !payout.psbt.inputs[0].partial_sigs.contains_key(&recipient_pubkey.unwrap()) {
+// TODO: need to create psbt correctly.  options: 
+//  manually set values following bdk::wallet::Wallet::create_tx
+//  is it a foreign UTXO ? no but it's to an address not in the descriptor
+//  need to test one-off escrow wallet using multisig desriptor
+//  set wallet subaccount/address descriptor to something like m/7/0 instead of m/0/*
+//  when creating payout tx psbt
+//      this might work great
+//
+//
+//
                 return Err(TgError("invalid payout - psbt signed improperly"))
             };
             let mut env = TgScriptEnv::new(payout.clone());
@@ -141,6 +151,7 @@ pub fn create_payout(contract: &Contract, payout_address: &Address) -> Payout {
     let mut psbt: PartiallySignedTransaction = PartiallySignedTransaction::from_unsigned_tx(create_payout_tx(&contract.funding_tx, &escrow_address, &payout_address).unwrap()).unwrap();
     if let Some(txout) = escrow_txout.next() {
         psbt.inputs[0].witness_utxo = Some(txout.clone());
+        psbt.inputs[0].witness_script = Some(create_escrow_script(&contract.p1_pubkey, &contract.p2_pubkey, &contract.arbiter_pubkey));
     }
     Payout::new(contract.clone(), psbt)
 }
