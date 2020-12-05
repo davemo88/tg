@@ -13,6 +13,10 @@ use bdk::bitcoin::{
         ToBase32,
     },
 };
+use crate::{
+    Result,
+    contract::PlayerContractInfo,
+};
 
 #[derive(Debug, Default, Clone)]
 pub struct PlayerId(pub String); 
@@ -37,4 +41,9 @@ impl From<PublicKey> for PlayerId {
         let encoded = bech32::encode("player", pubkey_hash.to_base32()).unwrap();
         PlayerId(encoded)
     }
+}
+
+pub trait PlayerIdentityService {
+    fn get_player_id(&self, pubkey: &PublicKey) -> Option<PlayerId>;
+    fn get_player_info(&self, player_id: PlayerId) -> Option<PlayerContractInfo>;
 }

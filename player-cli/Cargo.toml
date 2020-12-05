@@ -1,5 +1,5 @@
 [package]
-name = "player-identity"
+name = "player-cli"
 version = "0.1.0"
 authors = ["d <d@kasofsk.xyz>"]
 edition = "2018"
