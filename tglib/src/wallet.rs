@@ -147,8 +147,9 @@ pub fn create_payout(contract: &Contract, payout_address: &Address) -> Payout {
         &contract.arbiter_pubkey,
         payout_address.network,
         ).unwrap();
-    let mut escrow_txout = contract.funding_tx.output.iter().filter(|txout| txout.script_pubkey == escrow_address.script_pubkey());
-    let mut psbt: PartiallySignedTransaction = PartiallySignedTransaction::from_unsigned_tx(create_payout_tx(&contract.funding_tx, &escrow_address, &payout_address).unwrap()).unwrap();
+    let funding_tx = contract.clone().funding_tx.extract_tx();
+    let mut escrow_txout = funding_tx.output.iter().filter(|txout| txout.script_pubkey == escrow_address.script_pubkey());
+    let mut psbt: PartiallySignedTransaction = PartiallySignedTransaction::from_unsigned_tx(create_payout_tx(&funding_tx, &escrow_address, &payout_address).unwrap()).unwrap();
     if let Some(txout) = escrow_txout.next() {
         psbt.inputs[0].witness_utxo = Some(txout.clone());
         psbt.inputs[0].witness_script = Some(create_escrow_script(&contract.p1_pubkey, &contract.p2_pubkey, &contract.arbiter_pubkey));

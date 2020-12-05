@@ -253,7 +253,8 @@ mod tests {
         let mut matching_escrow_address = false;
         let mut correct_fee = false;
 
-        for txout in contract.funding_tx.clone().output {
+        let funding_tx = contract.clone().funding_tx.extract_tx();
+        for txout in funding_tx.output {
             matching_escrow_address = (txout.script_pubkey == escrow_script_pubkey && txout.value == amount) || matching_escrow_address;
             correct_fee = (txout.script_pubkey == fee_script_pubkey && txout.value == fee_amount) || correct_fee; 
         }
@@ -265,7 +266,7 @@ mod tests {
             &contract.p1_pubkey,
             &contract.p2_pubkey,
             &arbiter_pubkey,
-            &contract.funding_tx,
+            &contract.funding_tx.clone().extract_tx(),
             NETWORK,
         );
 

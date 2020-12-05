@@ -20,6 +20,7 @@ use tglib::{
                     DerivationPath,
                     Fingerprint,
                 },
+                psbt::PartiallySignedTransaction,
             }
         },
         blockchain::{
@@ -116,7 +117,7 @@ impl PlayerWallet {
             p1_pubkey,
             p2_contract_info.escrow_pubkey,
             arbiter_pubkey,
-            funding_tx,
+            PartiallySignedTransaction::from_unsigned_tx(funding_tx).unwrap(),
             payout_script,
         )
     }

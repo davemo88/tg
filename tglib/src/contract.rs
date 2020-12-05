@@ -4,7 +4,6 @@ use bdk::{
     bitcoin::{
         Address,
         Amount,
-        Transaction,
         PublicKey,
         consensus::{
             self,
@@ -21,6 +20,7 @@ use bdk::{
             Secp256k1,
             Signature,
         },
+        util::psbt::PartiallySignedTransaction,
     },
     UTXO,
 };
@@ -59,14 +59,16 @@ pub struct Contract {
     pub p1_pubkey:          PublicKey,
     pub p2_pubkey:          PublicKey,
     pub arbiter_pubkey:     PublicKey,
-    pub funding_tx:         Transaction,
+// TODO: convert to psbt
+//    pub funding_tx:         Transaction,
+    pub funding_tx:         PartiallySignedTransaction,
     pub payout_script:      TgScript,
     pub sigs:               Vec<Signature>, 
     pub version:            u8,
 }
 
 impl Contract {
-    pub fn new(p1_pubkey: PublicKey, p2_pubkey: PublicKey, arbiter_pubkey: PublicKey, funding_tx: Transaction, payout_script: TgScript) -> Self {
+    pub fn new(p1_pubkey: PublicKey, p2_pubkey: PublicKey, arbiter_pubkey: PublicKey, funding_tx: PartiallySignedTransaction, payout_script: TgScript) -> Self {
         Contract {
             version: CONTRACT_VERSION,
             p1_pubkey,
@@ -124,7 +126,7 @@ impl Contract {
 
     pub fn amount(&self) -> Result<Amount> {
         let escrow_address = create_escrow_address(&self.p1_pubkey, &self.p2_pubkey, &self.arbiter_pubkey, NETWORK).unwrap();
-        for txout in self.funding_tx.output.clone() {
+        for txout in self.funding_tx.clone().extract_tx().output.clone() {
             if txout.script_pubkey == escrow_address.script_pubkey() {
                 return Ok(Amount::from_sat(txout.value))
             }
@@ -134,7 +136,7 @@ impl Contract {
 
     pub fn fee(&self) -> Result<Address> {
         let fee_amount = self.amount().unwrap().as_sat()/100;
-        for txout in self.funding_tx.clone().output {
+        for txout in self.funding_tx.clone().extract_tx().output {
             if txout.value == fee_amount {
                return Ok(Address::from_script(&txout.script_pubkey, NETWORK).unwrap())
             }
@@ -160,7 +162,7 @@ impl Contract {
             &self.p1_pubkey,
             &self.p2_pubkey,
             &self.arbiter_pubkey,
-            &self.funding_tx,
+            &self.funding_tx.clone().extract_tx(),
             NETWORK,
         );
         if self.payout_script != payout_script {
@@ -223,9 +225,9 @@ fn pubkey(input: &[u8]) -> IResult<&[u8], PublicKey> {
     Ok((input, key))
 }
 
-fn funding_tx(input: &[u8]) -> IResult<&[u8], Transaction> {
+fn funding_tx(input: &[u8]) -> IResult<&[u8], PartiallySignedTransaction> {
     let (input, b) = length_data(be_u32)(input)?;
-    let tx = Transaction::consensus_decode(b).unwrap();
+    let tx = PartiallySignedTransaction::consensus_decode(b).unwrap();
     Ok((input, tx))
 }
 

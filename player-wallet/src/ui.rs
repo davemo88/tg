@@ -205,7 +205,10 @@ pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
                     .value_name("CXID")
                     .help("contract id")
                     .required(true)
-                    .takes_value(true)),
+                    .takes_value(true))
+                .arg(Arg::with_name("sign-funding-tx")
+                    .long("sign-funding-tx")
+                    .help("sign the funding tx as well as the contract")),
             SubCommand::with_name("submit").about("submit contract to arbiter")
                 .arg(Arg::with_name("cxid")
                     .index(1)
@@ -290,6 +293,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
             "sign" => {
                 if let Some(contract_record) = wallet.db.get_contract(a.value_of("cxid").unwrap()) {
 //                    let contract = Contract::from_bytes(hex::decode(contract_record.hex.clone()).unwrap()).unwrap();
+                    println!("{:?}",a);
                     let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
                     let sig = signing_wallet.sign_message(
                         Message::from_slice(&hex::decode(contract_record.cxid.clone()).unwrap()).unwrap(),
@@ -297,6 +301,9 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                     ).unwrap();
                     let mut contract = Contract::from_bytes(hex::decode(contract_record.hex.clone()).unwrap()).unwrap();
                     contract.sigs.push(sig);
+                    if a.value_of("sign-funding-tx").is_some() {
+                        contract.funding_tx = signing_wallet.sign_tx(contract.funding_tx.clone(), "".to_string()).unwrap();
+                    }
                     let _r = wallet.db.add_signature(contract_record.cxid, hex::encode(contract.to_bytes()));
 //                    assert_ne!(hex::encode(contract.to_bytes()), contract_record.hex);
                     println!("signed contract");
@@ -322,7 +329,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
             "broadcast" => {
                 if let Some(cr) = wallet.db.get_contract(a.value_of("cxid").unwrap()) {
                     let contract = Contract::from_bytes(hex::decode(cr.hex.clone()).unwrap()).unwrap();
-                    let _r = wallet.wallet.broadcast(contract.funding_tx);
+                    let _r = wallet.wallet.broadcast(contract.funding_tx.extract_tx());
                 }
 
             }
