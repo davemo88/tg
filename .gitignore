@@ -6,10 +6,14 @@
 /tglib/Cargo.lock
 /player-wallet/target
 /player-wallet/Cargo.lock
+/player-public/target
+/player-public/Cargo.lock
 /rbtr-public/target
 /rbtr-public/Cargo.lock
 /rbtr-private/target
 /rbtr-private/Cargo.lock
+/referee-signer/target
+/referee-signer/Cargo.lock
 testnet/
 regtest/
 player-app/node_modules/**/*
