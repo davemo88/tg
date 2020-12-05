@@ -88,9 +88,10 @@ struct RbtrPublic {
 }
 
 impl RbtrPublic {
-    pub fn new() -> Self {
+    pub fn new(redis_client: redis::Client) -> Self {
         RbtrPublic {
-            redis_client: redis::Client::open(REDIS_SERVER).unwrap()
+//            redis_client: redis::Client::open(REDIS_SERVER).unwrap()
+            redis_client,
         }
     }
 
@@ -194,10 +195,19 @@ async fn player_info_handler(player_id: String, rbtr: RbtrPublic) -> WebResult<i
     Ok(serde_json::to_string(&info).unwrap())
 }
 
+fn redis_client() -> redis::Client {
+    let mut client = redis::Client::open(REDIS_SERVER);
+    while client.is_err() {
+        sleep(Duration::from_secs(1));
+        client = redis::Client::open(REDIS_SERVER);
+    }
+    client.unwrap()
+}
+
 #[tokio::main]
 async fn main() {
-
-    let rbtr_public = RbtrPublic::new();
+    
+    let rbtr_public = RbtrPublic::new(redis_client());
     let escrow_pubkey = rbtr_public.get_escrow_pubkey().unwrap();
     let fee_address = rbtr_public.get_fee_address().unwrap();
     let rbtr_public = warp::any().map(move || rbtr_public.clone());

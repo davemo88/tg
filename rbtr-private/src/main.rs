@@ -77,9 +77,18 @@ async fn set_payout_psbt(con: &mut Connection, payout: Payout, psbt: PartiallySi
     con.set(hex::encode(payout.contract.cxid()), hex::encode(consensus::serialize(&psbt))).await
 }
 
+fn redis_client() -> redis::Client {
+    let mut client = redis::Client::open(REDIS_SERVER);
+    while client.is_err() {
+        sleep(Duration::from_secs(1));
+        client = redis::Client::open(REDIS_SERVER);
+    }
+    client.unwrap()
+}
+
 #[tokio::main]
 async fn main() {
-    let redis_client = redis::Client::open(REDIS_SERVER).unwrap();
+    let redis_client = redis_client();
     let mut con = redis_client.get_async_connection().await.unwrap();
     let wallet = Wallet::new();
     loop {
