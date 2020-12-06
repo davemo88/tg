@@ -14,7 +14,6 @@ use bdk::bitcoin::{
     },
 };
 use crate::{
-    Result,
     contract::PlayerContractInfo,
 };
 

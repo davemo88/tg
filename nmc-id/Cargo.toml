@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 tglib = { path = "../tglib" }
+player-wallet = { path = "../player-wallet" }
 warp = "0.2.5"
 tokio = { version = "0.2", features = ["full"] }
 futures = "0.3"
