@@ -20,10 +20,11 @@ use tglib::{
     },
 };
 use player_wallet::{
-//    arbiter,
-//    db,
     ui::{
-        self,
+        contract_ui,
+        payout_ui,
+        player_ui,
+        wallet_ui,
         contract_subcommand,
         payout_subcommand,
         player_subcommand,
@@ -40,10 +41,10 @@ fn repl<'a, 'b>() -> App<'a, 'b> {
         .settings(&[AppSettings::NoBinaryName, AppSettings::SubcommandRequiredElseHelp,
             AppSettings::VersionlessSubcommands])
         .subcommand(SubCommand::with_name("quit").about("quit the repl"))
-        .subcommand(ui::wallet_ui())
-        .subcommand(ui::player_ui())
-        .subcommand(ui::contract_ui())
-        .subcommand(ui::payout_ui())
+        .subcommand(wallet_ui())
+        .subcommand(player_ui())
+        .subcommand(contract_ui())
+        .subcommand(payout_ui())
 }
 
 fn main() -> Result<(), Error> {

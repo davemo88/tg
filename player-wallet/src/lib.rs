@@ -15,13 +15,16 @@ mod tests {
     use bitcoincore_rpc::{Auth, Client as RpcClient, RpcApi, json::EstimateMode};
     use tglib::{
         bip39::Mnemonic,
-        bdk::bitcoin::{
-            Amount,
-            secp256k1::{
-                Message,
-                Secp256k1,
+        bdk::{
+            bitcoin::{
+                Amount,
+                secp256k1::{
+                    Message,
+                    Secp256k1,
+                },
+                util::bip32::DerivationPath,
             },
-            util::bip32::DerivationPath,
+            electrum_client::Client,
         },
         arbiter::ArbiterService,
         contract::Contract,
@@ -50,14 +53,18 @@ mod tests {
 
     const SATS: u64 = 1000000;
 
+    fn local_electrum_client() -> Client {
+        Client::new("tcp://localhost:60401").unwrap()
+    }
+
     #[test]
     fn fund_players() {
         let p1_signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap()); 
-        let p1_wallet = PlayerWallet::new(p1_signing_wallet.fingerprint(), p1_signing_wallet.xpubkey(), NETWORK);
+        let p1_wallet = PlayerWallet::new(p1_signing_wallet.fingerprint(), p1_signing_wallet.xpubkey(), NETWORK, local_electrum_client());
         let p1_addr = p1_wallet.new_address();
 
         let p2_signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_2_MNEMONIC).unwrap()); 
-        let p2_wallet = PlayerWallet::new(p2_signing_wallet.fingerprint(), p2_signing_wallet.xpubkey(), NETWORK);
+        let p2_wallet = PlayerWallet::new(p2_signing_wallet.fingerprint(), p2_signing_wallet.xpubkey(), NETWORK, local_electrum_client());
         let p2_addr = p2_wallet.new_address();
 
         let rpc = RpcClient::new("http://127.0.0.1:18443".to_string(), Auth::UserPass("admin".to_string(), "passw".to_string())).unwrap();
@@ -71,7 +78,7 @@ mod tests {
 
     fn create_contract() -> Contract {
         let p1_signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap()); 
-        let p1_wallet = PlayerWallet::new(p1_signing_wallet.fingerprint(), p1_signing_wallet.xpubkey(), NETWORK);
+        let p1_wallet = PlayerWallet::new(p1_signing_wallet.fingerprint(), p1_signing_wallet.xpubkey(), NETWORK, local_electrum_client());
         let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
         let arbiter_pubkey = arbiter_client.get_escrow_pubkey().unwrap();
         let p2_contract_info = arbiter_client.get_player_info(PlayerId(String::from("player 2"))).unwrap();
@@ -80,7 +87,7 @@ mod tests {
 
     fn create_signed_contract() -> Contract {
         let p1_signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap()); 
-        let p1_wallet = PlayerWallet::new(p1_signing_wallet.fingerprint(), p1_signing_wallet.xpubkey(), NETWORK);
+        let p1_wallet = PlayerWallet::new(p1_signing_wallet.fingerprint(), p1_signing_wallet.xpubkey(), NETWORK, local_electrum_client());
         let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
         let arbiter_pubkey = arbiter_client.get_escrow_pubkey().unwrap();
         let p2_contract_info = arbiter_client.get_player_info(PlayerId(String::from("player 2"))).unwrap();
@@ -93,7 +100,7 @@ mod tests {
         ).unwrap();
         
         let p2_signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_2_MNEMONIC).unwrap()); 
-        let p2_wallet = PlayerWallet::new(p2_signing_wallet.fingerprint(), p2_signing_wallet.xpubkey(), NETWORK);
+        let p2_wallet = PlayerWallet::new(p2_signing_wallet.fingerprint(), p2_signing_wallet.xpubkey(), NETWORK, local_electrum_client());
         let p2_sig = p2_signing_wallet.sign_message(
             Message::from_slice(&cxid).unwrap(),
             DerivationPath::from_str(&format!("m/{}/{}/{}", BITCOIN_ACCOUNT_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(),
@@ -104,7 +111,6 @@ mod tests {
             Message::from_slice(&cxid).unwrap(),
             DerivationPath::from_str(&format!("m/{}/{}/{}", BITCOIN_ACCOUNT_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(),
         ).unwrap();
-
         contract.sigs.push(p1_sig);
         contract.sigs.push(p2_sig);
         contract.sigs.push(arbiter_sig);
