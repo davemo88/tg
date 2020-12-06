@@ -69,7 +69,7 @@ fn main() -> Result<(), Error> {
                 let matches = repl().get_matches_from_safe(split_line);
                 if matches.is_ok() {
                     if let (c, Some(a)) = matches.unwrap().subcommand() {
-                        println!("command: {}, args: {:?}", c, a);
+//                        println!("command: {}, args: {:?}", c, a);
                         rl.add_history_entry(line.as_str());
                         match c {
                             "wallet" => {
