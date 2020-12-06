@@ -60,11 +60,9 @@ type WebResult<T> = std::result::Result<T, Rejection>;
 fn wallet() -> Wallet<ElectrumBlockchain, MemoryDatabase> {
     let mut client = Client::new(ELECTRS_SERVER);
     while client.is_err() {
-        println!("connection to electrs failed");
         sleep(Duration::from_secs(1));
         client = Client::new(ELECTRS_SERVER);
     }
-    println!("connection to electrs succeeded");
     Wallet::<ElectrumBlockchain, MemoryDatabase>::new(Fingerprint::from_str(ARBITER_FINGERPRINT).unwrap(), ExtendedPubKey::from_str(ARBITER_XPUBKEY).unwrap(), ElectrumBlockchain::from(client.unwrap()), NETWORK).unwrap()
 }
 
