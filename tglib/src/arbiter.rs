@@ -20,12 +20,8 @@ use bdk::bitcoin::{
 };
 use crate::{
     Result,
-    contract::{
-        Contract,
-        PlayerContractInfo,
-    },
+    contract::Contract,
     payout::Payout,
-    player::PlayerId,
 };
 
 #[derive(Debug, Default, Clone)]
@@ -47,5 +43,4 @@ pub trait ArbiterService {
     fn get_fee_address(&self) -> Result<Address>;
     fn submit_contract(&self, contract: &Contract) -> Result<Signature>;
     fn submit_payout(&self, payout: &Payout) -> Result<PartiallySignedTransaction>;
-    fn get_player_info(&self, player_id: PlayerId) -> Result<PlayerContractInfo>;
 }

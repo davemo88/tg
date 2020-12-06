@@ -1,5 +1,4 @@
 use std::str::FromStr;
-use serde_json;
 use reqwest;
 use tglib::{
     bdk::{
@@ -15,12 +14,8 @@ use tglib::{
     Result,
     TgError,
     arbiter::ArbiterService,
-    contract::{
-        Contract,
-        PlayerContractInfo,
-    },
+    contract::Contract,
     payout::Payout,
-    player::PlayerId,
 };
 
 
@@ -63,12 +58,5 @@ impl ArbiterService for ArbiterClient {
         } else {
             Err(TgError("invalid payout"))
         }
-    }
-
-    fn get_player_info(&self, player_id: PlayerId) -> Result<PlayerContractInfo> {
-        let response = reqwest::blocking::get(&format!("{}/info/{}", self.0, player_id.0)).unwrap();
-        let body = String::from(response.text().unwrap());
-        let info: PlayerContractInfo = serde_json::from_str(&body).unwrap();
-        Ok(info)
     }
 }

@@ -3,7 +3,6 @@ use std::{
     thread::sleep,
     time::Duration,
 };
-use serde_json;
 use redis::{
     self,
     Commands,
@@ -34,35 +33,22 @@ use tglib::{
                 Signature,
             }
         },
-        blockchain::{
-            noop_progress,
-            ElectrumBlockchain,
-        },
+        blockchain::ElectrumBlockchain,
         database::MemoryDatabase,
         electrum_client::Client,
     },
-    bip39::Mnemonic,
     hex,
     Result,
     TgError,
     arbiter::ArbiterService,
-    contract::{
-        Contract,
-        PlayerContractInfo,
-    },
+    contract::Contract,
     payout::Payout,
-    player::PlayerId,
-    wallet::{
-        EscrowWallet,
-        SigningWallet,
-    },
+    wallet::EscrowWallet,
     mock::{
-        Trezor,
         ARBITER_FINGERPRINT,
         ARBITER_XPUBKEY,
         ELECTRS_SERVER,
         NETWORK,
-        PLAYER_2_MNEMONIC,
         REDIS_SERVER,
     },
 };
@@ -154,21 +140,6 @@ impl ArbiterService for RbtrPublic {
         }
         Err(TgError("invalid payout"))
     }
-
-    fn get_player_info(&self, _player_id: PlayerId) -> Result<PlayerContractInfo> {
-// TODO: separate service e.g. namecoin
-        let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_2_MNEMONIC).unwrap());
-        let client = Client::new(ELECTRS_SERVER).unwrap();
-        let player_wallet = Wallet::<ElectrumBlockchain, MemoryDatabase>::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), ElectrumBlockchain::from(client), NETWORK).unwrap();
-        let escrow_pubkey = EscrowWallet::get_escrow_pubkey(&player_wallet);
-        player_wallet.wallet.sync(noop_progress(), None).unwrap();
-        Ok(PlayerContractInfo {
-            escrow_pubkey,
-// TODO: send to internal descriptor, no immediate way to do so atm
-            change_address: player_wallet.wallet.get_new_address().unwrap(),
-            utxos: player_wallet.wallet.list_unspent().unwrap(),
-        })
-    }
 }
 
 async fn contract_handler(contract_hex: String, rbtr: RbtrPublic) -> WebResult<impl Reply> {
@@ -188,11 +159,6 @@ async fn payout_handler(payout_hex: String, rbtr: RbtrPublic) -> WebResult<impl 
     } else {
         Err(warp::reject())
     }
-}
-
-async fn player_info_handler(player_id: String, rbtr: RbtrPublic) -> WebResult<impl Reply> {
-    let info = rbtr.get_player_info(PlayerId(player_id)).unwrap();
-    Ok(serde_json::to_string(&info).unwrap())
 }
 
 fn redis_client() -> redis::Client {
@@ -233,16 +199,10 @@ async fn main() {
         .and(rbtr_public.clone())
         .and_then(payout_handler);
 
-    let player_info = warp::path("info")
-        .and(warp::path::param::<String>())
-        .and(rbtr_public.clone())
-        .and_then(player_info_handler);
-
     let routes = get_escrow_pubkey
         .or(get_fee_address)
         .or(submit_contract)
-        .or(submit_payout)
-        .or(player_info);
+        .or(submit_payout);
 
     warp::serve(routes).run(([0, 0, 0, 0], 5000)).await;
 }
