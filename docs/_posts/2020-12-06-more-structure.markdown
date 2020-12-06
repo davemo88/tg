@@ -33,4 +33,4 @@ The complete Arbiter service runs:
 * `electrum`
 * `redis`
 
-Players then use the service via wallets like `player-cli` or `player-app`. `referee-signer` is used in an ad hoc basis for the moment.
+Players then use the service via wallets like `player-cli` or `player-app`. `referee-signer` is used on an ad hoc basis for the moment.

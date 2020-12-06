@@ -6,7 +6,6 @@ pub mod wallet;
 
 #[cfg(test)]
 mod tests {
-
     use std::{
         str::FromStr,
         thread,
@@ -28,7 +27,10 @@ mod tests {
         },
         arbiter::ArbiterService,
         contract::Contract,
-        player::PlayerId,
+        player::{
+            PlayerId,
+            PlayerIdService,
+        },
         wallet::{
             SigningWallet,
             BITCOIN_ACCOUNT_PATH,
@@ -49,12 +51,17 @@ mod tests {
     use crate::{
         arbiter::ArbiterClient,
         wallet::PlayerWallet,
+        player::PlayerIdClient,
     };
 
     const SATS: u64 = 1000000;
 
     fn local_electrum_client() -> Client {
         Client::new("tcp://localhost:60401").unwrap()
+    }
+
+    fn local_player_id_client() -> PlayerIdClient {
+        PlayerIdClient::new("http://localhost:18420")
     }
 
     #[test]
@@ -81,7 +88,7 @@ mod tests {
         let p1_wallet = PlayerWallet::new(p1_signing_wallet.fingerprint(), p1_signing_wallet.xpubkey(), NETWORK, local_electrum_client());
         let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
         let arbiter_pubkey = arbiter_client.get_escrow_pubkey().unwrap();
-        let p2_contract_info = arbiter_client.get_player_info(PlayerId(String::from("player 2"))).unwrap();
+        let p2_contract_info = local_player_id_client().get_player_info(PlayerId(String::from("player 2"))).unwrap();
         p1_wallet.create_contract(p2_contract_info, Amount::from_sat(SATS), arbiter_pubkey)
     }
 
@@ -90,7 +97,7 @@ mod tests {
         let p1_wallet = PlayerWallet::new(p1_signing_wallet.fingerprint(), p1_signing_wallet.xpubkey(), NETWORK, local_electrum_client());
         let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
         let arbiter_pubkey = arbiter_client.get_escrow_pubkey().unwrap();
-        let p2_contract_info = arbiter_client.get_player_info(PlayerId(String::from("player 2"))).unwrap();
+        let p2_contract_info = local_player_id_client().get_player_info(PlayerId(String::from("player 2"))).unwrap();
         let mut contract = p1_wallet.create_contract(p2_contract_info, Amount::from_sat(SATS), arbiter_pubkey);
         let cxid = contract.cxid();
         
