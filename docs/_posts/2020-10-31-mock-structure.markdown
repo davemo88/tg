@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Mock Architecture"
+title:  "Mock Structure"
 date:   2020-10-31 11:28:00 -0400
 categories: mock
 ---
