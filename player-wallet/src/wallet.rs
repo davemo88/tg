@@ -66,12 +66,10 @@ pub struct PlayerWallet {
 }
 
 impl PlayerWallet {
-    pub fn new(fingerprint: Fingerprint, xpubkey: ExtendedPubKey, network: Network) -> Self {
+    pub fn new(fingerprint: Fingerprint, xpubkey: ExtendedPubKey, network: Network, electrum_client: Client) -> Self {
         let descriptor_key = format!("[{}/{}]{}", fingerprint, BITCOIN_ACCOUNT_PATH, xpubkey);
         let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
         let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
-//        let client = Client::new(ELECTRS_SERVER, None).unwrap();
-        let client = Client::new("tcp://localhost:60401").unwrap();
         let mut db_path = current_dir().unwrap();
         db_path.push(DB_NAME);
         let db = DB::new(&db_path).unwrap();
@@ -86,7 +84,7 @@ impl PlayerWallet {
                 Some(&internal_descriptor),
                 network,
                 MemoryDatabase::default(),
-                ElectrumBlockchain::from(client)
+                ElectrumBlockchain::from(electrum_client)
             ).unwrap(),
             db,
 

@@ -6,14 +6,16 @@ services:
         dockerfile: rbtr-public-Dockerfile
     ports:
       - "5000:5000"
-    volumes:
-      - logvolume01:/var/log
   rbtr-private:
     build: 
         context: .
         dockerfile: rbtr-private-Dockerfile
-    volumes:
-      - logvolume01:/var/log
+  nmc-id:
+    build: 
+        context: .
+        dockerfile: nmc-id-Dockerfile
+    ports:
+      - "18420:18420"
   redis:
     image: redis
   electrs:

@@ -42,7 +42,7 @@ impl From<PublicKey> for PlayerId {
     }
 }
 
-pub trait PlayerIdentityService {
+pub trait PlayerIdService {
     fn get_player_id(&self, pubkey: &PublicKey) -> Option<PlayerId>;
     fn get_player_info(&self, player_id: PlayerId) -> Option<PlayerContractInfo>;
 }

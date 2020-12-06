@@ -2,13 +2,15 @@ use std::{
     env::current_dir,
     path::PathBuf,
 };
-//use hex::{decode, encode};
 use clap::{App, SubCommand, AppSettings};
 use rustyline::Editor;
 use rustyline::error::ReadlineError;
 use shell_words;
 use tglib::{
-    bdk::Error,
+    bdk::{
+        Error,
+        electrum_client::Client,
+    },
     bip39::Mnemonic,
     wallet::SigningWallet,
     mock::{
@@ -59,7 +61,8 @@ fn main() -> Result<(), Error> {
     }
 
     let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-    let wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
+    let client = Client::new("tcp://localhost:60401").unwrap();
+    let wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK, client);
 
     loop {
         let readline = rl.readline(">> ");

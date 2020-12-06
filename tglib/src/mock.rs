@@ -61,6 +61,8 @@ pub const ARBITER_XPUBKEY: &'static str = "tpubDCoCzmZtfuft3oM8Y5RnaT5GFq27NR7iY
 pub const ARBITER_PUBLIC_URL: &'static str = "http://localhost:5000";
 pub const REFEREE_PRIVKEY: &'static str = "L52hw8to1fdBj9eP8HESBNrfcbehxvKU1vsqWjmHJavxNEi9q91i";
 
+pub const PLAYER_ID_SERVICE_URL: &'static str = "http://localhost:18420";
+
 pub fn referee_pubkey() -> PublicKey {
     let secp = Secp256k1::new();
     let key = PrivateKey::from_wif(REFEREE_PRIVKEY).unwrap();

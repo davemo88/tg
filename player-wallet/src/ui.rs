@@ -20,7 +20,10 @@ use tglib::{
     arbiter::ArbiterService,
     contract::Contract,
     payout::Payout,
-    player::PlayerId,
+    player::{
+        PlayerId,
+        PlayerIdService,
+    },
     wallet::{
         EscrowWallet,
         SigningWallet,
@@ -32,12 +35,14 @@ use tglib::{
         ESCROW_KIX,
         NETWORK,
         PAYOUT_VERSION,
+        PLAYER_ID_SERVICE_URL,
         PLAYER_1_MNEMONIC,
     },
 };
 use crate::{
     arbiter::ArbiterClient,
     db,
+    player::PlayerIdClient,
     wallet::PlayerWallet,
 };
 
@@ -145,8 +150,6 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 }
             },
             "id" => {
-                let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-                let wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
                 println!("{}", wallet.player_id().0);
             }
             _ => {
@@ -242,16 +245,18 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 let amount = Amount::from_sat(a.value_of("amount").unwrap().parse::<u64>().unwrap());
                 let desc = a.value_of("desc").unwrap_or("");
                 let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
-                let p2_contract_info = arbiter_client.get_player_info(p2_id.clone()).unwrap();
+//                let p2_contract_info = arbiter_client.get_player_info(p2_id.clone()).unwrap();
+                let player_id_client = PlayerIdClient::new(PLAYER_ID_SERVICE_URL);
+                let p2_contract_info = player_id_client.get_player_info(p2_id.clone()).unwrap();
                 let arbiter_pubkey = arbiter_client.get_escrow_pubkey().unwrap();
 
-                let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-                let player_wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
+//                let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
+//                let player_wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
 
-                let contract = player_wallet.create_contract(p2_contract_info, amount, arbiter_pubkey);
+                let contract = wallet.create_contract(p2_contract_info, amount, arbiter_pubkey);
                 let contract_record = db::ContractRecord {
                     cxid: hex::encode(contract.cxid()),
-                    p1_id: player_wallet.player_id(),
+                    p1_id: wallet.player_id(),
                     p2_id,
                     hex: hex::encode(contract.to_bytes()),
                     desc: desc.to_string(),
