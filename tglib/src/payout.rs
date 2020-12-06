@@ -2,7 +2,10 @@ use byteorder::{BigEndian, WriteBytesExt};
 use nom::{
     IResult,
     combinator::opt,
-    multi::length_data,
+    multi::{
+        length_data,
+        length_value,
+    },
     number::complete::be_u32,
     sequence::tuple,
 };
@@ -54,7 +57,7 @@ impl Payout {
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut v = Vec::new();
         let _ = v.write_u8(self.version);
-// payout length + contract
+// contract length + contract
         let contract_bytes = self.contract.to_bytes();
         v.write_u32::<BigEndian>(contract_bytes.len() as u32).unwrap();
         v.extend(contract_bytes);
@@ -109,7 +112,12 @@ fn payout(input: &[u8]) ->IResult<&[u8], Payout> {
         contract,
         psbt,
         script_sig,
-    )) = tuple((version, contract, payout_psbt, opt(signature)))(input)?;
+    )) = tuple((
+        version, 
+        length_value(be_u32, contract), 
+        length_value(be_u32, payout_psbt), 
+        opt(signature)
+    ))(input)?;
 
     let p = Payout {
         version,
@@ -125,7 +133,6 @@ fn payout_psbt(input: &[u8]) ->IResult<&[u8], PartiallySignedTransaction> {
     let (input, b) = length_data(be_u32)(input)?;
     let psbt = PartiallySignedTransaction::consensus_decode(b).unwrap();
     Ok((input, psbt))
-    
 }
 
 pub enum PayoutState {

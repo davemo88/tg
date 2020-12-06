@@ -212,7 +212,6 @@ pub fn contract(input: &[u8]) ->IResult<&[u8], Contract> {
     };
 
     Ok((input, c))
-    
 }
 
 pub fn version(input: &[u8]) -> IResult<&[u8], u8> {
