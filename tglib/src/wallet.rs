@@ -96,8 +96,6 @@ pub trait EscrowWallet {
 //  when creating payout tx psbt
 //      this might work great
 //
-//
-//
                 return Err(TgError("invalid payout - payout tx signed incorrectly"))
             };
             if payout.script_sig.is_none() {

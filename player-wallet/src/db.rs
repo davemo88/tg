@@ -63,15 +63,15 @@ impl DB {
                     cxid            TEXT PRIMARY KEY,
                     p1_id           TEXT NOT NULL,
                     p2_id           TEXT NOT NULL,
-                    hex             TEXT NOT NULL UNIQUE,
+                    hex             TEXT NOT NULL,
                     desc            TEXT,
                     FOREIGN KEY(p1_id) REFERENCES player(id),
                     FOREIGN KEY(p2_id) REFERENCES player(id)
                 );
                 CREATE TABLE IF NOT EXISTS payout (
                     cxid            TEXT PRIMARY KEY,
-                    psbt            TEXT NOT NULL UNIQUE,
-                    sig             TEXT NOT NULL UNIQUE,
+                    psbt            TEXT NOT NULL,
+                    sig             TEXT NOT NULL,
                     FOREIGN KEY(cxid) REFERENCES contract(cxid)
                 );
             COMMIT;"

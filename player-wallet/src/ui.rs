@@ -283,7 +283,6 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 } else {
                     println!("invalid contract");
                 }
-
             }
             "details" => {
                 if let Some(contract_record) = wallet.db.get_contract(a.value_of("cxid").unwrap()) {
@@ -298,7 +297,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
             "sign" => {
                 if let Some(contract_record) = wallet.db.get_contract(a.value_of("cxid").unwrap()) {
 //                    let contract = Contract::from_bytes(hex::decode(contract_record.hex.clone()).unwrap()).unwrap();
-                    println!("{:?}",a);
+//                    println!("{:?}",a);
                     let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
                     let sig = signing_wallet.sign_message(
                         Message::from_slice(&hex::decode(contract_record.cxid.clone()).unwrap()).unwrap(),
@@ -429,10 +428,26 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 let escrow_pubkey = wallet.get_escrow_pubkey();
                 let payout = tglib::wallet::create_payout(&contract, &Address::p2wpkh(&escrow_pubkey, NETWORK).unwrap());
                 let _r = wallet.db.insert_payout(db::PayoutRecord::from(payout.clone()));
-                println!("new payout {:?}", payout);
+                println!("created new payout for contract {}", contract_record.cxid);
             }
             "import" => {
-                println!("import");
+                if let Ok(payout) = Payout::from_bytes(hex::decode(a.value_of("hex").unwrap()).unwrap()) {
+                    let contract_record = db::ContractRecord {
+                        cxid: hex::encode(payout.contract.cxid()),
+                        p1_id: PlayerId::from(payout.contract.p1_pubkey),
+                        p2_id: PlayerId::from(payout.contract.p2_pubkey),
+                        hex: hex::encode(payout.contract.to_bytes()),
+                        desc: String::default(),
+                    };
+                    match wallet.db.insert_contract(contract_record.clone()) {
+                        Ok(_) => println!("imported contract {}", hex::encode(payout.contract.cxid())),
+                        Err(e) => println!("{:?}", e),
+                    }
+                    let _r = wallet.db.insert_payout(db::PayoutRecord::from(payout.clone()));
+                    println!("import payout for contract {}", contract_record.cxid);
+                } else {
+                    println!("invalid payout ");
+                }
             }
             "details" => {
                 if let Some(pr) = wallet.db.get_payout(a.value_of("cxid").unwrap()) {

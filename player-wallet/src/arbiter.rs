@@ -51,8 +51,6 @@ impl ArbiterService for ArbiterClient {
     }
 
     fn submit_payout(&self, payout: &Payout) -> Result<PartiallySignedTransaction> {
-        let payout_bytes = hex::encode(payout.to_bytes());
-        println!("payout bytes: {}", payout_bytes);
         let response = reqwest::blocking::get(&format!("{}/submit-payout/{}", self.0, hex::encode(payout.to_bytes()))).unwrap();
         let body = String::from(response.text().unwrap());
         if let Ok(psbt) = consensus::deserialize(&hex::decode(body).unwrap()) {
