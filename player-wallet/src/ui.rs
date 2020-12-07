@@ -195,6 +195,12 @@ pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
                     .help("hex-encoded contract")
                     .required(true)
                     .takes_value(true)),
+            SubCommand::with_name("export").about("export contract as hex")
+                .arg(Arg::with_name("cxid")
+                    .index(1)
+                    .help("contract id")
+                    .required(true)
+                    .takes_value(true)),
             SubCommand::with_name("details").about("show contract details")
                 .arg(Arg::with_name("cxid")
                     .index(1)
@@ -284,11 +290,18 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                     println!("invalid contract");
                 }
             }
+            "export" => {
+                if let Some(contract_record) = wallet.db.get_contract(a.value_of("cxid").unwrap()) {
+                    println!("{}", contract_record.hex);
+
+                } else {
+                    println!("no such contract");
+                }
+            }
             "details" => {
                 if let Some(contract_record) = wallet.db.get_contract(a.value_of("cxid").unwrap()) {
                     let contract = Contract::from_bytes(hex::decode(contract_record.hex.clone()).unwrap()).unwrap();
                     println!("{:?}", contract);
-                    println!("hex: {}", contract_record.hex);
 
                 } else {
                     println!("no such contract");
@@ -377,6 +390,12 @@ pub fn payout_ui<'a, 'b>() -> App<'a, 'b> {
                     .help("hex-encoded payout")
                     .required(true)
                     .takes_value(true)),
+            SubCommand::with_name("export").about("export payout as hex")
+                .arg(Arg::with_name("cxid")
+                    .index(1)
+                    .help("payout contract id")
+                    .required(true)
+                    .takes_value(true)),
             SubCommand::with_name("details").about("show payout details")
                 .arg(Arg::with_name("cxid")
                     .index(1)
@@ -449,6 +468,18 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                     println!("invalid payout ");
                 }
             }
+            "export" => {
+                let cxid = a.value_of("cxid").unwrap();
+                let cr = wallet.db.get_contract(cxid).unwrap();
+                let pr = wallet.db.get_payout(cxid).unwrap();
+                let p = Payout {
+                    version: PAYOUT_VERSION,
+                    contract: Contract::from_bytes(hex::decode(cr.hex).unwrap()).unwrap(),
+                    psbt: consensus::deserialize(&hex::decode(pr.psbt).unwrap()).unwrap(),
+                    script_sig: Signature::from_compact(&hex::decode(pr.sig).unwrap()).ok()
+                };
+                println!("{}", hex::encode(p.to_bytes()));
+            }
             "details" => {
                 if let Some(pr) = wallet.db.get_payout(a.value_of("cxid").unwrap()) {
                     println!("{:?}", pr);
@@ -510,7 +541,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
             "list" => {
                 let payouts = wallet.db.all_payouts().unwrap();
                 for p in payouts {
-                    println!("{:?}", p);
+                    println!("cxid: {}", p.cxid);
                 }
             }
             _ => {
