@@ -76,10 +76,10 @@ pub trait EscrowWallet {
             let payout_tx = payout.psbt.clone().extract_tx();
             let matching_tx = payout_tx.txid() == create_payout(&payout.contract, &payout_address).psbt.clone().extract_tx().txid();
             if !fully_signed {
-                return Err(TgError("invalid payout - not fully signed"))
+                return Err(TgError("invalid payout - contract not fully signed"))
             }
             if !matching_tx {
-                return Err(TgError("invalid payout - no matching tx"))
+                return Err(TgError("invalid payout - invalid payout tx"))
             }
             let recipient_pubkey = payout.recipient_pubkey();
             if recipient_pubkey.is_err() {
@@ -98,7 +98,7 @@ pub trait EscrowWallet {
 //
 //
 //
-                return Err(TgError("invalid payout - psbt signed improperly"))
+                return Err(TgError("invalid payout - payout tx signed incorrectly"))
             };
             if payout.script_sig.is_none() {
                 return Err(TgError("invalid payout - no script sig"))
