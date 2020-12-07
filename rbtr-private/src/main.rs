@@ -33,7 +33,7 @@ async fn maybe_sign_contract(con: &mut Connection, wallet: &Wallet) {
         if wallet.validate_contract(&contract).is_ok() {
             if let Ok(sig) = sign_contract(wallet, &mut contract) {
                 println!("signed contract {}", hex::encode(contract.cxid()));
-                let _ = set_contract_signature(con, contract, sig).await;
+                let _r = set_contract_signature(con, contract, sig).await;
             }
         }
     }
@@ -58,7 +58,7 @@ async fn maybe_sign_payout(con: &mut Connection, wallet: &Wallet) {
         if wallet.validate_payout(&payout).is_ok() {
             if let Ok(psbt) = sign_payout(wallet, &mut payout) {
                 println!("signed transaction for payout for contract {}", hex::encode(payout.contract.cxid()));
-                let _ = set_payout_psbt(con, payout, psbt).await;
+                let _r = set_payout_psbt(con, payout, psbt).await;
             }
         }
     }
@@ -78,6 +78,7 @@ async fn set_payout_psbt(con: &mut Connection, payout: Payout, psbt: PartiallySi
 }
 
 fn redis_client() -> redis::Client {
+    sleep(Duration::from_secs(1));
     let mut client = redis::Client::open(REDIS_SERVER);
     while client.is_err() {
         sleep(Duration::from_secs(1));

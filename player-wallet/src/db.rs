@@ -70,7 +70,7 @@ impl DB {
                 );
                 CREATE TABLE IF NOT EXISTS payout (
                     cxid            TEXT PRIMARY KEY,
-                    psbt              TEXT NOT NULL UNIQUE,
+                    psbt            TEXT NOT NULL UNIQUE,
                     sig             TEXT NOT NULL UNIQUE,
                     FOREIGN KEY(cxid) REFERENCES contract(cxid)
                 );

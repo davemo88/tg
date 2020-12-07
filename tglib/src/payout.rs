@@ -38,7 +38,6 @@ use crate::{
 pub struct Payout {
     pub version:         u8,
     pub contract:        Contract,
-//    pub tx:              Transaction,
     pub psbt:            PartiallySignedTransaction,
     pub script_sig:      Option<Signature>,
 }
@@ -76,10 +75,10 @@ impl Payout {
     pub fn from_bytes(bytes: Vec<u8>) -> Result<Payout> {
         let (i, p) = payout(&bytes).unwrap();
         if i.len() == 0 {
-            Ok(p)
+            return Ok(p)
         }
         else {
-            Err(TgError("couldn't parse contract"))
+            return Err(TgError("couldn't parse payout"))
         }
     }
 
@@ -115,9 +114,22 @@ fn payout(input: &[u8]) ->IResult<&[u8], Payout> {
     )) = tuple((
         version, 
         length_value(be_u32, contract), 
-        length_value(be_u32, payout_psbt), 
+        payout_psbt, 
         opt(signature)
     ))(input)?;
+//    let (input, version) = version(input).unwrap();
+//    let (input, contract) = length_value(be_u32, contract)(input).unwrap();
+//    let (input, psbt) = length_value(be_u32, payout_psbt)(input).unwrap();
+//    let (input, script_sig) = opt(signature)(input).unwrap();
+//        contract,
+//        psbt,
+//        script_sig,
+//    )) = tuple((
+//        version, 
+//        length_value(be_u32, contract), 
+//        length_value(be_u32, payout_psbt), 
+//        opt(signature)
+//    ))(input)?;
 
     let p = Payout {
         version,

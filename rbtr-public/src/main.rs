@@ -123,7 +123,10 @@ impl ArbiterService for RbtrPublic {
     }
 
     fn submit_payout(&self, payout: &Payout) -> Result<PartiallySignedTransaction> {
-        if wallet().validate_payout(&payout).is_ok() {
+        let r = wallet().validate_payout(&payout);
+//        if wallet().validate_payout(&payout).is_ok() {
+        if r.is_ok() {
+            println!("rbtr-public validated payout");
             let mut con = self.get_con();
             let _ = self.push_payout(&mut con, &hex::encode(payout.to_bytes())).unwrap();
             let cxid = hex::encode(payout.contract.cxid());
@@ -136,6 +139,7 @@ impl ArbiterService for RbtrPublic {
                 sleep(Duration::from_secs(1));
             }
         }
+        println!("{:?}", r);
         Err(TgError("invalid payout"))
     }
 }
