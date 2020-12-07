@@ -172,13 +172,11 @@ pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
             SubCommand::with_name("new").about("create a new contract")
                 .arg(Arg::with_name("player-2")
                     .index(1)
-                    .value_name("PLAYER2")
                     .help("player 2's id")
                     .required(true)
                     .takes_value(true))
                 .arg(Arg::with_name("amount")
                     .index(2)
-                    .value_name("AMOUNT")
                     .help("amount")
                     .required(true)
                     .takes_value(true))
@@ -191,7 +189,6 @@ pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
             SubCommand::with_name("import").about("import contract")
                 .arg(Arg::with_name("contract-hex")
                     .index(1)
-                    .value_name("CONTRACT_HEX")
                     .help("hex-encoded contract")
                     .required(true)
                     .takes_value(true)),
@@ -274,7 +271,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 }
             }
             "import" => {
-                if let Ok(contract) = Contract::from_bytes(hex::decode(a.value_of("hex").unwrap()).unwrap()) {
+                if let Ok(contract) = Contract::from_bytes(hex::decode(a.value_of("contract-hex").unwrap()).unwrap()) {
                     let contract_record = db::ContractRecord {
                         cxid: hex::encode(contract.cxid()),
                         p1_id: PlayerId::from(contract.p1_pubkey),
@@ -450,7 +447,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 println!("created new payout for contract {}", contract_record.cxid);
             }
             "import" => {
-                if let Ok(payout) = Payout::from_bytes(hex::decode(a.value_of("hex").unwrap()).unwrap()) {
+                if let Ok(payout) = Payout::from_bytes(hex::decode(a.value_of("payout-hex").unwrap()).unwrap()) {
                     let contract_record = db::ContractRecord {
                         cxid: hex::encode(payout.contract.cxid()),
                         p1_id: PlayerId::from(payout.contract.p1_pubkey),

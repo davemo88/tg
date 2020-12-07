@@ -87,7 +87,8 @@ impl DB {
 
     pub fn insert_contract(&self, contract: ContractRecord) -> Result<usize> {
         self.conn.execute(
-            "INSERT INTO contract (cxid, p1_id, p2_id, hex, desc) VALUES (?1, ?2, ?3, ?4, ?5)",
+            "INSERT INTO contract (cxid, p1_id, p2_id, hex, desc) VALUES (?1, ?2, ?3, ?4, ?5) 
+            ON CONFLICT (cxid) DO UPDATE SET p1_id=?2, p2_id=?3, hex=?4, desc=?5",
             params![contract.cxid, contract.p1_id.0, contract.p2_id.0, contract.hex, contract.desc],
         )
     }
