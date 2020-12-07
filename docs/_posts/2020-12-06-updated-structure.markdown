@@ -5,7 +5,7 @@ date:   2020-12-06 11:28:00 -0400
 categories: mock
 ---
 
-The BDK wallet library was refactored heavily / replaced by another library at some point after the last post. Since then, `tg` is refactored to use the new BDK wallet as well to run in a less mocked-up environment using `docker-compose`. The implementation has been broken up into several libraries and executables shown below.
+The BDK wallet library was refactored heavily / replaced by another library at some point after the last post. Since then, `tg` is refactored to use the new BDK wallet as well to run in a less mocked-up environment via `docker-compose`. The implementation has been broken up into several libraries and executables shown below.
 
 # Libraries
 * `tglib`: core library used throughout
@@ -25,7 +25,7 @@ The BDK wallet library was refactored heavily / replaced by another library at s
 * `redis`: transient storage
 
 # Arbiter Service
-The current Arbiter service uses:
+The current Arbiter service runs:
 * `rbtr-public`
 * `rbtr-private`
 * `nmc-id`
