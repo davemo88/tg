@@ -100,6 +100,9 @@ pub trait EscrowWallet {
 //
                 return Err(TgError("invalid payout - psbt signed improperly"))
             };
+            if payout.script_sig.is_none() {
+                return Err(TgError("invalid payout - no script sig"))
+            }
             let mut env = TgScriptEnv::new(payout.clone());
             env.validate_payout()
         } else {
