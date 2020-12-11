@@ -259,5 +259,6 @@ pub enum ContractState {
 pub struct PlayerContractInfo {
     pub escrow_pubkey: PublicKey,
     pub change_address: Address,
+// TODO: could just be outpoints and clients look up the TxOuts
     pub utxos: Vec<UTXO>,
 }

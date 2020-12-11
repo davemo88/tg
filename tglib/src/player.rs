@@ -1,7 +1,11 @@
-use std::convert::From;
+use std::{
+    convert::From,
+    error::Error,
+};
 use bdk::bitcoin::{
     PublicKey,
     util::bip32::ExtendedPubKey,
+    secp256k1::Signature,
     hashes::{
         Hash,
         HashEngine,
@@ -45,4 +49,14 @@ impl From<PublicKey> for PlayerId {
 pub trait PlayerIdService {
     fn get_player_id(&self, pubkey: &PublicKey) -> Option<PlayerId>;
     fn get_player_info(&self, player_id: PlayerId) -> Option<PlayerContractInfo>;
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct PlayerName(pub String);
+
+pub trait PlayerNameService {
+    fn get_player_name(&self, pubkey: &PublicKey) -> Option<PlayerName>;
+    fn get_contract_info(&self, name: PlayerName) -> Option<PlayerContractInfo>;
+    fn set_contract_info(&self, name: PlayerName, info: PlayerContractInfo, sig: Signature) -> Option<PlayerContractInfo>;
+    fn register_name(&self, name: PlayerName, pubkey: &PublicKey, sig: Signature) -> Result<(), String>;
 }

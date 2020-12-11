@@ -58,7 +58,7 @@ impl SigningWallet for Wallet {
     }
 
     fn sign_message(&self, msg: Message, path: DerivationPath) -> TgResult<Signature> {
-    self.trezor.sign_message(msg, path)
+        self.trezor.sign_message(msg, path)
     }
 }
 

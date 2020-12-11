@@ -111,12 +111,12 @@ impl ArbiterService for RbtrPublic {
             let mut con = self.get_con();
             let cxid = self.push_contract(&mut con, &hex::encode(contract.to_bytes())).unwrap();
             for _ in 1..15 as u32 {
+                sleep(Duration::from_secs(1));
                 let r: RedisResult<String> = con.get(hex::encode(contract.cxid()));
                 if let Ok(sig) = r {
-                    let _ : RedisResult<String> = con.del(cxid);
+                    let _r : RedisResult<String> = con.del(cxid);
                     return Ok(Signature::from_compact(&hex::decode(sig).unwrap()).unwrap())
                 }
-                sleep(Duration::from_secs(1));
             }
         }
         Err(TgError("invalid contract"))
@@ -128,15 +128,15 @@ impl ArbiterService for RbtrPublic {
         if r.is_ok() {
             println!("rbtr-public validated payout");
             let mut con = self.get_con();
-            let _ = self.push_payout(&mut con, &hex::encode(payout.to_bytes())).unwrap();
+            let _r = self.push_payout(&mut con, &hex::encode(payout.to_bytes())).unwrap();
             let cxid = hex::encode(payout.contract.cxid());
             for _ in 1..15 as u32 {
+                sleep(Duration::from_secs(1));
                 let r: RedisResult<String> = con.get(cxid.clone());
                 if let Ok(tx) = r {
-                    let _ : RedisResult<String> = con.del(cxid);
+                    let _r : RedisResult<String> = con.del(cxid);
                     return Ok(consensus::deserialize::<PartiallySignedTransaction>(&hex::decode(tx).unwrap()).unwrap())
                 }
-                sleep(Duration::from_secs(1));
             }
         }
         println!("{:?}", r);

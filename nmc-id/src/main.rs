@@ -6,7 +6,10 @@ use warp::{
 use serde_json;
 use tglib::{
     bdk::{
-        bitcoin::PublicKey,
+        bitcoin::{
+            PublicKey,
+            secp256k1::Signature,
+        },
         blockchain::noop_progress,
         electrum_client::Client,
     },
@@ -15,6 +18,8 @@ use tglib::{
     player::{
         PlayerId,
         PlayerIdService,
+        PlayerName,
+        PlayerNameService,
     },
     wallet::{
         EscrowWallet,
@@ -40,6 +45,22 @@ impl NmcId {
     }
 }
 
+impl PlayerNameService for NmcId {
+    fn get_player_name(&self, pubkey: &PublicKey) -> Option<PlayerName> {
+        None
+    }
+
+    fn get_contract_info(&self, name: PlayerName) -> Option<PlayerContractInfo> {
+        None
+    }
+    fn set_contract_info(&self, name: PlayerName, info: PlayerContractInfo, sig: Signature) -> Option<PlayerContractInfo> {
+        None
+    }
+    fn register_name(&self, name: PlayerName, pubkey: &PublicKey, sig: Signature) -> Result<(), String> {
+        Err("oh no".to_string())
+    }
+}
+
 impl PlayerIdService for NmcId {
     fn get_player_id(&self, _pubkey: &PublicKey) -> Option<PlayerId> {
         None
@@ -58,6 +79,13 @@ impl PlayerIdService for NmcId {
             utxos: player_wallet.wallet.list_unspent().unwrap(),
         })
     }
+
+// TODO this endpoint needs auth requiring ownership of the corresponding player_id
+// e.g. if the player_id is a namecoin name, then a signature of some random data
+// by the owner of the name will do nicely
+//    fn set_player_info(&self, player_id: PlayerId, info: PlayerContractInfo) -> Result<()> {
+//        Err(TgError("invalid signature"))
+//    }
 }
 
 async fn id_handler(_pubkey: String, _nmcid: NmcId) -> WebResult<impl Reply>{
