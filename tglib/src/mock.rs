@@ -134,6 +134,7 @@ impl SigningWallet for Trezor {
         }
     }
 
+// TODO : make this work
     fn sign_message(&self, msg: Message, _path: DerivationPath) -> TgResult<Signature> {
         let root_key = ExtendedPrivKey::new_master(NETWORK, &self.mnemonic.to_seed("")).unwrap();
         let secp = Secp256k1::new();

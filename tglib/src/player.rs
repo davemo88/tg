@@ -1,6 +1,5 @@
 use std::{
     convert::From,
-    error::Error,
 };
 use bdk::bitcoin::{
     PublicKey,

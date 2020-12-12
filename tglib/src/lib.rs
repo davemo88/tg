@@ -7,7 +7,7 @@ pub use bip39;
 pub use hex;
 pub use nom;
 pub use byteorder;
-pub use serde;
+//pub use serde;
 
 pub mod mock;
 
