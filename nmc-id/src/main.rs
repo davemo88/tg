@@ -73,6 +73,20 @@ struct RpcResponse {
     id: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct NameNewResult {
+    hex: String,
+    rand: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct NameNewResponse {
+    result: Option<NameNewResult>,
+    error: Option<String>,
+    message: Option<String>,
+    id: Option<String>,
+}
+
 impl NmcId {
     pub fn new() -> Self {
         NmcId
@@ -103,17 +117,38 @@ impl PlayerNameService for NmcId {
             address);
         println!("{}",string_body);
         let r = client.post(NAMECOIN_RPC_URL)
-            .body(string_body.clone())
-            .send()
-            .unwrap();
-        println!("{}", r.text().unwrap());
-        let r = client.post(NAMECOIN_RPC_URL)
             .body(string_body)
             .send()
             .unwrap();
         let r: RpcResponse = r.json().unwrap();
+        let tx_hex = r.result.unwrap();
+        let string_body = format!("{{\"jsonrpc\": \"{}\", \"id\": \"{}\", \"method\": \"namerawtransaction\", \"params\": [\"{}\", 0, {{\"op\":\"name_new\", \"name\":\"player/test\"}}]}}",
+            JSONRPC_VERSION,
+            JSONRPC_ID,
+            tx_hex.clone());
+        println!("{}",string_body);
+        let r = client.post(NAMECOIN_RPC_URL)
+            .body(string_body)
+            .send()
+            .unwrap();
+//        let r = r.text().unwrap();
+        let r: NameNewResponse = r.json().unwrap();
         println!("{:?}", r);
-        Err("oh no".to_string())
+        let name_new_result = r.result.unwrap();
+// mine (12?) blocks here or firstupdate won't be valid
+// name_firstupdate
+        let string_body = format!("{{\"jsonrpc\": \"{}\", \"id\": \"{}\", \"method\": \"namerawtransaction\", \"params\": [\"{}\", 0, {{\"op\":\"name_firstupdate\", \"name\":\"player/test\", \"value\":\"new value\", \"rand\":\"{}\"}}]}}",
+            JSONRPC_VERSION,
+            JSONRPC_ID,
+            tx_hex,
+            name_new_result.rand);
+        println!("{}",string_body);
+        let r = client.post(NAMECOIN_RPC_URL)
+            .body(string_body)
+            .send()
+            .unwrap();
+        let r = r.text().unwrap();
+        Ok(())
     }
 }
 
@@ -159,8 +194,7 @@ fn get_namecoin_address(pubkey: &PublicKey, network: Network) -> Result<Namecoin
             panic!("nice try, sucker");
 //            hash.insert(0,NAMECOIN_VERSION_BYTE);
         },
-        Network::Regtest
-        | Network::Testnet => {
+        Network::Regtest | Network::Testnet => {
             hash.insert(0,NAMECOIN_TESTNET_VERSION_BYTE);
         }
     }
