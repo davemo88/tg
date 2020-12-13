@@ -105,7 +105,7 @@ impl PlayerNameService for NmcId {
 // then do name_new followed by name_firstupdate and keep track of the RAND salt value
 //
         let mut name_output = HashMap::new();
-        name_output.insert(name_address,1000000.to_string());
+        name_output.insert(name_address,0.01);
         let _r = self.rpc_client.load_wallet("testwallet");
         let tx_hex = self.rpc_client.create_raw_transaction(Vec::new(), vec!(name_output)).unwrap();
 // another function to do this and extract rand for firstupdate
@@ -116,24 +116,26 @@ impl PlayerNameService for NmcId {
             value: None,
         };
         let name_new = self.rpc_client.name_raw_transaction(tx_hex.clone(), 0, op).unwrap();
-        let funded_name_new = self.rpc_client.fund_raw_transaction(name_new).unwrap();
-// need to add inputs with fundrawtransaction
+// fund
+        let funded_name_new = self.rpc_client.fund_raw_transaction(name_new.result.clone().unwrap().hex).unwrap();
 // sign + broadcast
-        let signed_name_new = self.rpc_client.sign_raw_transaction_with_wallet(funded_name_new.result.hex).unwrap();
-        println!("{}",signed_name_new);
+//        println!("funded: {:?}",funded_name_new);
+        let signed_name_new = self.rpc_client.sign_raw_transaction_with_wallet(funded_name_new.result.unwrap().hex).unwrap();
+//        println!("signed: {}",signed_name_new);
+        let broadcast_name_new = self.rpc_client.send_raw_transaction(signed_name_new).unwrap();
 // mine (12?) blocks here or firstupdate won't be valid
-//        let _r = self.generate(12);
-//// name_firstupdate
-//        let op = NameOp {
-//            op: "name_firstupdate".to_string(),
-//            name: format!("player/{}", name.0),
-//            rand: name_new.result.unwrap().rand,
-//            value: Some("first update test value".to_string()),
-//        };
-//
-//        let _r = self.generate(12);
-//
-//        let name_firstupdate = self.rpc_client.name_raw_transaction(tx_hex, 0, op).unwrap();
+        let _r = self.generate(12);
+        let op = NameOp {
+            op: "name_firstupdate".to_string(),
+            name: format!("player/{}", name.0),
+            rand: name_new.result.unwrap().rand,
+            value: Some("name first update".to_string()),
+        };
+        let name_first = self.rpc_client.name_raw_transaction(tx_hex.clone(), 0, op).unwrap();
+        let funded_name_first = self.rpc_client.fund_raw_transaction(name_first.result.clone().unwrap().hex).unwrap();
+        let signed_name_first = self.rpc_client.sign_raw_transaction_with_wallet(funded_name_first.result.unwrap().hex).unwrap();
+        let broadcast_name_first = self.rpc_client.send_raw_transaction(signed_name_first).unwrap();
+        let _r = self.generate(12);
         Ok(())
     }
 }
@@ -257,6 +259,7 @@ mod tests {
         ).unwrap();
 
         let nmc_id = NmcId::new();
+        nmc_id.generate(150);
         let name = nmc_id.register_name(PlayerName("AustinPompeii".to_string()), &pubkey, sig);
     }
 }

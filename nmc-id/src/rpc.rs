@@ -14,7 +14,7 @@ pub const NAMECOIN_RPC_URL: &'static str = "http://guyledouche:yodelinbabaganous
 pub const JSONRPC_VERSION: &'static str = "1.0";
 pub const JSONRPC_ID: &'static str = "nmc-id-test";
 
-pub type TxOut = HashMap<String,String>;
+pub type TxOut = HashMap<String,f64>;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TxIn {
@@ -82,16 +82,10 @@ impl NamecoinRpc for NamecoinRpcClient {
     }
 
     fn create_raw_transaction(&self, input: Vec<TxIn>, output: Vec<TxOut>) -> RpcResult<String> {
-        let mut params = String::default();
-//        params += &serde_json::to_string(
-//            &vec!(
-//                    serde_json::to_string(&input).unwrap(),
-//                    serde_json::to_string(&output).unwrap(),
-//                )
-//            ).unwrap();
-        params += &serde_json::to_string(&input).unwrap();
-        params += ", ";
-        params += &serde_json::to_string(&output).unwrap();
+        let params = format!("{}, {}",
+            &serde_json::to_string(&input).unwrap(),
+            &serde_json::to_string(&output).unwrap(),
+        );
         let body = self.build_request_body("createrawtransaction", &params);
         let r = self.post(body);
         let r: RpcResponse = r.unwrap().json().unwrap();
@@ -120,23 +114,25 @@ impl NamecoinRpc for NamecoinRpcClient {
     fn sign_raw_transaction_with_wallet(&self, tx_hex: String) -> RpcResult<String> {
         let body = self.build_request_body("signrawtransactionwithwallet", 
             &serde_json::to_string(&tx_hex).unwrap());
-        println!("{}",body);
         let r = self.post(body).unwrap().text().unwrap();
-        println!("{}",r);
-//        let r: RpcResponse = self.post(body).unwrap().json().unwrap();
-//        Ok(r.result.unwrap())
-        Ok("".to_string())
+        Ok(r)
     }
 
-    fn fund_raw_transaction(&self, tx_hex: String) -> RpcResult<String> {
-        let body = self.build_request_body("fundrawtransaction", 
+    fn fund_raw_transaction(&self, tx_hex: String) -> RpcResult<FundingResponse> {
+        let params = format!("{}, {{\"fee_rate\":100}}",
+            &serde_json::to_string(&tx_hex).unwrap(),
+        );
+        let body = self.build_request_body("fundrawtransaction", &params); 
+//        let r = self.post(body).unwrap().text().unwrap();
+        let response: FundingResponse = self.post(body).unwrap().json().unwrap();
+        Ok(response)
+    }
+
+    fn send_raw_transaction(&self, tx_hex: String) -> RpcResult<String> {
+        let body = self.build_request_body("sendrawtransaction", 
             &serde_json::to_string(&tx_hex).unwrap());
-        println!("{}",body);
         let r = self.post(body).unwrap().text().unwrap();
-        println!("{}",r);
-//        let r: RpcResponse = self.post(body).unwrap().json().unwrap();
-//        Ok(r.result.unwrap())
-        Ok("".to_string())
+        Ok(r)
     }
 }
 
@@ -162,6 +158,21 @@ pub struct NameResponse {
     pub id: Option<String>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FundingResponse {
+    pub result: Option<FundingResult>,
+    pub error: Option<String>,
+    pub message: Option<String>,
+    pub id: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FundingResult {
+    pub hex: String,
+    pub fee: f64,
+    pub changepos: i32,
+}
+
 type RpcResult<T> = Result<T, String>;
 
 pub trait NamecoinRpc {
@@ -169,11 +180,12 @@ pub trait NamecoinRpc {
     fn create_wallet(&self, name: &str) -> RpcResult<()>;
     fn load_wallet(&self, name: &str) -> RpcResult<()>;
     fn get_new_address(&self) -> RpcResult<String>;
+    fn sign_raw_transaction_with_wallet(&self, tx_hex: String) -> RpcResult<String>;
 // raw transaction
     fn create_raw_transaction(&self, input: Vec<TxIn>, output: Vec<TxOut>) -> RpcResult<String>;
     fn name_raw_transaction(&self, tx_hex: String, vout: u8, op: NameOp) -> RpcResult<NameResponse>;
-    fn fund_raw_transaction(&self, tx_hex: String) -> RpcResult<String>;
+    fn fund_raw_transaction(&self, tx_hex: String) -> RpcResult<FundingResponse>;
+    fn send_raw_transaction(&self, tx_hex: String) -> RpcResult<String>;
 // generation
     fn generate_to_address(&self, nblocks: u8, address: String) -> RpcResult<()>;
-    fn sign_raw_transaction_with_wallet(&self, tx_hex: String) -> RpcResult<String>;
 }
