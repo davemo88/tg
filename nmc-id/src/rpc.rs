@@ -8,8 +8,10 @@ use serde::{
     Serialize,
     Deserialize,
 };
+use tglib::bdk::bitcoin::PublicKey;
 
 pub const NAMECOIN_RPC_URL: &'static str = "http://guyledouche:yodelinbabaganoush@localhost:18443";
+pub const NAME_ENCODING: &'static str = "ascii";
 
 pub const JSONRPC_VERSION: &'static str = "1.0";
 pub const JSONRPC_ID: &'static str = "nmc-id-test";
@@ -111,20 +113,30 @@ impl NamecoinRpc for NamecoinRpcClient {
         Ok(())
     }
 
-    fn sign_raw_transaction_with_wallet(&self, tx_hex: String) -> RpcResult<String> {
+    fn sign_raw_transaction_with_wallet(&self, tx_hex: String) -> RpcResult<SignResult> {
         let body = self.build_request_body("signrawtransactionwithwallet", 
             &serde_json::to_string(&tx_hex).unwrap());
-        let r = self.post(body).unwrap().text().unwrap();
-        Ok(r)
+        let r = self.post(body.clone()).unwrap().text().unwrap();
+        let r: SignResponse = self.post(body).unwrap().json().unwrap();
+        Ok(r.result.unwrap())
     }
 
-    fn fund_raw_transaction(&self, tx_hex: String) -> RpcResult<FundingResponse> {
+    fn import_pubkey(&self, pubkey: &PublicKey) -> RpcResult<()> {
+        let body = self.build_request_body("importpubkey", 
+            &serde_json::to_string(&pubkey.to_string()).unwrap());
+//        println!("import pubkey body: {}",body);
+        let r = self.post(body).unwrap();
+//        println!("import pubkey response: {}",r.text().unwrap());
+        Ok(())
+    }
+
+    fn fund_raw_transaction(&self, tx_hex: String) -> RpcResult<FundResponse> {
         let params = format!("{}, {{\"fee_rate\":100}}",
             &serde_json::to_string(&tx_hex).unwrap(),
         );
         let body = self.build_request_body("fundrawtransaction", &params); 
-//        let r = self.post(body).unwrap().text().unwrap();
-        let response: FundingResponse = self.post(body).unwrap().json().unwrap();
+        let r = self.post(body.clone()).unwrap().text().unwrap();
+        let response: FundResponse = self.post(body).unwrap().json().unwrap();
         Ok(response)
     }
 
@@ -134,14 +146,106 @@ impl NamecoinRpc for NamecoinRpcClient {
         let r = self.post(body).unwrap().text().unwrap();
         Ok(r)
     }
+
+    fn decode_raw_transaction(&self, tx_hex: String, is_witness: bool) -> RpcResult<DecodeResponse> {
+        let params = format!("{}, {}",
+            &serde_json::to_string(&tx_hex).unwrap(),
+            &serde_json::to_string(&is_witness).unwrap(),
+        );
+        let body = self.build_request_body("decoderawtransaction", &params);
+        let r = self.post(body.clone()).unwrap().text().unwrap();
+        let r = self.post(body).unwrap().json().unwrap();
+        Ok(r)
+    }
+
+    fn get_raw_transaction(&self, txid: &str, _verbose: bool) -> RpcResult<String> {
+        let body = self.build_request_body("decoderawtransaction", txid);
+        Ok(self.post(body).unwrap().text().unwrap())
+    }
+
+    fn name_new(&self, name: &str, dest_address: &str) -> RpcResult<(String, String)> {
+        let params = format!("{}, {{\"destAddress\":{}, \"nameEncoding\":{}}}",
+            serde_json::to_string(name).unwrap(),
+            serde_json::to_string(dest_address).unwrap(),
+            serde_json::to_string(NAME_ENCODING).unwrap(),
+        );
+        let body = self.build_request_body("name_new", &params);
+        let r = self.post(body.clone()).unwrap().text().unwrap();
+        println!("name_new response:{}",r);
+        let r: NameNewResponse = self.post(body).unwrap().json().unwrap();
+        let result = r.result.unwrap();
+        Ok((result[0].clone(), result[1].clone()))
+    }
+
+    fn name_firstupdate(&self, name: &str, rand: &str, txid: &str, value: Option<&str>, dest_address: &str) -> RpcResult<String> {
+        let params = format!("{}, {}, {}, {}, {{\"destAddress\":{}, \"nameEncoding\":{}}}",
+            serde_json::to_string(name).unwrap(),
+            serde_json::to_string(rand).unwrap(),
+            serde_json::to_string(txid).unwrap(),
+            serde_json::to_string(value.unwrap_or_default()).unwrap(),
+            serde_json::to_string(dest_address).unwrap(),
+            serde_json::to_string(NAME_ENCODING).unwrap(),
+        );
+        let body = self.build_request_body("name_firstupdate", &params);
+//        let r = self.post(body.clone()).unwrap().text().unwrap();
+//        println!("first update response: {}",r);
+        let r: RpcResponse = self.post(body).unwrap().json().unwrap();
+        Ok(r.result.unwrap())
+    }
+
+    fn name_list(&self, name: Option<&str>) -> RpcResult<Vec<NameStatus>> {
+        let params = if let Some(name) = name {
+            serde_json::to_string(name).unwrap()
+        } else {
+            "".to_string()
+        };
+        let body = self.build_request_body("name_list", &params);
+        Ok(Vec::new())
+    }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RpcResponse {
-    pub result: Option<String>,
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct BaseResponse {
     pub error: Option<String>,
     pub message: Option<String>,
     pub id: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DecodeResult {
+pub     txid: String,
+pub     hash: String,
+pub     size: u64,
+pub     vsize: u64,
+pub     weight: u64,
+pub     version: u64,
+pub     locktime: u64,
+        #[serde(skip)]
+pub     vin: Vec<String>,
+        #[serde(skip)]
+pub     vout: Vec<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DecodeResponse {
+    pub result: Option<DecodeResult>,
+    #[serde(flatten)]
+    pub base: BaseResponse,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NameFirstupdateResponse {
+    pub result: Option<String>,
+    pub error: Option<String>,
+    pub id: Option<String>,
+}
+
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct RpcResponse {
+    pub result: Option<String>,
+    #[serde(flatten)]
+    pub base: BaseResponse,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -153,25 +257,61 @@ pub struct NameResult {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NameResponse {
     pub result: Option<NameResult>,
-    pub error: Option<String>,
-    pub message: Option<String>,
-    pub id: Option<String>,
+    #[serde(flatten)]
+    pub base: BaseResponse,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct FundingResponse {
-    pub result: Option<FundingResult>,
-    pub error: Option<String>,
-    pub message: Option<String>,
-    pub id: Option<String>,
+pub struct NameNewResponse {
+    pub result: Option<Vec<String>>,
+    #[serde(flatten)]
+    pub base: BaseResponse,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct FundingResult {
+pub struct FundResult {
     pub hex: String,
     pub fee: f64,
     pub changepos: i32,
 }
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FundResponse {
+    pub result: Option<FundResult>,
+    #[serde(flatten)]
+    pub base: BaseResponse,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SignResult {
+    pub hex: String,
+    pub complete: bool,
+    pub errors: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SignResponse {
+    pub result: Option<SignResult>,
+    #[serde(flatten)]
+    pub base: BaseResponse,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NameStatus {
+    pub name: String,
+    pub name_encoding: String,
+    pub name_error: String,
+    pub value: String,
+    pub value_encoding: String,
+    pub value_error: String,
+    pub txid: String,
+    pub vout: u8,
+    pub address: String,
+    pub height: u64,
+    pub expires_in: u64,
+    pub expired: bool,
+}
+
 
 type RpcResult<T> = Result<T, String>;
 
@@ -180,12 +320,19 @@ pub trait NamecoinRpc {
     fn create_wallet(&self, name: &str) -> RpcResult<()>;
     fn load_wallet(&self, name: &str) -> RpcResult<()>;
     fn get_new_address(&self) -> RpcResult<String>;
-    fn sign_raw_transaction_with_wallet(&self, tx_hex: String) -> RpcResult<String>;
+    fn sign_raw_transaction_with_wallet(&self, tx_hex: String) -> RpcResult<SignResult>;
+    fn import_pubkey(&self, pubkey: &PublicKey) -> RpcResult<()>;
 // raw transaction
     fn create_raw_transaction(&self, input: Vec<TxIn>, output: Vec<TxOut>) -> RpcResult<String>;
     fn name_raw_transaction(&self, tx_hex: String, vout: u8, op: NameOp) -> RpcResult<NameResponse>;
-    fn fund_raw_transaction(&self, tx_hex: String) -> RpcResult<FundingResponse>;
+    fn fund_raw_transaction(&self, tx_hex: String) -> RpcResult<FundResponse>;
     fn send_raw_transaction(&self, tx_hex: String) -> RpcResult<String>;
+    fn decode_raw_transaction(&self, tx_hex: String, is_witness: bool) -> RpcResult<DecodeResponse>;
+    fn get_raw_transaction(&self, txid: &str, verbose: bool) -> RpcResult<String>;
 // generation
     fn generate_to_address(&self, nblocks: u8, address: String) -> RpcResult<()>;
+// names
+    fn name_new(&self, name: &str, dest_address: &str) -> RpcResult<(String, String)>;
+    fn name_firstupdate(&self, name: &str, rand: &str, txid: &str, value: Option<&str>, dest_address: &str) -> RpcResult<String>;
+    fn name_list(&self, name: Option<&str>) -> RpcResult<Vec<NameStatus>>;
 }

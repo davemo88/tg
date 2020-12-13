@@ -53,6 +53,8 @@ use player_wallet::wallet::PlayerWallet;
 
 mod rpc;
 use rpc::{
+    TxIn,
+    TxOut,
     NamecoinRpc,
     NameOp,
     NamecoinRpcClient,
@@ -85,6 +87,12 @@ impl NmcId {
         let _r = self.rpc_client.generate_to_address(nblocks, address);
         Ok(())
     }
+
+    fn get_txid(&self, tx_hex: String) -> Result<String, String> {
+        let decoded = self.rpc_client.decode_raw_transaction(tx_hex, false).unwrap();
+        let result = decoded.result.unwrap();
+        Ok(result.txid)
+    }
 }
 
 impl PlayerNameService for NmcId {
@@ -100,42 +108,21 @@ impl PlayerNameService for NmcId {
     }
     fn register_name(&self, name: PlayerName, pubkey: &PublicKey, sig: Signature) -> Result<(), String> {
 // create namecoin address from supplied pubkey
-        let name_address = get_namecoin_address(&pubkey, NETWORK).unwrap();
+        let _r = self.rpc_client.import_pubkey(pubkey);
+        let name_address = get_namecoin_address(pubkey, NETWORK).unwrap();
+        println!("name_address: {}", name_address);
+        let name = format!("player/{}",name.0);
 // then build a transaction for the name operation
 // then do name_new followed by name_firstupdate and keep track of the RAND salt value
-//
-        let mut name_output = HashMap::new();
-        name_output.insert(name_address,0.01);
-        let _r = self.rpc_client.load_wallet("testwallet");
-        let tx_hex = self.rpc_client.create_raw_transaction(Vec::new(), vec!(name_output)).unwrap();
-// another function to do this and extract rand for firstupdate
-        let op = NameOp {
-            op: "name_new".to_string(),
-            name: format!("player/{}", name.0),
-            rand: None,
-            value: None,
-        };
-        let name_new = self.rpc_client.name_raw_transaction(tx_hex.clone(), 0, op).unwrap();
-// fund
-        let funded_name_new = self.rpc_client.fund_raw_transaction(name_new.result.clone().unwrap().hex).unwrap();
-// sign + broadcast
-//        println!("funded: {:?}",funded_name_new);
-        let signed_name_new = self.rpc_client.sign_raw_transaction_with_wallet(funded_name_new.result.unwrap().hex).unwrap();
-//        println!("signed: {}",signed_name_new);
-        let _broadcast_name_new = self.rpc_client.send_raw_transaction(signed_name_new).unwrap();
-// mine (12?) blocks here or firstupdate won't be valid
-        let _r = self.generate(12);
-        let op = NameOp {
-            op: "name_firstupdate".to_string(),
-            name: format!("player/{}", name.0),
-            rand: name_new.result.unwrap().rand,
-            value: Some("name first update".to_string()),
-        };
-        let name_first = self.rpc_client.name_raw_transaction(tx_hex.clone(), 0, op).unwrap();
-        let funded_name_first = self.rpc_client.fund_raw_transaction(name_first.result.clone().unwrap().hex).unwrap();
-        let signed_name_first = self.rpc_client.sign_raw_transaction_with_wallet(funded_name_first.result.unwrap().hex).unwrap();
-        let _broadcast_name_first = self.rpc_client.send_raw_transaction(signed_name_first).unwrap();
+// use our address for the name_new so we can spend it later for name_firstupdate
+        let new_address = self.rpc_client.get_new_address().unwrap();
+        let (name_new_txid, rand) = self.rpc_client.name_new(&name, &new_address).unwrap();
+        let _r = self.generate(13);
+        let name_firstupdate_txid = self.rpc_client.name_firstupdate(&name, &rand, &name_new_txid, Some("hello world"), &name_address).unwrap();
+        println!("name_firstupdate_txid: {}", name_firstupdate_txid);
         let _r = self.generate(1);
+        let r = self.rpc_client.name_list(None).unwrap();
+        println!("name list:\n{:?}", r);
         Ok(())
     }
 }
@@ -259,7 +246,8 @@ mod tests {
         ).unwrap();
 
         let nmc_id = NmcId::new();
-        nmc_id.generate(150);
+        let _r = nmc_id.rpc_client.load_wallet("testwallet");
+//        nmc_id.generate(150);
         let name = nmc_id.register_name(PlayerName("AustinPompeii".to_string()), &pubkey, sig);
     }
 }
