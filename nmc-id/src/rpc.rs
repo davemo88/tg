@@ -171,7 +171,7 @@ impl NamecoinRpc for NamecoinRpcClient {
         );
         let body = self.build_request_body("name_new", &params);
         let r = self.post(body.clone()).unwrap().text().unwrap();
-        println!("name_new response:{}",r);
+//        println!("name_new response:{}",r);
         let r: NameNewResponse = self.post(body).unwrap().json().unwrap();
         let result = r.result.unwrap();
         Ok((result[0].clone(), result[1].clone()))
@@ -200,8 +200,8 @@ impl NamecoinRpc for NamecoinRpcClient {
             "".to_string()
         };
         let body = self.build_request_body("name_list", &params);
-        let r = self.post(body.clone()).unwrap().text().unwrap();
-        println!("{}", r);
+//        let r = self.post(body.clone()).unwrap().text().unwrap();
+//        println!("{}", r);
 //        Ok(Vec::new())
         let r: NameListResponse = self.post(body).unwrap().json().unwrap();
         Ok(r.result)
@@ -318,6 +318,7 @@ pub struct NameStatus {
     pub txid: String,
     pub vout: u8,
     pub address: String,
+//    pub ismine: bool,
     pub height: u64,
     pub expires_in: i64,
     pub expired: bool,

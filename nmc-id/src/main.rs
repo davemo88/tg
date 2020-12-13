@@ -116,10 +116,10 @@ impl PlayerNameService for NmcId {
         let (name_new_txid, rand) = self.rpc_client.name_new(&name, &new_address).unwrap();
         let _r = self.generate(13);
         let name_firstupdate_txid = self.rpc_client.name_firstupdate(&name, &rand, &name_new_txid, Some("hello world"), &name_address).unwrap();
-//        println!("name_firstupdate_txid: {}", name_firstupdate_txid);
         let _r = self.generate(1);
-        let r = self.rpc_client.name_list(None).unwrap();
-        println!("name list:\n{:?}", r);
+// confirm name_firstupdate_txid in the chain
+//
+        println!("registered {}", name);
         Ok(())
     }
 }
@@ -208,7 +208,7 @@ mod tests {
             secp256k1::Message,
             util::bip32::DerivationPath,
         },
-        wallet::NAMECOIN_ACCOUNT_PATH,
+        wallet::BITCOIN_ACCOUNT_PATH,
         mock::{
             ESCROW_SUBACCOUNT,
             ESCROW_KIX,
@@ -224,14 +224,16 @@ mod tests {
     fn test_get_namecoin_address() {
         let pubkey = PublicKey::from_slice(&hex::decode(PUBKEY).unwrap()).unwrap();
         let namecoin_address = get_namecoin_address(&pubkey, Network::Testnet).unwrap();
-//        println!("{}", namecoin_address);
         assert_eq!(namecoin_address,TESTNET_ADDRESS_FROM_NAMECOIND)
     }
 
     #[test]
     fn test_name_list() {
         let nmc_id = NmcId::new();
-        let r = nmc_id.rpc_client.name_list(None).unwrap();
+        let r = nmc_id.rpc_client.name_list(None);
+        for name_status in r.unwrap() {
+            println!("{:?}",name_status);
+        } 
     }
 
     #[test]
@@ -245,12 +247,11 @@ mod tests {
 
         let sig = wallet.sign_message(
             Message::from_slice(hash).unwrap(),
-            DerivationPath::from_str(&format!("m/{}/{}/{}", NAMECOIN_ACCOUNT_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(),
+            DerivationPath::from_str(&format!("m/{}/{}/{}", BITCOIN_ACCOUNT_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(),
         ).unwrap();
 
         let nmc_id = NmcId::new();
         let _r = nmc_id.rpc_client.load_wallet("testwallet");
-//        nmc_id.generate(150);
-        let name = nmc_id.register_name(PlayerName("Spoob".to_string()), &pubkey, sig);
+        let name = nmc_id.register_name(PlayerName("Canceller".to_string()), &pubkey, sig);
     }
 }
