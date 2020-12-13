@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    str::FromStr,
+};
 use reqwest;
 use warp::{
     Filter,
@@ -6,17 +9,17 @@ use warp::{
     Rejection,
 };
 use serde_json;
-use serde::{
-    Serialize,
-    Deserialize,
-};
 use tglib::{
     bdk::{
         bitcoin::{
             Network,
             PublicKey,
-            secp256k1::Signature,
-            util::base58,
+            secp256k1::{
+                Signature,
+            },
+            util::{
+                base58,
+            },
             hashes::{
                 ripemd160,
                 sha256,
@@ -48,48 +51,39 @@ use tglib::{
 };
 use player_wallet::wallet::PlayerWallet;
 
-const NAMECOIN_RPC_URL: &'static str = "http://guyledouche:yodelinbabaganoush@localhost:18443";
+mod rpc;
+use rpc::{
+    NamecoinRpc,
+    NameOp,
+    NamecoinRpcClient,
+    NAMECOIN_RPC_URL,
+};
+
 
 type WebResult<T> = std::result::Result<T, Rejection>;
 type NamecoinAddress = String;
 
-const EMPTY_TX: &'static str = "01000000000000000000";
 // mainnet
-const NAMECOIN_VERSION_BYTE: u8 = 0x34;//52
+//const NAMECOIN_VERSION_BYTE: u8 = 0x34;//52
 // testnet / regtest, same as bitcoin?
 const NAMECOIN_TESTNET_VERSION_BYTE: u8 = 0x6F;//111
 
-const JSONRPC_VERSION: &'static str = "1.0";
-const JSONRPC_ID: &'static str = "nmc-id-test";
-
 #[derive(Clone)]
-struct NmcId;
-
-#[derive(Debug, Serialize, Deserialize)]
-struct RpcResponse {
-    result: Option<String>,
-    error: Option<String>,
-    message: Option<String>,
-    id: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct NameNewResult {
-    hex: String,
-    rand: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct NameNewResponse {
-    result: Option<NameNewResult>,
-    error: Option<String>,
-    message: Option<String>,
-    id: Option<String>,
+struct NmcId {
+    pub rpc_client: NamecoinRpcClient,
 }
 
 impl NmcId {
     pub fn new() -> Self {
-        NmcId
+        NmcId {
+            rpc_client: NamecoinRpcClient::new(NAMECOIN_RPC_URL),
+        }
+    }
+
+    fn generate(&self, nblocks: u8) -> Result<(), String> {
+        let address = self.rpc_client.get_new_address().unwrap();
+        let _r = self.rpc_client.generate_to_address(nblocks, address);
+        Ok(())
     }
 }
 
@@ -106,48 +100,40 @@ impl PlayerNameService for NmcId {
     }
     fn register_name(&self, name: PlayerName, pubkey: &PublicKey, sig: Signature) -> Result<(), String> {
 // create namecoin address from supplied pubkey
-        let address = get_namecoin_address(&pubkey, NETWORK).unwrap();
+        let name_address = get_namecoin_address(&pubkey, NETWORK).unwrap();
 // then build a transaction for the name operation
 // then do name_new followed by name_firstupdate and keep track of the RAND salt value
 //
-        let client = reqwest::blocking::Client::new();
-        let string_body = format!("{{\"jsonrpc\": \"{}\", \"id\": \"{}\", \"method\": \"createrawtransaction\", \"params\": [[], [{{\"{}\":\"0.01\"}}]]}}",
-            JSONRPC_VERSION,
-            JSONRPC_ID,
-            address);
-        println!("{}",string_body);
-        let r = client.post(NAMECOIN_RPC_URL)
-            .body(string_body)
-            .send()
-            .unwrap();
-        let r: RpcResponse = r.json().unwrap();
-        let tx_hex = r.result.unwrap();
-        let string_body = format!("{{\"jsonrpc\": \"{}\", \"id\": \"{}\", \"method\": \"namerawtransaction\", \"params\": [\"{}\", 0, {{\"op\":\"name_new\", \"name\":\"player/test\"}}]}}",
-            JSONRPC_VERSION,
-            JSONRPC_ID,
-            tx_hex.clone());
-        println!("{}",string_body);
-        let r = client.post(NAMECOIN_RPC_URL)
-            .body(string_body)
-            .send()
-            .unwrap();
-//        let r = r.text().unwrap();
-        let r: NameNewResponse = r.json().unwrap();
-        println!("{:?}", r);
-        let name_new_result = r.result.unwrap();
+        let mut name_output = HashMap::new();
+        name_output.insert(name_address,1000000.to_string());
+        let _r = self.rpc_client.load_wallet("testwallet");
+        let tx_hex = self.rpc_client.create_raw_transaction(Vec::new(), vec!(name_output)).unwrap();
+// another function to do this and extract rand for firstupdate
+        let op = NameOp {
+            op: "name_new".to_string(),
+            name: format!("player/{}", name.0),
+            rand: None,
+            value: None,
+        };
+        let name_new = self.rpc_client.name_raw_transaction(tx_hex.clone(), 0, op).unwrap();
+        let funded_name_new = self.rpc_client.fund_raw_transaction(name_new).unwrap();
+// need to add inputs with fundrawtransaction
+// sign + broadcast
+        let signed_name_new = self.rpc_client.sign_raw_transaction_with_wallet(funded_name_new.result.hex).unwrap();
+        println!("{}",signed_name_new);
 // mine (12?) blocks here or firstupdate won't be valid
-// name_firstupdate
-        let string_body = format!("{{\"jsonrpc\": \"{}\", \"id\": \"{}\", \"method\": \"namerawtransaction\", \"params\": [\"{}\", 0, {{\"op\":\"name_firstupdate\", \"name\":\"player/test\", \"value\":\"new value\", \"rand\":\"{}\"}}]}}",
-            JSONRPC_VERSION,
-            JSONRPC_ID,
-            tx_hex,
-            name_new_result.rand);
-        println!("{}",string_body);
-        let r = client.post(NAMECOIN_RPC_URL)
-            .body(string_body)
-            .send()
-            .unwrap();
-        let r = r.text().unwrap();
+//        let _r = self.generate(12);
+//// name_firstupdate
+//        let op = NameOp {
+//            op: "name_firstupdate".to_string(),
+//            name: format!("player/{}", name.0),
+//            rand: name_new.result.unwrap().rand,
+//            value: Some("first update test value".to_string()),
+//        };
+//
+//        let _r = self.generate(12);
+//
+//        let name_firstupdate = self.rpc_client.name_raw_transaction(tx_hex, 0, op).unwrap();
         Ok(())
     }
 }
@@ -170,13 +156,6 @@ impl PlayerIdService for NmcId {
             utxos: player_wallet.wallet.list_unspent().unwrap(),
         })
     }
-
-// TODO this endpoint needs auth requiring ownership of the corresponding player_id
-// e.g. if the player_id is a namecoin name, then a signature of some random data
-// by the owner of the name will do nicely
-//    fn set_player_info(&self, player_id: PlayerId, info: PlayerContractInfo) -> Result<()> {
-//        Err(TgError("invalid signature"))
-//    }
 }
 
 fn get_namecoin_address(pubkey: &PublicKey, network: Network) -> Result<NamecoinAddress, String> {
@@ -213,8 +192,9 @@ async fn info_handler(player_id: String, nmcid: NmcId) -> WebResult<impl Reply>{
 
 #[tokio::main]
 async fn main() {
+    let nmc_id = NmcId::new();
     
-    let nmc_id = warp::any().map(move || NmcId::new());
+    let nmc_id = warp::any().map(move || nmc_id.clone());
 
     let get_player_id = warp::path("get-player-id")
         .and(warp::path::param::<String>())
@@ -242,8 +222,8 @@ mod tests {
             secp256k1::Message,
             util::bip32::DerivationPath,
         },
+        wallet::NAMECOIN_ACCOUNT_PATH,
         mock::{
-            BITCOIN_ACCOUNT_PATH,
             ESCROW_SUBACCOUNT,
             ESCROW_KIX,
             PLAYER_1_MNEMONIC,
@@ -252,7 +232,7 @@ mod tests {
 
     const PUBKEY: &'static str = "02123e6a7816f2149f90cca1ea1ba41b73e77db44cd71f01c184defd10961d03fc";
     const TESTNET_ADDRESS_FROM_NAMECOIND: &'static str = "mfuf8qvMsMJMgBqtEGBt8aCQPQi1qgANzo";
-    const TEST_NAME: &'static str = "player/name";
+    const TEST_NAME: &'static str = "player/test";
 
     #[test]
     fn test_get_namecoin_address() {
@@ -266,18 +246,17 @@ mod tests {
     fn test_register_name() {
         let wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
         let pubkey = wallet.get_escrow_pubkey();
-        let namecoin_address = get_namecoin_address(&pubkey, NETWORK).unwrap();
         
         let mut engine = sha256::HashEngine::default();
         engine.input(TEST_NAME.as_bytes());
         let hash: &[u8] = &sha256::Hash::from_engine(engine);
 
-        let nid = NmcId;
         let sig = wallet.sign_message(
             Message::from_slice(hash).unwrap(),
-// TODO: NAMECOIN_ACCOUNT_PATH etc
-            DerivationPath::from_str(&format!("m/{}/{}/{}", BITCOIN_ACCOUNT_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(),
+            DerivationPath::from_str(&format!("m/{}/{}/{}", NAMECOIN_ACCOUNT_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(),
         ).unwrap();
-        let name = nid.register_name(PlayerName("AustinPompeii".to_string()), &pubkey, sig);
+
+        let nmc_id = NmcId::new();
+        let name = nmc_id.register_name(PlayerName("AustinPompeii".to_string()), &pubkey, sig);
     }
 }

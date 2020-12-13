@@ -47,6 +47,7 @@ use crate::{
 };
 
 pub const BITCOIN_ACCOUNT_PATH: &'static str = "44'/0'/0'";
+pub const NAMECOIN_ACCOUNT_PATH: &'static str = "44'/7'/0'";
 pub const ESCROW_SUBACCOUNT: &'static str = "7";
 
 // TODO: need to clarify. this is signing in the normal bitcoin / crypto sense
@@ -378,5 +379,4 @@ mod tests {
         payout.script_sig = Some(get_referee_signature(msg));
         assert!(arbiter_wallet.validate_payout(&payout).is_err())
     }
-
 }
