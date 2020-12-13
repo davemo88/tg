@@ -122,7 +122,7 @@ impl PlayerNameService for NmcId {
 //        println!("funded: {:?}",funded_name_new);
         let signed_name_new = self.rpc_client.sign_raw_transaction_with_wallet(funded_name_new.result.unwrap().hex).unwrap();
 //        println!("signed: {}",signed_name_new);
-        let broadcast_name_new = self.rpc_client.send_raw_transaction(signed_name_new).unwrap();
+        let _broadcast_name_new = self.rpc_client.send_raw_transaction(signed_name_new).unwrap();
 // mine (12?) blocks here or firstupdate won't be valid
         let _r = self.generate(12);
         let op = NameOp {
@@ -134,8 +134,8 @@ impl PlayerNameService for NmcId {
         let name_first = self.rpc_client.name_raw_transaction(tx_hex.clone(), 0, op).unwrap();
         let funded_name_first = self.rpc_client.fund_raw_transaction(name_first.result.clone().unwrap().hex).unwrap();
         let signed_name_first = self.rpc_client.sign_raw_transaction_with_wallet(funded_name_first.result.unwrap().hex).unwrap();
-        let broadcast_name_first = self.rpc_client.send_raw_transaction(signed_name_first).unwrap();
-        let _r = self.generate(12);
+        let _broadcast_name_first = self.rpc_client.send_raw_transaction(signed_name_first).unwrap();
+        let _r = self.generate(1);
         Ok(())
     }
 }
