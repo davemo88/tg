@@ -110,16 +110,13 @@ impl PlayerNameService for NmcId {
 // create namecoin address from supplied pubkey
         let _r = self.rpc_client.import_pubkey(pubkey);
         let name_address = get_namecoin_address(pubkey, NETWORK).unwrap();
-        println!("name_address: {}", name_address);
+//        println!("name_address: {}", name_address);
         let name = format!("player/{}",name.0);
-// then build a transaction for the name operation
-// then do name_new followed by name_firstupdate and keep track of the RAND salt value
-// use our address for the name_new so we can spend it later for name_firstupdate
         let new_address = self.rpc_client.get_new_address().unwrap();
         let (name_new_txid, rand) = self.rpc_client.name_new(&name, &new_address).unwrap();
         let _r = self.generate(13);
         let name_firstupdate_txid = self.rpc_client.name_firstupdate(&name, &rand, &name_new_txid, Some("hello world"), &name_address).unwrap();
-        println!("name_firstupdate_txid: {}", name_firstupdate_txid);
+//        println!("name_firstupdate_txid: {}", name_firstupdate_txid);
         let _r = self.generate(1);
         let r = self.rpc_client.name_list(None).unwrap();
         println!("name list:\n{:?}", r);
@@ -232,6 +229,12 @@ mod tests {
     }
 
     #[test]
+    fn test_name_list() {
+        let nmc_id = NmcId::new();
+        let r = nmc_id.rpc_client.name_list(None).unwrap();
+    }
+
+    #[test]
     fn test_register_name() {
         let wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
         let pubkey = wallet.get_escrow_pubkey();
@@ -248,6 +251,6 @@ mod tests {
         let nmc_id = NmcId::new();
         let _r = nmc_id.rpc_client.load_wallet("testwallet");
 //        nmc_id.generate(150);
-        let name = nmc_id.register_name(PlayerName("AustinPompeii".to_string()), &pubkey, sig);
+        let name = nmc_id.register_name(PlayerName("Spoob".to_string()), &pubkey, sig);
     }
 }

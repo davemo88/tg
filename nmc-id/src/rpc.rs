@@ -200,7 +200,11 @@ impl NamecoinRpc for NamecoinRpcClient {
             "".to_string()
         };
         let body = self.build_request_body("name_list", &params);
-        Ok(Vec::new())
+        let r = self.post(body.clone()).unwrap().text().unwrap();
+        println!("{}", r);
+//        Ok(Vec::new())
+        let r: NameListResponse = self.post(body).unwrap().json().unwrap();
+        Ok(r.result)
     }
 }
 
@@ -297,18 +301,25 @@ pub struct SignResponse {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NameListResponse {
+    pub result: Vec<NameStatus>,
+    #[serde(flatten)]
+    pub base: BaseResponse,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NameStatus {
     pub name: String,
     pub name_encoding: String,
-    pub name_error: String,
+    pub name_error: Option<String>,
     pub value: String,
     pub value_encoding: String,
-    pub value_error: String,
+    pub value_error: Option<String>,
     pub txid: String,
     pub vout: u8,
     pub address: String,
     pub height: u64,
-    pub expires_in: u64,
+    pub expires_in: i64,
     pub expired: bool,
 }
 
