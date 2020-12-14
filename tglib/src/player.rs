@@ -1,6 +1,10 @@
 use std::{
     convert::From,
 };
+use serde::{
+    Serialize,
+    Deserialize,
+};
 use bdk::bitcoin::{
     PublicKey,
     util::bip32::ExtendedPubKey,
@@ -50,12 +54,29 @@ pub trait PlayerIdService {
     fn get_player_info(&self, player_id: PlayerId) -> Option<PlayerContractInfo>;
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PlayerName(pub String);
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NameRegistrationInfo {
+    pub name: PlayerName,
+    pub pubkey: PublicKey,
+    pub sig: Signature,
+}
+
+impl NameRegistrationInfo {
+    pub fn new(name: PlayerName, pubkey: PublicKey, sig: Signature) -> Self {
+        NameRegistrationInfo {
+            name,
+            pubkey,
+            sig,
+        }
+    }
+}
 
 pub trait PlayerNameService {
     fn get_player_name(&self, pubkey: &PublicKey) -> Option<PlayerName>;
     fn get_contract_info(&self, name: PlayerName) -> Option<PlayerContractInfo>;
     fn set_contract_info(&self, name: PlayerName, info: PlayerContractInfo, sig: Signature) -> Option<PlayerContractInfo>;
-    fn register_name(&self, name: PlayerName, pubkey: &PublicKey, sig: Signature) -> Result<(), String>;
+    fn register_name(&self, registration_info: NameRegistrationInfo) -> Result<String, String>;
 }

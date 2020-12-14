@@ -116,7 +116,6 @@ impl NamecoinRpc for NamecoinRpcClient {
     fn sign_raw_transaction_with_wallet(&self, tx_hex: String) -> RpcResult<SignResult> {
         let body = self.build_request_body("signrawtransactionwithwallet", 
             &serde_json::to_string(&tx_hex).unwrap());
-        let r = self.post(body.clone()).unwrap().text().unwrap();
         let r: SignResponse = self.post(body).unwrap().json().unwrap();
         Ok(r.result.unwrap())
     }
@@ -124,9 +123,7 @@ impl NamecoinRpc for NamecoinRpcClient {
     fn import_pubkey(&self, pubkey: &PublicKey) -> RpcResult<()> {
         let body = self.build_request_body("importpubkey", 
             &serde_json::to_string(&pubkey.to_string()).unwrap());
-//        println!("import pubkey body: {}",body);
-        let r = self.post(body).unwrap();
-//        println!("import pubkey response: {}",r.text().unwrap());
+        let _r = self.post(body).unwrap();
         Ok(())
     }
 
@@ -135,7 +132,6 @@ impl NamecoinRpc for NamecoinRpcClient {
             &serde_json::to_string(&tx_hex).unwrap(),
         );
         let body = self.build_request_body("fundrawtransaction", &params); 
-        let r = self.post(body.clone()).unwrap().text().unwrap();
         let response: FundResponse = self.post(body).unwrap().json().unwrap();
         Ok(response)
     }
@@ -153,7 +149,6 @@ impl NamecoinRpc for NamecoinRpcClient {
             &serde_json::to_string(&is_witness).unwrap(),
         );
         let body = self.build_request_body("decoderawtransaction", &params);
-        let r = self.post(body.clone()).unwrap().text().unwrap();
         let r = self.post(body).unwrap().json().unwrap();
         Ok(r)
     }
@@ -170,8 +165,6 @@ impl NamecoinRpc for NamecoinRpcClient {
             serde_json::to_string(NAME_ENCODING).unwrap(),
         );
         let body = self.build_request_body("name_new", &params);
-        let r = self.post(body.clone()).unwrap().text().unwrap();
-//        println!("name_new response:{}",r);
         let r: NameNewResponse = self.post(body).unwrap().json().unwrap();
         let result = r.result.unwrap();
         Ok((result[0].clone(), result[1].clone()))
@@ -318,7 +311,7 @@ pub struct NameStatus {
     pub txid: String,
     pub vout: u8,
     pub address: String,
-//    pub ismine: bool,
+    pub ismine: bool,
     pub height: u64,
     pub expires_in: i64,
     pub expired: bool,

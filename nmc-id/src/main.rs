@@ -15,6 +15,8 @@ use tglib::{
             Network,
             PublicKey,
             secp256k1::{
+                Message,
+                Secp256k1,
                 Signature,
             },
             util::{
@@ -37,6 +39,7 @@ use tglib::{
         PlayerIdService,
         PlayerName,
         PlayerNameService,
+        NameRegistrationInfo,
     },
     wallet::{
         EscrowWallet,
@@ -53,10 +56,7 @@ use player_wallet::wallet::PlayerWallet;
 
 mod rpc;
 use rpc::{
-    TxIn,
-    TxOut,
     NamecoinRpc,
-    NameOp,
     NamecoinRpcClient,
     NAMECOIN_RPC_URL,
 };
@@ -106,12 +106,20 @@ impl PlayerNameService for NmcId {
     fn set_contract_info(&self, name: PlayerName, info: PlayerContractInfo, sig: Signature) -> Option<PlayerContractInfo> {
         None
     }
-    fn register_name(&self, name: PlayerName, pubkey: &PublicKey, sig: Signature) -> Result<(), String> {
+    fn register_name(&self, info: NameRegistrationInfo) -> Result<String, String> {
 // create namecoin address from supplied pubkey
-        let _r = self.rpc_client.import_pubkey(pubkey);
-        let name_address = get_namecoin_address(pubkey, NETWORK).unwrap();
+        let secp = Secp256k1::new();
+        let mut engine = sha256::HashEngine::default();
+        engine.input(info.name.0.as_bytes());
+        let hash: &[u8] = &sha256::Hash::from_engine(engine);
+
+        if secp.verify(&Message::from_slice(hash).unwrap(), &info.sig, &info.pubkey.key).is_err() {
+            return Err("invalid signature".to_string())
+        }
+        let _r = self.rpc_client.import_pubkey(&info.pubkey);
+        let name_address = get_namecoin_address(&info.pubkey, NETWORK).unwrap();
 //        println!("name_address: {}", name_address);
-        let name = format!("player/{}",name.0);
+        let name = format!("player/{}",info.name.0);
         let new_address = self.rpc_client.get_new_address().unwrap();
         let (name_new_txid, rand) = self.rpc_client.name_new(&name, &new_address).unwrap();
         let _r = self.generate(13);
@@ -120,7 +128,7 @@ impl PlayerNameService for NmcId {
 // confirm name_firstupdate_txid in the chain
 //
         println!("registered {}", name);
-        Ok(())
+        Ok(name)
     }
 }
 
@@ -171,9 +179,15 @@ async fn id_handler(_pubkey: String, _nmcid: NmcId) -> WebResult<impl Reply>{
     Ok("not implemented".to_string())
 }
 
-async fn info_handler(player_id: String, nmcid: NmcId) -> WebResult<impl Reply>{
+async fn get_info_handler(player_id: String, nmcid: NmcId) -> WebResult<impl Reply>{
     let info = nmcid.get_player_info(PlayerId(player_id)).unwrap();
     Ok(serde_json::to_string(&info).unwrap())
+}
+
+async fn register_handler(registration_info: String, nmcid: NmcId) -> WebResult<impl Reply>{
+    let info: NameRegistrationInfo = serde_json::from_str(&registration_info).unwrap();
+    let _r = nmcid.register_name(info.clone()).unwrap();
+    Ok(info.name.0)
 }
 
 #[tokio::main]
@@ -190,9 +204,16 @@ async fn main() {
     let get_player_info = warp::path("get-player-info")
         .and(warp::path::param::<String>())
         .and(nmc_id.clone())
-        .and_then(info_handler);
+        .and_then(get_info_handler);
 
-    let routes = get_player_id.or(get_player_info);
+    let register_name = warp::path("register-name")
+        .and(warp::path::param::<String>())
+        .and(nmc_id.clone())
+        .and_then(register_handler);
+
+    let routes = get_player_id
+        .or(get_player_info)
+        .or(register_name);
 
     warp::serve(routes).run(([0, 0, 0, 0], 18420)).await;
 }
@@ -205,7 +226,6 @@ mod tests {
     use tglib::{
         hex,
         bdk::bitcoin::{
-            secp256k1::Message,
             util::bip32::DerivationPath,
         },
         wallet::BITCOIN_ACCOUNT_PATH,
@@ -218,7 +238,7 @@ mod tests {
 
     const PUBKEY: &'static str = "02123e6a7816f2149f90cca1ea1ba41b73e77db44cd71f01c184defd10961d03fc";
     const TESTNET_ADDRESS_FROM_NAMECOIND: &'static str = "mfuf8qvMsMJMgBqtEGBt8aCQPQi1qgANzo";
-    const TEST_NAME: &'static str = "player/test";
+    const TEST_NAME: &'static str = "Sven";
 
     #[test]
     fn test_get_namecoin_address() {
@@ -232,7 +252,7 @@ mod tests {
         let nmc_id = NmcId::new();
         let r = nmc_id.rpc_client.name_list(None);
         for name_status in r.unwrap() {
-            println!("{:?}",name_status);
+            println!("{:?} => {:?}", name_status.address, name_status.name);
         } 
     }
 
@@ -252,6 +272,6 @@ mod tests {
 
         let nmc_id = NmcId::new();
         let _r = nmc_id.rpc_client.load_wallet("testwallet");
-        let name = nmc_id.register_name(PlayerName("Canceller".to_string()), &pubkey, sig);
+        let name = nmc_id.register_name(NameRegistrationInfo::new(PlayerName(TEST_NAME.to_string()), pubkey, sig));
     }
 }
