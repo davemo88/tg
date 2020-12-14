@@ -1,15 +1,6 @@
-use std::{
-    collections::HashMap,
-    str::FromStr,
-    hash::{
-        Hash,
-        Hasher,
-    },
-};
 use redis::{
     self,
     Commands,
-    Connection,
     RedisResult,
 };
 use warp::{
@@ -38,29 +29,18 @@ use tglib::{
                 Hash as BitcoinHash,
             },
         },
-        blockchain::noop_progress,
-        electrum_client::Client,
     },
-    bip39::Mnemonic,
     hex,
     contract::PlayerContractInfo,
     player::{
         PlayerName,
         PlayerNameService,
     },
-    wallet::{
-        EscrowWallet,
-        SigningWallet,
-    },
     mock::{
-        Trezor,
-        ELECTRS_SERVER,
-        PLAYER_2_MNEMONIC,
         NETWORK,
         REDIS_SERVER,
     }
 };
-use player_wallet::wallet::PlayerWallet;
 
 mod rpc;
 use rpc::{
@@ -98,15 +78,15 @@ impl NmcId {
         Ok(())
     }
 
-    fn get_txid(&self, tx_hex: String) -> Result<String, String> {
-        let decoded = self.rpc_client.decode_raw_transaction(tx_hex, false).unwrap();
-        let result = decoded.result.unwrap();
-        Ok(result.txid)
-    }
+//    fn get_txid(&self, tx_hex: String) -> Result<String, String> {
+//        let decoded = self.rpc_client.decode_raw_transaction(tx_hex, false).unwrap();
+//        let result = decoded.result.unwrap();
+//        Ok(result.txid)
+//    }
 }
 
 impl PlayerNameService for NmcId {
-    fn get_player_name(&self, pubkey: &PublicKey) -> Option<PlayerName> {
+    fn get_player_name(&self, _pubkey: &PublicKey) -> Option<PlayerName> {
         None
     }
 
@@ -127,7 +107,7 @@ impl PlayerNameService for NmcId {
         }
 
         let mut con = self.redis_client.get_connection().unwrap();
-        let r: RedisResult<String> = con.set(info.name.clone().0, &serde_json::to_string(&info).unwrap());
+        let _r: RedisResult<String> = con.set(info.name.clone().0, &serde_json::to_string(&info).unwrap());
         Ok(())
     }
     fn register_name(&self, name: PlayerName, pubkey: PublicKey, sig: Signature) -> Result<(), String> {
@@ -147,7 +127,7 @@ impl PlayerNameService for NmcId {
         let new_address = self.rpc_client.get_new_address().unwrap();
         let (name_new_txid, rand) = self.rpc_client.name_new(&name, &new_address).unwrap();
         let _r = self.generate(13);
-        let name_firstupdate_txid = self.rpc_client.name_firstupdate(&name, &rand, &name_new_txid, Some("hello world"), &name_address).unwrap();
+        let _name_firstupdate_txid = self.rpc_client.name_firstupdate(&name, &rand, &name_new_txid, Some("hello world"), &name_address).unwrap();
         let _r = self.generate(1);
 // confirm name_firstupdate_txid in the chain
 //
@@ -195,11 +175,14 @@ async fn set_info_handler(contract_info: String, pubkey: String, sig: String, nm
     let contract_info: PlayerContractInfo = serde_json::from_str(&contract_info).unwrap();
     let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
     let sig = Signature::from_compact(&hex::decode(sig).unwrap()).unwrap();
-    let r = nmcid.set_contract_info(contract_info, pubkey, sig);
-    Ok("not implemented".to_string())
+    if nmcid.set_contract_info(contract_info.clone(), pubkey, sig).is_ok() {
+        Ok(format!("set contract info for {}", contract_info.name.0))
+    } else {
+        Err(warp::reject())
+    }
 }
 
-async fn name_handler(_pubkey: String, _nmcid: NmcId) -> WebResult<impl Reply>{
+async fn get_player_name_handler(_pubkey: String, _nmcid: NmcId) -> WebResult<impl Reply>{
     Ok("not implemented".to_string())
 }
 
@@ -231,7 +214,7 @@ async fn main() {
     let get_player_name = warp::path("get-player-name")
         .and(warp::path::param::<String>())
         .and(nmc_id.clone())
-        .and_then(name_handler);
+        .and_then(get_player_name_handler);
 
     let routes = register_name
         .or(set_contract_info)
@@ -251,8 +234,14 @@ mod tests {
         bdk::bitcoin::{
             util::bip32::DerivationPath,
         },
-        wallet::BITCOIN_ACCOUNT_PATH,
+        bip39::Mnemonic,
+        wallet::{
+            EscrowWallet,
+            SigningWallet,
+            BITCOIN_ACCOUNT_PATH,
+        },
         mock::{
+            Trezor,
             ESCROW_SUBACCOUNT,
             ESCROW_KIX,
             PLAYER_1_MNEMONIC,
@@ -295,6 +284,6 @@ mod tests {
 
         let nmc_id = NmcId::new();
         let _r = nmc_id.rpc_client.load_wallet("testwallet");
-        let name = nmc_id.register_name(PlayerName(TEST_NAME.to_string()), pubkey, sig);
+        let _name = nmc_id.register_name(PlayerName(TEST_NAME.to_string()), pubkey, sig);
     }
 }
