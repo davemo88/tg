@@ -252,7 +252,7 @@ mod tests {
 
     const PUBKEY: &'static str = "02123e6a7816f2149f90cca1ea1ba41b73e77db44cd71f01c184defd10961d03fc";
     const TESTNET_ADDRESS_FROM_NAMECOIND: &'static str = "mfuf8qvMsMJMgBqtEGBt8aCQPQi1qgANzo";
-    const TEST_NAME: &'static str = "Garll";
+    const TEST_NAME: &'static str = "Arbor";
 
     #[test]
     fn test_get_namecoin_address() {

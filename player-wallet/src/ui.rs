@@ -100,6 +100,11 @@ pub fn player_ui<'a, 'b>() -> App<'a, 'b> {
         .settings(&[AppSettings::NoBinaryName, AppSettings::SubcommandRequiredElseHelp,
             AppSettings::VersionlessSubcommands])
         .subcommands(vec![
+            SubCommand::with_name("register").about("register new player")
+                .arg(Arg::with_name("name")
+                    .index(1)
+                    .help("new player name")
+                    .required(true)),
             SubCommand::with_name("add").about("add to known players")
                 .arg(Arg::with_name("name")
                     .index(1)
@@ -165,13 +170,18 @@ pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
             AppSettings::VersionlessSubcommands])
         .subcommands(vec![
             SubCommand::with_name("new").about("create a new contract")
-                .arg(Arg::with_name("player-2")
+                .arg(Arg::with_name("player-1")
                     .index(1)
-                    .help("player 2's id")
+                    .help("player 1's name")
+                    .required(true)
+                    .takes_value(true))
+                .arg(Arg::with_name("player-2")
+                    .index(2)
+                    .help("player 2's name")
                     .required(true)
                     .takes_value(true))
                 .arg(Arg::with_name("amount")
-                    .index(2)
+                    .index(3)
                     .help("amount")
                     .required(true)
                     .takes_value(true))
@@ -239,6 +249,8 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
     if let (c, Some(a)) = subcommand {
         match c {
             "new" => {
+// TODO: confirm local ownership of p1_name
+                let p1_name = PlayerName(a.value_of("player-1").unwrap().to_string());
                 let p2_name = PlayerName(a.value_of("player-2").unwrap().to_string());
                 let amount = Amount::from_sat(a.value_of("amount").unwrap().parse::<u64>().unwrap());
                 let desc = a.value_of("desc").unwrap_or("");
@@ -254,7 +266,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 let contract = wallet.create_contract(p2_contract_info, amount, arbiter_pubkey);
                 let contract_record = db::ContractRecord {
                     cxid: hex::encode(contract.cxid()),
-                    p1_name: wallet.player_name(),
+                    p1_name,
                     p2_name,
                     hex: hex::encode(contract.to_bytes()),
                     desc: desc.to_string(),
