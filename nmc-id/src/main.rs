@@ -86,30 +86,6 @@ impl NmcId {
 }
 
 impl PlayerNameService for NmcId {
-    fn get_player_name(&self, _pubkey: &PublicKey) -> Option<PlayerName> {
-        None
-    }
-
-    fn get_contract_info(&self, name: PlayerName) -> Option<PlayerContractInfo> {
-        let mut con = self.redis_client.get_connection().unwrap();
-        let r: RedisResult<String> = con.get(&name.0);
-        if let Ok(info) = r {
-            Some(serde_json::from_str(&info).unwrap())
-        } else {
-            None
-        }
-    }
-
-    fn set_contract_info(&self, info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<(), String> {
-        let secp = Secp256k1::new();
-        if secp.verify(&Message::from_slice(&info.hash()).unwrap(), &sig, &pubkey.key).is_err() {
-            return Err("invalid signature".to_string())
-        }
-
-        let mut con = self.redis_client.get_connection().unwrap();
-        let _r: RedisResult<String> = con.set(info.name.clone().0, &serde_json::to_string(&info).unwrap());
-        Ok(())
-    }
     fn register_name(&self, name: PlayerName, pubkey: PublicKey, sig: Signature) -> Result<(), String> {
         let mut engine = sha256::HashEngine::default();
         engine.input(name.0.as_bytes());
@@ -133,6 +109,32 @@ impl PlayerNameService for NmcId {
 //
         println!("registered {}", name);
         Ok(())
+    }
+
+    fn set_contract_info(&self, info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<(), String> {
+        let secp = Secp256k1::new();
+        if secp.verify(&Message::from_slice(&info.hash()).unwrap(), &sig, &pubkey.key).is_err() {
+            return Err("invalid signature".to_string())
+        }
+
+        let mut con = self.redis_client.get_connection().unwrap();
+        let _r: RedisResult<String> = con.set(info.name.clone().0, &serde_json::to_string(&info).unwrap());
+        Ok(())
+    }
+
+    fn get_contract_info(&self, name: PlayerName) -> Option<PlayerContractInfo> {
+        let mut con = self.redis_client.get_connection().unwrap();
+        let r: RedisResult<String> = con.get(&name.0);
+        if let Ok(info) = r {
+            Some(serde_json::from_str(&info).unwrap())
+        } else {
+            None
+        }
+    }
+
+    fn get_player_name(&self, _pubkey: &PublicKey) -> Option<PlayerName> {
+// need to go PublicKey -> Address -> Name
+        None
     }
 }
 
@@ -159,7 +161,7 @@ fn get_namecoin_address(pubkey: &PublicKey, network: Network) -> Result<Namecoin
     Ok(base58::check_encode_slice(&hash))
 }
 
-async fn register_handler(name: String, pubkey: String, sig: String, nmcid: NmcId) -> WebResult<impl Reply>{
+async fn register_name_handler(name: String, pubkey: String, sig: String, nmcid: NmcId) -> WebResult<impl Reply>{
     let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
     let sig = Signature::from_compact(&hex::decode(sig).unwrap()).unwrap();
     let _r = nmcid.register_name(PlayerName(name.clone()), pubkey, sig).unwrap();
@@ -182,8 +184,13 @@ async fn set_info_handler(contract_info: String, pubkey: String, sig: String, nm
     }
 }
 
-async fn get_player_name_handler(_pubkey: String, _nmcid: NmcId) -> WebResult<impl Reply>{
-    Ok("not implemented".to_string())
+async fn get_name_handler(pubkey: String, nmcid: NmcId) -> WebResult<impl Reply>{
+    let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
+    if let Some(name) = nmcid.get_player_name(&pubkey) {
+        Ok(name.0)
+    } else {
+        Err(warp::reject())
+    }
 }
 
 #[tokio::main]
@@ -197,7 +204,7 @@ async fn main() {
         .and(warp::path::param::<String>())
         .and(warp::path::param::<String>())
         .and(nmc_id.clone())
-        .and_then(register_handler);
+        .and_then(register_name_handler);
 
     let set_contract_info = warp::path("set-contract-info")
         .and(warp::path::param::<String>())
@@ -214,7 +221,7 @@ async fn main() {
     let get_player_name = warp::path("get-player-name")
         .and(warp::path::param::<String>())
         .and(nmc_id.clone())
-        .and_then(get_player_name_handler);
+        .and_then(get_name_handler);
 
     let routes = register_name
         .or(set_contract_info)

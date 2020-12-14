@@ -53,8 +53,8 @@ impl From<PublicKey> for PlayerId {
 pub struct PlayerName(pub String);
 
 pub trait PlayerNameService {
-    fn get_player_name(&self, pubkey: &PublicKey) -> Option<PlayerName>;
-    fn get_contract_info(&self, name: PlayerName) -> Option<PlayerContractInfo>;
-    fn set_contract_info(&self, info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<(), String>;
     fn register_name(&self, name: PlayerName, pubkey: PublicKey, sig: Signature) -> Result<(), String>;
+    fn set_contract_info(&self, info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<(), String>;
+    fn get_contract_info(&self, name: PlayerName) -> Option<PlayerContractInfo>;
+    fn get_player_name(&self, pubkey: &PublicKey) -> Option<PlayerName>;
 }
