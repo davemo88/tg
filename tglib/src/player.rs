@@ -49,34 +49,12 @@ impl From<PublicKey> for PlayerId {
     }
 }
 
-pub trait PlayerIdService {
-    fn get_player_id(&self, pubkey: &PublicKey) -> Option<PlayerId>;
-    fn get_player_info(&self, player_id: PlayerId) -> Option<PlayerContractInfo>;
-}
-
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct PlayerName(pub String);
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct NameRegistrationInfo {
-    pub name: PlayerName,
-    pub pubkey: PublicKey,
-    pub sig: Signature,
-}
-
-impl NameRegistrationInfo {
-    pub fn new(name: PlayerName, pubkey: PublicKey, sig: Signature) -> Self {
-        NameRegistrationInfo {
-            name,
-            pubkey,
-            sig,
-        }
-    }
-}
 
 pub trait PlayerNameService {
     fn get_player_name(&self, pubkey: &PublicKey) -> Option<PlayerName>;
     fn get_contract_info(&self, name: PlayerName) -> Option<PlayerContractInfo>;
-    fn set_contract_info(&self, name: PlayerName, info: PlayerContractInfo, sig: Signature) -> Result<(), String>;
-    fn register_name(&self, registration_info: NameRegistrationInfo) -> Result<(), String>;
+    fn set_contract_info(&self, info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<(), String>;
+    fn register_name(&self, name: PlayerName, pubkey: PublicKey, sig: Signature) -> Result<(), String>;
 }

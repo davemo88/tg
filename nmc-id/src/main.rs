@@ -1,8 +1,17 @@
 use std::{
     collections::HashMap,
     str::FromStr,
+    hash::{
+        Hash,
+        Hasher,
+    },
 };
-use reqwest;
+use redis::{
+    self,
+    Commands,
+    Connection,
+    RedisResult,
+};
 use warp::{
     Filter,
     Reply,
@@ -26,20 +35,18 @@ use tglib::{
                 ripemd160,
                 sha256,
                 HashEngine,
-                Hash,
+                Hash as BitcoinHash,
             },
         },
         blockchain::noop_progress,
         electrum_client::Client,
     },
     bip39::Mnemonic,
+    hex,
     contract::PlayerContractInfo,
     player::{
-        PlayerId,
-        PlayerIdService,
         PlayerName,
         PlayerNameService,
-        NameRegistrationInfo,
     },
     wallet::{
         EscrowWallet,
@@ -50,6 +57,7 @@ use tglib::{
         ELECTRS_SERVER,
         PLAYER_2_MNEMONIC,
         NETWORK,
+        REDIS_SERVER,
     }
 };
 use player_wallet::wallet::PlayerWallet;
@@ -72,12 +80,14 @@ const NAMECOIN_TESTNET_VERSION_BYTE: u8 = 0x6F;//111
 
 #[derive(Clone)]
 struct NmcId {
+    pub redis_client: redis::Client,
     pub rpc_client: NamecoinRpcClient,
 }
 
 impl NmcId {
     pub fn new() -> Self {
         NmcId {
+            redis_client: redis::Client::open(REDIS_SERVER).unwrap(),
             rpc_client: NamecoinRpcClient::new(NAMECOIN_RPC_URL),
         }
     }
@@ -101,25 +111,39 @@ impl PlayerNameService for NmcId {
     }
 
     fn get_contract_info(&self, name: PlayerName) -> Option<PlayerContractInfo> {
-        None
+        let mut con = self.redis_client.get_connection().unwrap();
+        let r: RedisResult<String> = con.get(&name.0);
+        if let Ok(info) = r {
+            Some(serde_json::from_str(&info).unwrap())
+        } else {
+            None
+        }
     }
-    fn set_contract_info(&self, name: PlayerName, info: PlayerContractInfo, sig: Signature) -> Option<PlayerContractInfo> {
-        None
-    }
-    fn register_name(&self, info: NameRegistrationInfo) -> Result<String, String> {
-// create namecoin address from supplied pubkey
-        let secp = Secp256k1::new();
-        let mut engine = sha256::HashEngine::default();
-        engine.input(info.name.0.as_bytes());
-        let hash: &[u8] = &sha256::Hash::from_engine(engine);
 
-        if secp.verify(&Message::from_slice(hash).unwrap(), &info.sig, &info.pubkey.key).is_err() {
+    fn set_contract_info(&self, info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<(), String> {
+        let secp = Secp256k1::new();
+        if secp.verify(&Message::from_slice(&info.hash()).unwrap(), &sig, &pubkey.key).is_err() {
             return Err("invalid signature".to_string())
         }
-        let _r = self.rpc_client.import_pubkey(&info.pubkey);
-        let name_address = get_namecoin_address(&info.pubkey, NETWORK).unwrap();
+
+        let mut con = self.redis_client.get_connection().unwrap();
+        let r: RedisResult<String> = con.set(info.name.clone().0, &serde_json::to_string(&info).unwrap());
+        Ok(())
+    }
+    fn register_name(&self, name: PlayerName, pubkey: PublicKey, sig: Signature) -> Result<(), String> {
+        let mut engine = sha256::HashEngine::default();
+        engine.input(name.0.as_bytes());
+        let hash: &[u8] = &sha256::Hash::from_engine(engine);
+
+        let secp = Secp256k1::new();
+        if secp.verify(&Message::from_slice(hash).unwrap(), &sig, &pubkey.key).is_err() {
+            return Err("invalid signature".to_string())
+        }
+        let _r = self.rpc_client.import_pubkey(&pubkey);
+// create namecoin address from supplied pubkey
+        let name_address = get_namecoin_address(&pubkey, NETWORK).unwrap();
 //        println!("name_address: {}", name_address);
-        let name = format!("player/{}",info.name.0);
+        let name = format!("player/{}",name.0);
         let new_address = self.rpc_client.get_new_address().unwrap();
         let (name_new_txid, rand) = self.rpc_client.name_new(&name, &new_address).unwrap();
         let _r = self.generate(13);
@@ -128,27 +152,7 @@ impl PlayerNameService for NmcId {
 // confirm name_firstupdate_txid in the chain
 //
         println!("registered {}", name);
-        Ok(name)
-    }
-}
-
-impl PlayerIdService for NmcId {
-    fn get_player_id(&self, _pubkey: &PublicKey) -> Option<PlayerId> {
-        None
-    }
-
-    fn get_player_info(&self, player_id: PlayerId) -> Option<PlayerContractInfo> {
-        println!("request for info on player {}", player_id.0);
-        let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_2_MNEMONIC).unwrap());
-        let client = Client::new(ELECTRS_SERVER).unwrap();
-        let player_wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK, client);
-        let escrow_pubkey = EscrowWallet::get_escrow_pubkey(&player_wallet);
-        player_wallet.wallet.sync(noop_progress(), None).unwrap();
-        Some(PlayerContractInfo {
-            escrow_pubkey,
-            change_address: player_wallet.wallet.get_new_address().unwrap(),
-            utxos: player_wallet.wallet.list_unspent().unwrap(),
-        })
+        Ok(())
     }
 }
 
@@ -175,19 +179,28 @@ fn get_namecoin_address(pubkey: &PublicKey, network: Network) -> Result<Namecoin
     Ok(base58::check_encode_slice(&hash))
 }
 
-async fn name_handler(_pubkey: String, _nmcid: NmcId) -> WebResult<impl Reply>{
-    Ok("not implemented".to_string())
+async fn register_handler(name: String, pubkey: String, sig: String, nmcid: NmcId) -> WebResult<impl Reply>{
+    let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
+    let sig = Signature::from_compact(&hex::decode(sig).unwrap()).unwrap();
+    let _r = nmcid.register_name(PlayerName(name.clone()), pubkey, sig).unwrap();
+    Ok(name)
 }
 
-async fn get_info_handler(player_id: String, nmcid: NmcId) -> WebResult<impl Reply>{
-    let info = nmcid.get_player_info(PlayerId(player_id)).unwrap();
+async fn get_info_handler(player_name: String, nmcid: NmcId) -> WebResult<impl Reply>{
+    let info = nmcid.get_contract_info(PlayerName(player_name)).unwrap();
     Ok(serde_json::to_string(&info).unwrap())
 }
 
-async fn register_handler(registration_info: String, nmcid: NmcId) -> WebResult<impl Reply>{
-    let info: NameRegistrationInfo = serde_json::from_str(&registration_info).unwrap();
-    let _r = nmcid.register_name(info.clone()).unwrap();
-    Ok(info.name.0)
+async fn set_info_handler(contract_info: String, pubkey: String, sig: String, nmcid: NmcId) -> WebResult<impl Reply>{
+    let contract_info: PlayerContractInfo = serde_json::from_str(&contract_info).unwrap();
+    let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
+    let sig = Signature::from_compact(&hex::decode(sig).unwrap()).unwrap();
+    let r = nmcid.set_contract_info(contract_info, pubkey, sig);
+    Ok("not implemented".to_string())
+}
+
+async fn name_handler(_pubkey: String, _nmcid: NmcId) -> WebResult<impl Reply>{
+    Ok("not implemented".to_string())
 }
 
 #[tokio::main]
@@ -198,10 +211,14 @@ async fn main() {
 
     let register_name = warp::path("register-name")
         .and(warp::path::param::<String>())
+        .and(warp::path::param::<String>())
+        .and(warp::path::param::<String>())
         .and(nmc_id.clone())
         .and_then(register_handler);
 
     let set_contract_info = warp::path("set-contract-info")
+        .and(warp::path::param::<String>())
+        .and(warp::path::param::<String>())
         .and(warp::path::param::<String>())
         .and(nmc_id.clone())
         .and_then(set_info_handler);
@@ -278,6 +295,6 @@ mod tests {
 
         let nmc_id = NmcId::new();
         let _r = nmc_id.rpc_client.load_wallet("testwallet");
-        let name = nmc_id.register_name(NameRegistrationInfo::new(PlayerName(TEST_NAME.to_string()), pubkey, sig));
+        let name = nmc_id.register_name(PlayerName(TEST_NAME.to_string()), pubkey, sig);
     }
 }

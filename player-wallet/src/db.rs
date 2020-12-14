@@ -1,5 +1,9 @@
 use std::convert::From;
 use rusqlite::{params, Connection, Result};
+use serde::{
+    Serialize,
+    Deserialize,
+};
 use tglib::{
     bdk::bitcoin::consensus,
     hex,
@@ -12,7 +16,7 @@ pub struct PlayerRecord {
     pub name:       PlayerName,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContractRecord {
     pub cxid:           String,
     pub p1_name:        PlayerName,
@@ -21,7 +25,7 @@ pub struct ContractRecord {
     pub desc:           String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PayoutRecord {
     pub cxid:           String,
     pub psbt:           String,
@@ -59,8 +63,8 @@ impl DB {
                 );
                 CREATE TABLE IF NOT EXISTS contract (
                     cxid            TEXT PRIMARY KEY,
-                    p1_name           TEXT NOT NULL,
-                    p2_name           TEXT NOT NULL,
+                    p1_name         TEXT NOT NULL,
+                    p2_name         TEXT NOT NULL,
                     hex             TEXT NOT NULL,
                     desc            TEXT,
                     FOREIGN KEY(p1_name) REFERENCES player(name),
@@ -92,7 +96,7 @@ impl DB {
     }
 
     pub fn all_players(&self) -> Result<Vec<PlayerRecord>> {
-        let mut stmt = self.conn.prepare("SELECT * FROM player")?;
+        let mut stmt = self.conn.prepare("SELECT name FROM player")?;
         let player_iter = stmt.query_map(params![], |row| {
             Ok(PlayerRecord {
                 name: PlayerName(row.get(0)?),

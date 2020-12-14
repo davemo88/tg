@@ -35,13 +35,17 @@ use tglib::{
         ESCROW_KIX,
         NETWORK,
         PAYOUT_VERSION,
-        PLAYER_ID_SERVICE_URL,
+        NAME_SERVICE_URL,
         PLAYER_1_MNEMONIC,
     },
 };
 use crate::{
     arbiter::ArbiterClient,
-    db,
+    db::{
+        self,
+        ContractRecord,
+        PayoutRecord,
+    },
     player::PlayerNameClient,
     wallet::PlayerWallet,
 };
@@ -178,9 +182,9 @@ pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
                     .help("description")
                     .takes_value(true)),
             SubCommand::with_name("import").about("import contract")
-                .arg(Arg::with_name("contract-hex")
+                .arg(Arg::with_name("contract-value")
                     .index(1)
-                    .help("hex-encoded contract")
+                    .help("contract record json or hex-encoded contract")
                     .required(true)
                     .takes_value(true)),
             SubCommand::with_name("export").about("export contract as hex")
@@ -240,7 +244,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 let desc = a.value_of("desc").unwrap_or("");
                 let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
 //                let p2_contract_info = arbiter_client.get_player_info(p2_name.clone()).unwrap();
-                let player_name_client = PlayerNameClient::new(PLAYER_ID_SERVICE_URL);
+                let player_name_client = PlayerNameClient::new(NAME_SERVICE_URL);
                 let p2_contract_info = player_name_client.get_contract_info(p2_name.clone()).unwrap();
                 let arbiter_pubkey = arbiter_client.get_escrow_pubkey().unwrap();
 
@@ -262,19 +266,32 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 }
             }
             "import" => {
-                if let Ok(contract) = Contract::from_bytes(hex::decode(a.value_of("contract-hex").unwrap()).unwrap()) {
-                    let contract_record = db::ContractRecord {
-                        cxid: hex::encode(contract.cxid()),
-                        p1_name: PlayerName::from(contract.p1_pubkey),
-                        p2_name: PlayerName::from(contract.p2_pubkey),
-                        hex: hex::encode(contract.to_bytes()),
-                        desc: String::default(),
-                    };
+// accept both contracts and contract records in binary
+// contract record binary encoding can be defined in player-wallet libs
+// is not a necessarily standardized encoding like contract
+// try to parse contract record first, since it contains more info
+                if let Ok(contract_record) = serde_json::from_str::<ContractRecord>(a.value_of("contract-value").unwrap()) {
                     match wallet.db.insert_contract(contract_record.clone()) {
-                        Ok(_) => println!("imported contract {}", hex::encode(contract.cxid())),
+                        Ok(_) => println!("imported contract {}", hex::encode(contract_record.cxid)),
                         Err(e) => println!("{:?}", e),
                     }
-                } else {
+                }
+// disable this for now until we decide how to address missing names
+//                else if let Ok(contract) = Contract::from_bytes(hex::decode(a.value_of("contract-value").unwrap()).unwrap()) {
+//// contract alone doesn't have player names
+//                    let contract_record = db::ContractRecord {
+//                        cxid: hex::encode(contract.cxid()),
+//                        p1_name: PlayerName::from(contract.p1_pubkey),
+//                        p2_name: PlayerName::from(contract.p2_pubkey),
+//                        hex: hex::encode(contract.to_bytes()),
+//                        desc: String::default(),
+//                    };
+//                    match wallet.db.insert_contract(contract_record.clone()) {
+//                        Ok(_) => println!("imported contract {}", hex::encode(contract.cxid())),
+//                        Err(e) => println!("{:?}", e),
+//                    }
+//                } 
+                else {
                     println!("invalid contract");
                 }
             }
@@ -373,9 +390,9 @@ pub fn payout_ui<'a, 'b>() -> App<'a, 'b> {
                     .required(true)
                     .takes_value(true)),
             SubCommand::with_name("import").about("import payout")
-                .arg(Arg::with_name("payout-hex")
+                .arg(Arg::with_name("payout-value")
                     .index(1)
-                    .help("hex-encoded payout")
+                    .help("payout record or hex-encoded payout")
                     .required(true)
                     .takes_value(true)),
             SubCommand::with_name("export").about("export payout as hex")
@@ -438,21 +455,26 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 println!("created new payout for contract {}", contract_record.cxid);
             }
             "import" => {
-                if let Ok(payout) = Payout::from_bytes(hex::decode(a.value_of("payout-hex").unwrap()).unwrap()) {
-                    let contract_record = db::ContractRecord {
-                        cxid: hex::encode(payout.contract.cxid()),
-                        p1_name: PlayerName::from(payout.contract.p1_pubkey),
-                        p2_name: PlayerName::from(payout.contract.p2_pubkey),
-                        hex: hex::encode(payout.contract.to_bytes()),
-                        desc: String::default(),
-                    };
-                    match wallet.db.insert_contract(contract_record.clone()) {
-                        Ok(_) => println!("imported contract {}", hex::encode(payout.contract.cxid())),
-                        Err(e) => println!("{:?}", e),
-                    }
-                    let _r = wallet.db.insert_payout(db::PayoutRecord::from(payout.clone()));
-                    println!("import payout for contract {}", contract_record.cxid);
-                } else {
+                if let Ok(payout_record) = serde_json::from_str::<PayoutRecord>(a.value_of("payout-value").unwrap()) {
+                    let _r = wallet.db.insert_payout(payout_record.clone());
+                    println!("import payout for contract {}", payout_record.cxid);
+                }
+//                if let Ok(payout) = Payout::from_bytes(hex::decode(a.value_of("payout-value").unwrap()).unwrap()) {
+//                    let contract_record = db::ContractRecord {
+//                        cxid: hex::encode(payout.contract.cxid()),
+//                        p1_name: PlayerName::from(payout.contract.p1_pubkey),
+//                        p2_name: PlayerName::from(payout.contract.p2_pubkey),
+//                        hex: hex::encode(payout.contract.to_bytes()),
+//                        desc: String::default(),
+//                    };
+//                    match wallet.db.insert_contract(contract_record.clone()) {
+//                        Ok(_) => println!("imported contract {}", hex::encode(payout.contract.cxid())),
+//                        Err(e) => println!("{:?}", e),
+//                    }
+//                    let _r = wallet.db.insert_payout(db::PayoutRecord::from(payout.clone()));
+//                    println!("import payout for contract {}", contract_record.cxid);
+//                } 
+                else {
                     println!("invalid payout ");
                 }
             }

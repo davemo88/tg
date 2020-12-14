@@ -38,23 +38,31 @@ use tglib::{
         Contract,
         PlayerContractInfo,
     },
-    player::PlayerName,
+    player::{
+        PlayerName,
+        PlayerNameService,
+    },
     wallet::{
         create_escrow_address,
         create_payout_script,
         EscrowWallet,
+        NameWallet,
         BITCOIN_ACCOUNT_PATH,
+        NAME_SUBACCOUNT,
+        NAME_KIX,
     },
     mock::{
         ARBITER_PUBLIC_URL,
         DB_NAME,
         ESCROW_SUBACCOUNT,
         ESCROW_KIX,
+        NAME_SERVICE_URL,
     },
 };
 use crate::{
     arbiter::ArbiterClient,
     db::DB,
+    player::PlayerNameClient,
 };
 
 pub struct PlayerWallet {
@@ -189,6 +197,21 @@ impl PlayerWallet {
             input,
             output,
         }
+    }
+}
+
+impl NameWallet for PlayerWallet {
+    fn name(&self) -> PlayerName {
+// TODO: get from local config / cache
+        let player_name_client = PlayerNameClient::new(NAME_SERVICE_URL);
+        player_name_client.get_player_name(&self.name_pubkey()).unwrap()
+    }
+
+    fn name_pubkey(&self) -> PublicKey {
+        let secp = Secp256k1::new();
+        let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX))).unwrap();
+        let pubkey = self.xpubkey.derive_pub(&secp, &path).unwrap();
+        pubkey.public_key
     }
 }
 

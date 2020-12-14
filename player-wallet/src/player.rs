@@ -10,7 +10,6 @@ use tglib::{
     player::{
         PlayerName,
         PlayerNameService,
-        NameRegistrationInfo,
     },
 };
 
@@ -36,11 +35,11 @@ impl PlayerNameService for PlayerNameClient {
         Some(info)
     }
 
-    fn set_contract_info(&self, name: PlayerName, info: PlayerContractInfo, sig: Signature) -> Result<(), String> {
+    fn set_contract_info(&self, info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<(), String> {
         Ok(())
     }
 
-    fn register_name(&self, registration_info: NameRegistrationInfo) -> Result<(), String> {
+    fn register_name(&self, name: PlayerName, pubkey: PublicKey, sig: Signature) -> Result<(), String> {
         Ok(())
     }
 }

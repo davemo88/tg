@@ -10,7 +10,7 @@ use bdk::{
             encode::Decodable,
         },
         hashes::{
-            Hash,
+            Hash as BitcoinHash,
             HashEngine,
             sha256::Hash as ShaHash,
             sha256::HashEngine as ShaHashEngine,
@@ -38,8 +38,7 @@ use nom::{
 use crate::{
     Result,
     TgError,
-//    arbiter::ArbiterId,
-//    player::PlayerId,
+    player::PlayerName,
     script::{
         parser::tg_script,
         TgScript,
@@ -257,8 +256,25 @@ pub enum ContractState {
 
 #[derive(Serialize, Deserialize)]
 pub struct PlayerContractInfo {
+    pub name: PlayerName,
     pub escrow_pubkey: PublicKey,
     pub change_address: Address,
 // TODO: could just be outpoints and clients look up the TxOuts
     pub utxos: Vec<UTXO>,
+}
+
+impl PlayerContractInfo {
+    pub fn hash(&self) -> Vec<u8> {
+        let mut engine = ShaHashEngine::default();
+        engine.input(self.name.0.as_bytes());
+        engine.input(&self.escrow_pubkey.to_bytes());
+        engine.input(&self.change_address.to_string().as_bytes());
+        for utxo in self.utxos.clone() {
+            engine.input(&hex::decode(utxo.outpoint.txid).unwrap());
+            engine.input(&Vec::from(utxo.outpoint.vout.to_be_bytes()));
+        }
+
+        let hash: &[u8] = &ShaHash::from_engine(engine);
+        Vec::from(hash)
+    }
 }
