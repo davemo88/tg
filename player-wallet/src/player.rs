@@ -1,34 +1,46 @@
 use reqwest;
 use serde_json;
 use tglib::{
-    bdk::bitcoin::PublicKey,
+    bdk::bitcoin::{
+        secp256k1::Signature,
+        PublicKey,
+    },
     hex,
     contract::PlayerContractInfo,
     player::{
-        PlayerId,
-        PlayerIdService,
+        PlayerName,
+        PlayerNameService,
+        NameRegistrationInfo,
     },
 };
 
-pub struct PlayerIdClient(String);
+pub struct PlayerNameClient(String);
 
-impl PlayerIdClient {
+impl PlayerNameClient {
     pub fn new (host: &str) -> Self {
-        PlayerIdClient(String::from(host))
+        PlayerNameClient(String::from(host))
     }
 }
 
-impl PlayerIdService for PlayerIdClient {
-    fn get_player_id(&self, pubkey: &PublicKey) -> Option<PlayerId> {
+impl PlayerNameService for PlayerNameClient {
+    fn get_player_name(&self, pubkey: &PublicKey) -> Option<PlayerName> {
         let response = reqwest::blocking::get(&format!("{}/get-player-id/{}", self.0, hex::encode(pubkey.to_bytes()))).unwrap();
         let body = String::from(response.text().unwrap());
-        Some(PlayerId(body))
+        Some(PlayerName(body))
     }
 
-    fn get_player_info(&self, player_id: PlayerId) -> Option<PlayerContractInfo> {
-        let response = reqwest::blocking::get(&format!("{}/get-player-info/{}", self.0, player_id.0)).unwrap();
+    fn get_contract_info(&self, player_name: PlayerName) -> Option<PlayerContractInfo> {
+        let response = reqwest::blocking::get(&format!("{}/get-player-info/{}", self.0, player_name.0)).unwrap();
         let body = String::from(response.text().unwrap());
         let info: PlayerContractInfo = serde_json::from_str(&body).unwrap();
         Some(info)
+    }
+
+    fn set_contract_info(&self, name: PlayerName, info: PlayerContractInfo, sig: Signature) -> Result<(), String> {
+        Ok(())
+    }
+
+    fn register_name(&self, registration_info: NameRegistrationInfo) -> Result<(), String> {
+        Ok(())
     }
 }

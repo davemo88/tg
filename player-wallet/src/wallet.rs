@@ -38,7 +38,7 @@ use tglib::{
         Contract,
         PlayerContractInfo,
     },
-    player::PlayerId,
+    player::PlayerName,
     wallet::{
         create_escrow_address,
         create_payout_script,
@@ -91,8 +91,8 @@ impl PlayerWallet {
         }
     }
 
-    pub fn player_id(&self) -> PlayerId {
-        PlayerId::from(self.xpubkey)
+    pub fn player_name(&self) -> PlayerName {
+        PlayerName("wtf goes here lol".to_string())
     }
 
     pub fn balance(&self) -> Amount {

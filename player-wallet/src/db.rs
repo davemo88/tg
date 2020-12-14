@@ -3,21 +3,20 @@ use rusqlite::{params, Connection, Result};
 use tglib::{
     bdk::bitcoin::consensus,
     hex,
-    player::PlayerId,
+    player::PlayerName,
     payout::Payout,
 };
 
 #[derive(Debug, Clone)]
 pub struct PlayerRecord {
-    pub id:             PlayerId,
-    pub name:           String,
+    pub name:       PlayerName,
 }
 
 #[derive(Debug, Clone)]
 pub struct ContractRecord {
     pub cxid:           String,
-    pub p1_id:          PlayerId,
-    pub p2_id:          PlayerId,
+    pub p1_name:        PlayerName,
+    pub p2_name:        PlayerName,
     pub hex:            String,
     pub desc:           String,
 }
@@ -56,17 +55,16 @@ impl DB {
         self.conn.execute_batch(
             "BEGIN;
                 CREATE TABLE IF NOT EXISTS player (
-                    id              TEXT PRIMARY KEY,
-                    name            TEXT
+                    name              TEXT PRIMARY KEY,
                 );
                 CREATE TABLE IF NOT EXISTS contract (
                     cxid            TEXT PRIMARY KEY,
-                    p1_id           TEXT NOT NULL,
-                    p2_id           TEXT NOT NULL,
+                    p1_name           TEXT NOT NULL,
+                    p2_name           TEXT NOT NULL,
                     hex             TEXT NOT NULL,
                     desc            TEXT,
-                    FOREIGN KEY(p1_id) REFERENCES player(id),
-                    FOREIGN KEY(p2_id) REFERENCES player(id)
+                    FOREIGN KEY(p1_name) REFERENCES player(name),
+                    FOREIGN KEY(p2_name) REFERENCES player(name)
                 );
                 CREATE TABLE IF NOT EXISTS payout (
                     cxid            TEXT PRIMARY KEY,
@@ -80,16 +78,16 @@ impl DB {
 
     pub fn insert_player(&self, player: PlayerRecord) -> Result<usize> {
          self.conn.execute(
-            "INSERT INTO player (id, name) VALUES (?1, ?2)",
-            params![player.id.0, player.name],
+            "INSERT INTO player (name) VALUES (?1)",
+            params![player.name.0],
          )
     }
 
     pub fn insert_contract(&self, contract: ContractRecord) -> Result<usize> {
         self.conn.execute(
-            "INSERT INTO contract (cxid, p1_id, p2_id, hex, desc) VALUES (?1, ?2, ?3, ?4, ?5) 
-            ON CONFLICT (cxid) DO UPDATE SET p1_id=?2, p2_id=?3, hex=?4, desc=?5",
-            params![contract.cxid, contract.p1_id.0, contract.p2_id.0, contract.hex, contract.desc],
+            "INSERT INTO contract (cxid, p1_name, p2_name, hex, desc) VALUES (?1, ?2, ?3, ?4, ?5) 
+            ON CONFLICT (cxid) DO UPDATE SET p1_name=?2, p2_name=?3, hex=?4, desc=?5",
+            params![contract.cxid, contract.p1_name.0, contract.p2_name.0, contract.hex, contract.desc],
         )
     }
 
@@ -97,8 +95,7 @@ impl DB {
         let mut stmt = self.conn.prepare("SELECT * FROM player")?;
         let player_iter = stmt.query_map(params![], |row| {
             Ok(PlayerRecord {
-                id: PlayerId(row.get(0)?),
-                name: row.get(1)?,
+                name: PlayerName(row.get(0)?),
             })
         })?;
 
@@ -109,10 +106,10 @@ impl DB {
         Ok(players)
     }
 
-    pub fn delete_player(&self, id: PlayerId) -> Result<usize> {
+    pub fn delete_player(&self, name: PlayerName) -> Result<usize> {
         self.conn.execute(
-            "DELETE FROM player WHERE id = ?1",
-            params![id.0],
+            "DELETE FROM player WHERE name = ?1",
+            params![name.0],
         )
     }
 
@@ -121,8 +118,8 @@ impl DB {
         let contract_iter = stmt.query_map(params![], |row| {
             Ok(ContractRecord {
                 cxid: row.get(0)?, 
-                p1_id: PlayerId(row.get(1)?),
-                p2_id: PlayerId(row.get(2)?),
+                p1_name: PlayerName(row.get(1)?),
+                p2_name: PlayerName(row.get(2)?),
                 hex: row.get(3)?,
                 desc: row.get(4)?,
             })
@@ -140,8 +137,8 @@ impl DB {
         let mut contract_iter = stmt.query_map(params![cxid], |row| {
             Ok(ContractRecord {
                 cxid: row.get(0)?, 
-                p1_id: PlayerId(row.get(1)?),
-                p2_id: PlayerId(row.get(2)?),
+                p1_name: PlayerName(row.get(1)?),
+                p2_name: PlayerName(row.get(2)?),
                 hex: row.get(3)?,
                 desc: row.get(4)?,
             })

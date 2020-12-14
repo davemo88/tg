@@ -175,7 +175,7 @@ fn get_namecoin_address(pubkey: &PublicKey, network: Network) -> Result<Namecoin
     Ok(base58::check_encode_slice(&hash))
 }
 
-async fn id_handler(_pubkey: String, _nmcid: NmcId) -> WebResult<impl Reply>{
+async fn name_handler(_pubkey: String, _nmcid: NmcId) -> WebResult<impl Reply>{
     Ok("not implemented".to_string())
 }
 
@@ -196,24 +196,30 @@ async fn main() {
     
     let nmc_id = warp::any().map(move || nmc_id.clone());
 
-    let get_player_id = warp::path("get-player-id")
-        .and(warp::path::param::<String>())
-        .and(nmc_id.clone())
-        .and_then(id_handler);
-
-    let get_player_info = warp::path("get-player-info")
-        .and(warp::path::param::<String>())
-        .and(nmc_id.clone())
-        .and_then(get_info_handler);
-
     let register_name = warp::path("register-name")
         .and(warp::path::param::<String>())
         .and(nmc_id.clone())
         .and_then(register_handler);
 
-    let routes = get_player_id
-        .or(get_player_info)
-        .or(register_name);
+    let set_contract_info = warp::path("set-contract-info")
+        .and(warp::path::param::<String>())
+        .and(nmc_id.clone())
+        .and_then(set_info_handler);
+
+    let get_contract_info = warp::path("get-contract-info")
+        .and(warp::path::param::<String>())
+        .and(nmc_id.clone())
+        .and_then(get_info_handler);
+
+    let get_player_name = warp::path("get-player-name")
+        .and(warp::path::param::<String>())
+        .and(nmc_id.clone())
+        .and_then(name_handler);
+
+    let routes = register_name
+        .or(set_contract_info)
+        .or(get_contract_info)
+        .or(get_player_name);
 
     warp::serve(routes).run(([0, 0, 0, 0], 18420)).await;
 }

@@ -21,8 +21,8 @@ use tglib::{
     contract::Contract,
     payout::Payout,
     player::{
-        PlayerId,
-        PlayerIdService,
+        PlayerName,
+        PlayerNameService,
     },
     wallet::{
         EscrowWallet,
@@ -42,7 +42,7 @@ use tglib::{
 use crate::{
     arbiter::ArbiterClient,
     db,
-    player::PlayerIdClient,
+    player::PlayerNameClient,
     wallet::PlayerWallet,
 };
 
@@ -97,25 +97,17 @@ pub fn player_ui<'a, 'b>() -> App<'a, 'b> {
             AppSettings::VersionlessSubcommands])
         .subcommands(vec![
             SubCommand::with_name("add").about("add to known players")
-                .arg(Arg::with_name("id")
-                    .index(1)
-                    .value_name("ID")
-                    .help("player id")
-                    .required(true))
                 .arg(Arg::with_name("name")
-                    .index(2)
-                    .value_name("NAME")
+                    .index(1)
                     .help("player name")
                     .required(true)),
-//                    .multiple(true)),
             SubCommand::with_name("remove").about("remove from known players")
-                .arg(Arg::with_name("id")
+                .arg(Arg::with_name("name")
                     .index(1)
-                    .value_name("ID")
-                    .help("id of player to remove")
+                    .help("name of player to remove")
                     .required(true)),
             SubCommand::with_name("list").about("list known players"),
-            SubCommand::with_name("id").about("shows local player id"),
+            SubCommand::with_name("name").about("shows local player name"),
         ])
 }
 
@@ -124,33 +116,32 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
         match c {
             "add" => {
                 let player = db::PlayerRecord {
-                    id:         PlayerId(a.args["id"].vals[0].clone().into_string().unwrap()),
-                    name:       a.args["name"].vals[0].clone().into_string().unwrap(),
+                    name:       PlayerName(a.args["name"].vals[0].clone().into_string().unwrap()),
                 };
                 match wallet.db.insert_player(player.clone()) {
-                    Ok(_) => println!("added player {} named {}", player.id.0, player.name),
+                    Ok(_) => println!("added player {}", player.name.0),
                     Err(e) => println!("{:?}", e),
                 }
             }
             "list" => {
                 let players = wallet.db.all_players().unwrap();
                 for p in players {
-                    println!("id: {}, name: {}", p.id.0, p.name);
+                    println!("player name: {}", p.name.0);
                 }
             }
             "remove" => {
-                let player_id = PlayerId(a.args["id"].vals[0].clone().into_string().unwrap());
-                match wallet.db.delete_player(player_id.clone()) {
+                let player_name = PlayerName(a.args["name"].vals[0].clone().into_string().unwrap());
+                match wallet.db.delete_player(player_name.clone()) {
                     Ok(num_deleted) => match num_deleted {
-                        0 => println!("no player with that id"),
-                        1 => println!("removed player {}", player_id.0),
+                        0 => println!("no player with that name"),
+                        1 => println!("removed player {}", player_name.0),
                         n => panic!("{} removed, should be impossible", n),//this is impossible
                     }
                     Err(e) => println!("{:?}", e),
                 }
             },
-            "id" => {
-                println!("{}", wallet.player_id().0);
+            "name" => {
+                println!("{}", wallet.player_name().0);
             }
             _ => {
                 println!("command '{}' is not implemented", c);
@@ -244,13 +235,13 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
     if let (c, Some(a)) = subcommand {
         match c {
             "new" => {
-                let p2_id = PlayerId(a.value_of("player-2").unwrap().to_string());
+                let p2_name = PlayerName(a.value_of("player-2").unwrap().to_string());
                 let amount = Amount::from_sat(a.value_of("amount").unwrap().parse::<u64>().unwrap());
                 let desc = a.value_of("desc").unwrap_or("");
                 let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
-//                let p2_contract_info = arbiter_client.get_player_info(p2_id.clone()).unwrap();
-                let player_id_client = PlayerIdClient::new(PLAYER_ID_SERVICE_URL);
-                let p2_contract_info = player_id_client.get_player_info(p2_id.clone()).unwrap();
+//                let p2_contract_info = arbiter_client.get_player_info(p2_name.clone()).unwrap();
+                let player_name_client = PlayerNameClient::new(PLAYER_ID_SERVICE_URL);
+                let p2_contract_info = player_name_client.get_contract_info(p2_name.clone()).unwrap();
                 let arbiter_pubkey = arbiter_client.get_escrow_pubkey().unwrap();
 
 //                let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
@@ -259,8 +250,8 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 let contract = wallet.create_contract(p2_contract_info, amount, arbiter_pubkey);
                 let contract_record = db::ContractRecord {
                     cxid: hex::encode(contract.cxid()),
-                    p1_id: wallet.player_id(),
-                    p2_id,
+                    p1_name: wallet.player_name(),
+                    p2_name,
                     hex: hex::encode(contract.to_bytes()),
                     desc: desc.to_string(),
                 };
@@ -274,8 +265,8 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 if let Ok(contract) = Contract::from_bytes(hex::decode(a.value_of("contract-hex").unwrap()).unwrap()) {
                     let contract_record = db::ContractRecord {
                         cxid: hex::encode(contract.cxid()),
-                        p1_id: PlayerId::from(contract.p1_pubkey),
-                        p2_id: PlayerId::from(contract.p2_pubkey),
+                        p1_name: PlayerName::from(contract.p1_pubkey),
+                        p2_name: PlayerName::from(contract.p2_pubkey),
                         hex: hex::encode(contract.to_bytes()),
                         desc: String::default(),
                     };
@@ -356,7 +347,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
             "list" => {
                 let contracts = wallet.db.all_contracts().unwrap();
                 for c in contracts {
-                    println!("cxid: {:?}, p1: {:?}, p2: {:?}, desc: {}", c.cxid, c.p1_id.0, c.p2_id.0, c.desc);
+                    println!("cxid: {:?}, p1: {:?}, p2: {:?}, desc: {}", c.cxid, c.p1_name.0, c.p2_name.0, c.desc);
                 }
             }
             _ => {
@@ -450,8 +441,8 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 if let Ok(payout) = Payout::from_bytes(hex::decode(a.value_of("payout-hex").unwrap()).unwrap()) {
                     let contract_record = db::ContractRecord {
                         cxid: hex::encode(payout.contract.cxid()),
-                        p1_id: PlayerId::from(payout.contract.p1_pubkey),
-                        p2_id: PlayerId::from(payout.contract.p2_pubkey),
+                        p1_name: PlayerName::from(payout.contract.p1_pubkey),
+                        p2_name: PlayerName::from(payout.contract.p2_pubkey),
                         hex: hex::encode(payout.contract.to_bytes()),
                         desc: String::default(),
                     };

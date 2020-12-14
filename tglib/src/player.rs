@@ -54,7 +54,7 @@ pub trait PlayerIdService {
     fn get_player_info(&self, player_id: PlayerId) -> Option<PlayerContractInfo>;
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct PlayerName(pub String);
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -77,6 +77,6 @@ impl NameRegistrationInfo {
 pub trait PlayerNameService {
     fn get_player_name(&self, pubkey: &PublicKey) -> Option<PlayerName>;
     fn get_contract_info(&self, name: PlayerName) -> Option<PlayerContractInfo>;
-    fn set_contract_info(&self, name: PlayerName, info: PlayerContractInfo, sig: Signature) -> Option<PlayerContractInfo>;
-    fn register_name(&self, registration_info: NameRegistrationInfo) -> Result<String, String>;
+    fn set_contract_info(&self, name: PlayerName, info: PlayerContractInfo, sig: Signature) -> Result<(), String>;
+    fn register_name(&self, registration_info: NameRegistrationInfo) -> Result<(), String>;
 }
