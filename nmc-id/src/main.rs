@@ -77,12 +77,6 @@ impl NmcId {
         let _r = self.rpc_client.generate_to_address(nblocks, address);
         Ok(())
     }
-
-//    fn get_txid(&self, tx_hex: String) -> Result<String, String> {
-//        let decoded = self.rpc_client.decode_raw_transaction(tx_hex, false).unwrap();
-//        let result = decoded.result.unwrap();
-//        Ok(result.txid)
-//    }
 }
 
 impl PlayerNameService for NmcId {
@@ -102,6 +96,7 @@ impl PlayerNameService for NmcId {
         let name = format!("player/{}",name.0);
         let new_address = self.rpc_client.get_new_address().unwrap();
         let (name_new_txid, rand) = self.rpc_client.name_new(&name, &new_address).unwrap();
+// TODO: need to handle case in which name is already registered
         let _r = self.generate(13);
         let _name_firstupdate_txid = self.rpc_client.name_firstupdate(&name, &rand, &name_new_txid, Some("hello world"), &name_address).unwrap();
         let _r = self.generate(1);
@@ -257,7 +252,7 @@ mod tests {
 
     const PUBKEY: &'static str = "02123e6a7816f2149f90cca1ea1ba41b73e77db44cd71f01c184defd10961d03fc";
     const TESTNET_ADDRESS_FROM_NAMECOIND: &'static str = "mfuf8qvMsMJMgBqtEGBt8aCQPQi1qgANzo";
-    const TEST_NAME: &'static str = "Sven";
+    const TEST_NAME: &'static str = "Garll";
 
     #[test]
     fn test_get_namecoin_address() {
