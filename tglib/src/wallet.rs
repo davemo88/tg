@@ -35,6 +35,7 @@ use crate::{
     TgError,
     contract::Contract,
     payout::Payout,
+    player::PlayerName,
     script::{
         TgScript,
         TgScriptEnv,
@@ -49,6 +50,12 @@ use crate::{
 pub const BITCOIN_ACCOUNT_PATH: &'static str = "44'/0'/0'";
 pub const NAMECOIN_ACCOUNT_PATH: &'static str = "44'/7'/0'";
 pub const ESCROW_SUBACCOUNT: &'static str = "7";
+pub const NAME_KEY_PATH: &'static str = "44'/7'/0'/0/0";
+
+pub trait PlayerWallet {
+    fn name() -> PlayerName;
+    fn name_pubkey() -> PublicKey;
+}
 
 // TODO: need to clarify. this is signing in the normal bitcoin / crypto sense
 // and the Signing trait is for signing our contracts and payouts only
