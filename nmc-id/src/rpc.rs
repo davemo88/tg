@@ -49,16 +49,16 @@ impl NamecoinRpcClient {
         Ok(())
     }
 
-    pub async fn load_wallet(&self, name: &str) -> RpcResult<()> {
+    pub async fn load_wallet(&self, name: &str) -> RpcResult<LoadWalletResponse> {
         let body = self.build_request_body("loadwallet", &serde_json::to_string(name).unwrap());
-        let _r = self.post(body).await;
-        Ok(())
+        let r: LoadWalletResponse = self.post(body).await.unwrap().json().await.unwrap();
+        Ok(r)
     }
 
     pub async fn get_new_address(&self) -> RpcResult<String> {
         let body = self.build_request_body("getnewaddress", "");
+        let r = self.post(body.clone()).await;
         let r = self.post(body).await;
-        println!("{:?}",r);
         let r: RpcResponse = r.unwrap().json().await.unwrap();
         Ok(r.result.unwrap())
     }
@@ -85,6 +85,7 @@ impl NamecoinRpcClient {
         );
         let body = self.build_request_body("name_new", &params);
         let r: NameNewResponse = self.post(body).await.unwrap().json().await.unwrap();
+        println!("{:?}",r);
         let result = r.result.unwrap();
         Ok((result[0].clone(), result[1].clone()))
     }
@@ -116,8 +117,14 @@ impl NamecoinRpcClient {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct RpcError {
+    pub code: i64,
+    pub message: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BaseResponse {
-    pub error: Option<String>,
+    pub error: Option<RpcError>,
     pub message: Option<String>,
     pub id: Option<String>,
 }
@@ -127,6 +134,19 @@ pub struct RpcResponse {
     pub result: Option<String>,
     #[serde(flatten)]
     pub base: BaseResponse,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct LoadWalletResponse {
+    pub result: Option<LoadWalletResult>,
+    #[serde(flatten)]
+    pub base: BaseResponse,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct LoadWalletResult {
+    name: String,
+    warning: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

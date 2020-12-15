@@ -1,3 +1,7 @@
+use std::{
+    thread::sleep,
+    time::Duration,
+};
 use redis::{
     self,
     AsyncCommands,
@@ -76,6 +80,22 @@ fn get_namecoin_address(pubkey: &PublicKey, network: Network) -> Result<Namecoin
     Ok(base58::check_encode_slice(&hash))
 }
 
+async fn load_wallet(nmc_rpc_client: &NamecoinRpcClient) {
+    while let Some(err) = nmc_rpc_client.load_wallet("testwallet").await.unwrap().base.error {
+//        println!("err {}: {}", err.code, err.message);
+        sleep(Duration::from_secs(1));
+        match err.code {
+// wallet already loaded
+            -4 => {
+                break;
+            }
+// no wallet loaded, try to create it
+            -18 => nmc_rpc_client.create_wallet("testwallet").await.unwrap(),
+            _ => ()
+        }
+    };
+}
+
 async fn register_name_handler(name: String, pubkey: String, sig: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
     let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
     let sig = Signature::from_compact(&hex::decode(sig).unwrap()).unwrap();
@@ -90,7 +110,7 @@ async fn register_name_handler(name: String, pubkey: String, sig: String, nmc_rp
     let _r = nmc_rpc.import_pubkey(&pubkey);
 // create namecoin address from supplied pubkey
     let name_address = get_namecoin_address(&pubkey, NETWORK).unwrap();
-    println!("name_address: {}", name_address);
+//    println!("name_address: {}", name_address);
     let name = format!("player/{}",name);
     let new_address = nmc_rpc.get_new_address().await.unwrap();
     let (name_new_txid, rand) = nmc_rpc.name_new(&name, &new_address).await.unwrap();
@@ -134,8 +154,13 @@ async fn get_name_handler(pubkey: String, _nmc_rpc: NamecoinRpcClient) -> WebRes
 #[tokio::main]
 async fn main() {
 
-    let redis_client = redis::Client::open(REDIS_SERVER).unwrap();
     let nmc_rpc_client = NamecoinRpcClient::new(NAMECOIN_RPC_URL);
+     
+    load_wallet(&nmc_rpc_client).await;
+    let new_address = nmc_rpc_client.get_new_address().await.unwrap();
+    let _r = nmc_rpc_client.generate_to_address(150, new_address).await;
+
+    let redis_client = redis::Client::open(REDIS_SERVER).unwrap();
     let redis = warp::any().map(move || redis_client.clone()); 
     let nmc_rpc = warp::any().map(move || nmc_rpc_client.clone());
 
