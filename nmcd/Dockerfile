@@ -8,3 +8,8 @@ RUN git clone https://github.com/namecoin/namecoin-core.git && cd namecoin-core 
     && make \
     && make install
 
+ADD namecoin.conf ~/.namecoin/
+
+EXPOSE 18443
+
+CMD ["namecoind", "-regtest", "-wallet=~/.namecoin/"]

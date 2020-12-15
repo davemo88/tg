@@ -23,5 +23,7 @@ services:
     ports:
       - "18443-18444:18443-18444"
       - "60401:60401"
+  nmcd:
+    image: nmcd
 volumes:
   logvolume01: {}

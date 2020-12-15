@@ -233,10 +233,10 @@ fn create_payout_tx(funding_tx: &Transaction, escrow_address: &Address, payout_a
 }
 
 pub fn derive_account_xprivkey(mnemonic: &Mnemonic, network: Network) -> ExtendedPrivKey {
-        let xprivkey = ExtendedPrivKey::new_master(network, &mnemonic.to_seed("")).unwrap();
+        let root_key = ExtendedPrivKey::new_master(network, &mnemonic.to_seed("")).unwrap();
         let secp = Secp256k1::new();
         let path = DerivationPath::from_str(&String::from(format!("m/{}", BITCOIN_ACCOUNT_PATH))).unwrap();
-        xprivkey.derive_priv(&secp, &path).unwrap()
+        root_key.derive_priv(&secp, &path).unwrap()
 }
 
 pub fn derive_account_xpubkey(mnemonic: &Mnemonic, network: Network) -> ExtendedPubKey {

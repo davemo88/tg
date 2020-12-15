@@ -5,6 +5,11 @@ use tglib::{
         Address,
         Amount,
         consensus,
+        hashes::{
+            sha256,
+            Hash,
+            HashEngine,
+        },
         secp256k1::{
             Message,
             Signature,
@@ -26,8 +31,11 @@ use tglib::{
     },
     wallet::{
         EscrowWallet,
+        NameWallet,
         SigningWallet,
         ESCROW_SUBACCOUNT,
+        NAME_SUBACCOUNT,
+        NAME_KIX,
     },
     mock::{
         Trezor,
@@ -123,6 +131,30 @@ pub fn player_ui<'a, 'b>() -> App<'a, 'b> {
 pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &PlayerWallet) -> TgResult<()> {
     if let (c, Some(a)) = subcommand {
         match c {
+            "register" => {
+                let name = PlayerName(a.args["name"].vals[0].clone().into_string().unwrap());
+                let name_client = PlayerNameClient::new(NAME_SERVICE_URL);
+                let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
+                let mut engine = sha256::HashEngine::default();
+                engine.input(name.0.as_bytes());
+                let hash: &[u8] = &sha256::Hash::from_engine(engine);
+                let sig = signing_wallet.sign_message(
+                    Message::from_slice(hash).unwrap(),
+                    DerivationPath::from_str(&format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX)).unwrap(),
+                ).unwrap();
+                if name_client.register_name(name.clone(), wallet.name_pubkey(), sig).is_ok() {
+                    let pr = db::PlayerRecord {
+                        name: name.clone(),
+                    };
+                    match wallet.db.insert_player(pr) {
+                        Ok(_) => println!("added player {}", name.0),
+                        Err(e) => println!("{:?}", e),
+                    }
+                } else {
+                    println!("couldn't register name");
+                }
+
+            }
             "add" => {
                 let player = db::PlayerRecord {
                     name:       PlayerName(a.args["name"].vals[0].clone().into_string().unwrap()),

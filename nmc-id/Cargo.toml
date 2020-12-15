@@ -8,7 +8,6 @@ edition = "2018"
 
 [dependencies]
 tglib = { path = "../tglib" }
-player-wallet = { path = "../player-wallet" }
 reqwest = { version = "0.10", features = ["blocking", "json"] }
  serde = { version = "1.0", features = ["derive"] }
 warp = "0.2.5"

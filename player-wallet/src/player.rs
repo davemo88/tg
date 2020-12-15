@@ -24,8 +24,8 @@ impl PlayerNameClient {
 impl PlayerNameService for PlayerNameClient {
     fn register_name(&self, name: PlayerName, pubkey: PublicKey, sig: Signature) -> Result<(), String> {
         let body = format!("{}/register-name/{}/{}/{}", self.0, 
-            serde_json::to_string(&name.0).unwrap(),
-            hex::encode(pubkey.key.serialize()),
+            &name.0,
+            hex::encode(pubkey.to_bytes()),
             hex::encode(sig.serialize_compact()),
         );
         let response = reqwest::blocking::get(&body).unwrap();

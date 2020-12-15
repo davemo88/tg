@@ -1,10 +1,8 @@
 FROM rust:buster
 
 ADD tglib/ tglib/
-ADD player-wallet/ player-wallet/
 ADD nmc-id/ nmc-id/
 
 RUN cargo build --manifest-path=nmc-id/Cargo.toml
 
 CMD ["cargo", "run", "--manifest-path", "nmc-id/Cargo.toml"]
-

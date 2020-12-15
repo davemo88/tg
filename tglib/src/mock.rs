@@ -59,9 +59,8 @@ pub const ARBITER_MNEMONIC: &'static str = "meadow found language where fringe c
 pub const ARBITER_FINGERPRINT: &'static str = "1af44eee";
 pub const ARBITER_XPUBKEY: &'static str = "tpubDCoCzmZtfuft3oM8Y5RnaT5GFq27NR7iYLbj5r1HZyfbgMAT1AAeAxCoyMnKGQ67GAeZDcekJgsaSMTb7SpmRJ3vGbPXZxDToKHTRa3mBS2";
 pub const ARBITER_PUBLIC_URL: &'static str = "http://localhost:5000";
-pub const REFEREE_PRIVKEY: &'static str = "L52hw8to1fdBj9eP8HESBNrfcbehxvKU1vsqWjmHJavxNEi9q91i";
-
 pub const NAME_SERVICE_URL: &'static str = "http://localhost:18420";
+pub const REFEREE_PRIVKEY: &'static str = "L52hw8to1fdBj9eP8HESBNrfcbehxvKU1vsqWjmHJavxNEi9q91i";
 
 pub fn referee_pubkey() -> PublicKey {
     let secp = Secp256k1::new();
@@ -135,11 +134,11 @@ impl SigningWallet for Trezor {
     }
 
 // TODO : make this work
-    fn sign_message(&self, msg: Message, _path: DerivationPath) -> TgResult<Signature> {
-        let root_key = ExtendedPrivKey::new_master(NETWORK, &self.mnemonic.to_seed("")).unwrap();
+    fn sign_message(&self, msg: Message, path: DerivationPath) -> TgResult<Signature> {
+//        let root_key = ExtendedPrivKey::new_master(NETWORK, &self.mnemonic.to_seed("")).unwrap();
+        let account_key = derive_account_xprivkey(&self.mnemonic, NETWORK);
         let secp = Secp256k1::new();
-        let path = DerivationPath::from_str(&String::from(format!("m/{}/{}/{}", BITCOIN_ACCOUNT_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
-        let signing_key = root_key.derive_priv(&secp, &path).unwrap();
+        let signing_key = account_key.derive_priv(&secp, &path).unwrap();
         Ok(secp.sign(&msg, &signing_key.private_key.key))
     }
 }
