@@ -29,8 +29,13 @@ impl PlayerNameService for PlayerNameClient {
             hex::encode(sig.serialize_compact()),
         );
         let response = reqwest::blocking::get(&body).unwrap();
-        let _body = String::from(response.text().unwrap());
-        Ok(())
+        let body = String::from(response.text().unwrap());
+// weird
+        if body == name.0 {
+            Ok(())
+        } else {
+            Err(body)
+        }
     }
     fn set_contract_info(&self, info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<(), String> {
         let body = format!("{}/set-contract-info/{}/{}/{}", self.0, 

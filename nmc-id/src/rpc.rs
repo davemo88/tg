@@ -57,7 +57,6 @@ impl NamecoinRpcClient {
 
     pub async fn get_new_address(&self) -> RpcResult<String> {
         let body = self.build_request_body("getnewaddress", "");
-        let r = self.post(body.clone()).await;
         let r = self.post(body).await;
         let r: RpcResponse = r.unwrap().json().await.unwrap();
         Ok(r.result.unwrap())
@@ -85,9 +84,12 @@ impl NamecoinRpcClient {
         );
         let body = self.build_request_body("name_new", &params);
         let r: NameNewResponse = self.post(body).await.unwrap().json().await.unwrap();
-        println!("{:?}",r);
-        let result = r.result.unwrap();
-        Ok((result[0].clone(), result[1].clone()))
+        if let Some(name_result) = r.result {
+            Ok((name_result[0].clone(), name_result[1].clone()))
+        } else {
+            let rpc_error = r.base.error.unwrap();
+            Err(format!("error {}: {}", rpc_error.code, rpc_error.message))
+        }
     }
 
     pub async fn name_firstupdate(&self, name: &str, rand: &str, txid: &str, value: Option<&str>, dest_address: &str) -> RpcResult<String> {

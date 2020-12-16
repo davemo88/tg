@@ -287,13 +287,9 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 let amount = Amount::from_sat(a.value_of("amount").unwrap().parse::<u64>().unwrap());
                 let desc = a.value_of("desc").unwrap_or("");
                 let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
-//                let p2_contract_info = arbiter_client.get_player_info(p2_name.clone()).unwrap();
                 let player_name_client = PlayerNameClient::new(NAME_SERVICE_URL);
                 let p2_contract_info = player_name_client.get_contract_info(p2_name.clone()).unwrap();
                 let arbiter_pubkey = arbiter_client.get_escrow_pubkey().unwrap();
-
-//                let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-//                let player_wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK);
 
                 let contract = wallet.create_contract(p2_contract_info, amount, arbiter_pubkey);
                 let contract_record = db::ContractRecord {

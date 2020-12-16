@@ -80,22 +80,6 @@ fn get_namecoin_address(pubkey: &PublicKey, network: Network) -> Result<Namecoin
     Ok(base58::check_encode_slice(&hash))
 }
 
-async fn load_wallet(nmc_rpc_client: &NamecoinRpcClient) {
-    while let Some(err) = nmc_rpc_client.load_wallet("testwallet").await.unwrap().base.error {
-//        println!("err {}: {}", err.code, err.message);
-        sleep(Duration::from_secs(1));
-        match err.code {
-// wallet already loaded
-            -4 => {
-                break;
-            }
-// no wallet loaded, try to create it
-            -18 => nmc_rpc_client.create_wallet("testwallet").await.unwrap(),
-            _ => ()
-        }
-    };
-}
-
 async fn register_name_handler(name: String, pubkey: String, sig: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
     let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
     let sig = Signature::from_compact(&hex::decode(sig).unwrap()).unwrap();
@@ -113,13 +97,20 @@ async fn register_name_handler(name: String, pubkey: String, sig: String, nmc_rp
 //    println!("name_address: {}", name_address);
     let name = format!("player/{}",name);
     let new_address = nmc_rpc.get_new_address().await.unwrap();
-    let (name_new_txid, rand) = nmc_rpc.name_new(&name, &new_address).await.unwrap();
+    match nmc_rpc.name_new(&name, &new_address).await {
+        Ok((name_new_txid, rand)) => {
+            let _r = nmc_rpc.generate_to_address(13, new_address.clone()).await;
+            let _name_firstupdate_txid = nmc_rpc.name_firstupdate(&name, &rand, &name_new_txid, Some("hello world"), &name_address).await.unwrap();
+            let _r = nmc_rpc.generate_to_address(1, new_address).await;
+// c        onfirm name_firstupdate_txid in the chain
+            Ok(name)
+        }
+        Err(msg) => {
+            Ok(msg)
+//            Err(warp::reject())
+        }
+    }
 // TODO: need to handle case in which name is already registered
-    let _r = nmc_rpc.generate_to_address(13, new_address.clone()).await;
-    let _name_firstupdate_txid = nmc_rpc.name_firstupdate(&name, &rand, &name_new_txid, Some("hello world"), &name_address).await.unwrap();
-    let _r = nmc_rpc.generate_to_address(1, new_address).await;
-// confirm name_firstupdate_txid in the chain
-    Ok(name)
 }
 
 async fn get_info_handler(player_name: String, redis: redis::Client) -> WebResult<impl Reply>{
@@ -151,6 +142,31 @@ async fn get_name_handler(pubkey: String, _nmc_rpc: NamecoinRpcClient) -> WebRes
     Ok("unimplemented")
 }
 
+fn redis_client() -> redis::Client {
+    let mut client = redis::Client::open(REDIS_SERVER);
+    while client.is_err() {
+        sleep(Duration::from_secs(1));
+        client = redis::Client::open(REDIS_SERVER);
+    }
+    client.unwrap()
+}
+
+async fn load_wallet(nmc_rpc_client: &NamecoinRpcClient) {
+    while let Some(err) = nmc_rpc_client.load_wallet("testwallet").await.unwrap().base.error {
+//        println!("err {}: {}", err.code, err.message);
+        match err.code {
+// wallet already loaded
+            -4 => {
+                break;
+            }
+// no wallet loaded, try to create it
+            -18 => nmc_rpc_client.create_wallet("testwallet").await.unwrap(),
+            _ => ()
+        }
+        sleep(Duration::from_secs(1));
+    };
+}
+
 #[tokio::main]
 async fn main() {
 
@@ -160,7 +176,7 @@ async fn main() {
     let new_address = nmc_rpc_client.get_new_address().await.unwrap();
     let _r = nmc_rpc_client.generate_to_address(150, new_address).await;
 
-    let redis_client = redis::Client::open(REDIS_SERVER).unwrap();
+    let redis_client = redis_client();
     let redis = warp::any().map(move || redis_client.clone()); 
     let nmc_rpc = warp::any().map(move || nmc_rpc_client.clone());
 
