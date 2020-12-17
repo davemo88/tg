@@ -22,6 +22,7 @@ use tglib::{
     hex,
     bip39::Mnemonic,
     Result as TgResult,
+    TgError,
     arbiter::ArbiterService,
     contract::Contract,
     payout::Payout,
@@ -124,7 +125,7 @@ pub fn player_ui<'a, 'b>() -> App<'a, 'b> {
                     .help("name of player to remove")
                     .required(true)),
             SubCommand::with_name("list").about("list known players"),
-            SubCommand::with_name("name").about("shows local player name"),
+            SubCommand::with_name("mine").about("show local player names"),
         ])
 }
 
@@ -142,18 +143,18 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                     Message::from_slice(hash).unwrap(),
                     DerivationPath::from_str(&format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX)).unwrap(),
                 ).unwrap();
-                if name_client.register_name(name.clone(), wallet.name_pubkey(), sig).is_ok() {
-                    let pr = db::PlayerRecord {
-                        name: name.clone(),
-                    };
-                    match wallet.db.insert_player(pr) {
-                        Ok(_) => println!("added player {}", name.0),
-                        Err(e) => println!("{:?}", e),
+                match name_client.register_name(name.clone(), wallet.name_pubkey(), sig) {
+                    Ok(()) => {
+                        let pr = db::PlayerRecord {
+                            name: name.clone(),
+                        };
+                        match wallet.db.insert_player(pr) {
+                            Ok(_) => println!("added player {}", name.0),
+                            Err(e) => println!("{:?}", e),
+                        }
                     }
-                } else {
-                    println!("couldn't register name");
+                    Err(e) => println!("registration error: {}", e),
                 }
-
             }
             "add" => {
                 let player = db::PlayerRecord {
@@ -281,17 +282,28 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
     if let (c, Some(a)) = subcommand {
         match c {
             "new" => {
-// TODO: confirm local ownership of p1_name
                 let p1_name = PlayerName(a.value_of("player-1").unwrap().to_string());
                 let p2_name = PlayerName(a.value_of("player-2").unwrap().to_string());
                 let amount = Amount::from_sat(a.value_of("amount").unwrap().parse::<u64>().unwrap());
                 let desc = a.value_of("desc").unwrap_or("");
-                let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
-                let player_name_client = PlayerNameClient::new(NAME_SERVICE_URL);
-                let p2_contract_info = player_name_client.get_contract_info(p2_name.clone()).unwrap();
-                let arbiter_pubkey = arbiter_client.get_escrow_pubkey().unwrap();
 
+                let player_name_client = PlayerNameClient::new(NAME_SERVICE_URL);
+                if !player_name_client.get_player_names(&wallet.name_pubkey()).contains(&p1_name) {
+                    return Err(TgError("can't create contract: p1 name not controlled by local wallet"))
+                }
+
+// TODO: confirm p2_name is registered, or just let the future contract info check fail
+// if p2 is uneegistered, they can't have posted contract info
+                let p2_contract_info = match player_name_client.get_contract_info(p2_name.clone()) {
+                    Some(info) => info,
+                    None => return Err(TgError("can't create contract: can't fetch p2 contract info")),
+                };
+
+                let arbiter_pubkey = ArbiterClient::new(ARBITER_PUBLIC_URL).get_escrow_pubkey().unwrap();
+
+// TODO: this could fail if amount is too large
                 let contract = wallet.create_contract(p2_contract_info, amount, arbiter_pubkey);
+
                 let contract_record = db::ContractRecord {
                     cxid: hex::encode(contract.cxid()),
                     p1_name,

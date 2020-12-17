@@ -20,9 +20,17 @@ use bdk::bitcoin::{
         ToBase32,
     },
 };
-use crate::{
-    contract::PlayerContractInfo,
-};
+use crate::contract::PlayerContractInfo;
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct PlayerName(pub String);
+
+pub trait PlayerNameService {
+    fn register_name(&self, name: PlayerName, pubkey: PublicKey, sig: Signature) -> Result<(), String>;
+    fn set_contract_info(&self, info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<(), String>;
+    fn get_contract_info(&self, name: PlayerName) -> Option<PlayerContractInfo>;
+    fn get_player_names(&self, pubkey: &PublicKey) -> Vec<PlayerName>;
+}
 
 #[derive(Debug, Default, Clone)]
 pub struct PlayerId(pub String); 
@@ -47,14 +55,4 @@ impl From<PublicKey> for PlayerId {
         let encoded = bech32::encode("player", pubkey_hash.to_base32()).unwrap();
         PlayerId(encoded)
     }
-}
-
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Default, Serialize, Deserialize)]
-pub struct PlayerName(pub String);
-
-pub trait PlayerNameService {
-    fn register_name(&self, name: PlayerName, pubkey: PublicKey, sig: Signature) -> Result<(), String>;
-    fn set_contract_info(&self, info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<(), String>;
-    fn get_contract_info(&self, name: PlayerName) -> Option<PlayerContractInfo>;
-    fn get_player_names(&self, pubkey: &PublicKey) -> Vec<PlayerName>;
 }

@@ -45,35 +45,46 @@ impl NamecoinRpcClient {
 
     pub async fn create_wallet(&self, name: &str) -> RpcResult<()> {
         let body = self.build_request_body("createwallet", &serde_json::to_string(name).unwrap());
-        let _r = self.post(body).await;
-        Ok(())
+        match self.post(body).await {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e.to_string())
+        }
     }
 
     pub async fn load_wallet(&self, name: &str) -> RpcResult<LoadWalletResponse> {
         let body = self.build_request_body("loadwallet", &serde_json::to_string(name).unwrap());
-        let r: LoadWalletResponse = self.post(body).await.unwrap().json().await.unwrap();
-        Ok(r)
+        match self.post(body).await {
+            Ok(r) => Ok(r.json::<LoadWalletResponse>().await.unwrap()),
+            Err(e) => Err(e.to_string())
+        }
+//        let r: LoadWalletResponse = self.post(body).await.unwrap().json().await.unwrap();
+//        Ok(r)
     }
 
     pub async fn get_new_address(&self) -> RpcResult<String> {
         let body = self.build_request_body("getnewaddress", "");
-        let r = self.post(body).await;
-        let r: RpcResponse = r.unwrap().json().await.unwrap();
-        Ok(r.result.unwrap())
+        match self.post(body).await {
+            Ok(r) => Ok(r.json::<RpcResponse>().await.unwrap().result.unwrap()),
+            Err(e) => Err(e.to_string())
+        }
     }
 
     pub async fn generate_to_address(&self, nblocks: u8, address: String) -> RpcResult<()> {
         let params = format!("{}, \"{}\"", nblocks, address);
         let body = self.build_request_body("generatetoaddress", &params);
-        let _r = self.post(body).await.unwrap();
-        Ok(())
+        match self.post(body).await {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e.to_string())
+        }
     }
 
     pub async fn import_pubkey(&self, pubkey: &PublicKey) -> RpcResult<()> {
         let body = self.build_request_body("importpubkey", 
             &serde_json::to_string(&pubkey.to_string()).unwrap());
-        let _r = self.post(body).await.unwrap();
-        Ok(())
+        match self.post(body).await {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e.to_string())
+        }
     }
 
     pub async fn name_new(&self, name: &str, dest_address: &str) -> RpcResult<(String, String)> {
@@ -83,12 +94,19 @@ impl NamecoinRpcClient {
             serde_json::to_string(NAME_ENCODING).unwrap(),
         );
         let body = self.build_request_body("name_new", &params);
-        let r: NameNewResponse = self.post(body).await.unwrap().json().await.unwrap();
-        if let Some(name_result) = r.result {
-            Ok((name_result[0].clone(), name_result[1].clone()))
-        } else {
-            let rpc_error = r.base.error.unwrap();
-            Err(format!("error {}: {}", rpc_error.code, rpc_error.message))
+        match self.post(body).await {
+            Ok(r) => {
+                let r = r.json::<NameNewResponse>().await.unwrap();
+                if let Some(name_result) = r.result {
+                    Ok((name_result[0].clone(), name_result[1].clone()))
+                } else {
+                    let rpc_error = r.base.error.unwrap();
+                    let e = format!("error {}: {}", rpc_error.code, rpc_error.message);
+                    println!("name new error: {}",e);
+                    Err(e)
+                }
+            },
+            Err(e) => Err(e.to_string()),
         }
     }
 
@@ -102,26 +120,32 @@ impl NamecoinRpcClient {
             serde_json::to_string(NAME_ENCODING).unwrap(),
         );
         let body = self.build_request_body("name_firstupdate", &params);
-        let r: RpcResponse = self.post(body).await.unwrap().json().await.unwrap();
-        Ok(r.result.unwrap())
+        match self.post(body).await {
+            Ok(r) => Ok(r.json::<RpcResponse>().await.unwrap().result.unwrap()),
+            Err(e) => Err(e.to_string()),
+        }
     }
 
     pub async fn _name_list(&self, name: Option<&str>) -> RpcResult<Vec<NameStatus>> {
         let params = serde_json::to_string(&name).unwrap();
         let body = self.build_request_body("name_list", &params);
-        let r: NameListResponse = self.post(body).await.unwrap().json().await.unwrap();
-        Ok(r.result)
+        match self.post(body).await {
+            Ok(r) => Ok(r.json::<NameListResponse>().await.unwrap().result),
+            Err(e) => Err(e.to_string()),
+        }
     }
 
     pub async fn name_scan(&self, start: Option<String>, count: Option<u32>, options: Option<NameScanOptions>) -> RpcResult<Vec<NameStatus>> {
         let params = format!("{}, {}, {}",
-            serde_json::to_string(&start).unwrap(),
-            serde_json::to_string(&count).unwrap(),
+            serde_json::to_string(&start.unwrap_or("player/".to_string())).unwrap(),
+            serde_json::to_string(&count.unwrap_or(50)).unwrap(),
             serde_json::to_string(&options).unwrap(),
         );
         let body = self.build_request_body("name_scan", &params);
-        let r: Vec<NameStatus> = self.post(body).await.unwrap().json().await.unwrap();
-        Ok(r)
+        match self.post(body).await {
+            Ok(r) => Ok(r.json::<NameScanResponse>().await.unwrap().result),
+            Err(e) => Err(e.to_string()),
+        }
     }
 }
 
@@ -166,6 +190,8 @@ pub struct NameNewResponse {
     #[serde(flatten)]
     pub base: BaseResponse,
 }
+
+type NameScanResponse = NameListResponse;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NameListResponse {

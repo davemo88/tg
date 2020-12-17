@@ -82,8 +82,9 @@ fn get_namecoin_address(pubkey: &PublicKey, network: Network) -> Result<Namecoin
 }
 
 async fn register_name_handler(name: String, pubkey: String, sig: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
+    let name = String::from_utf8(hex::decode(name).unwrap()).unwrap();
+    println!("register name \"{}\"", name);
     let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
-// if a player name is already controlled by this pubkey, deny registration
     let sig = Signature::from_compact(&hex::decode(sig).unwrap()).unwrap();
     let mut engine = sha256::HashEngine::default();
     engine.input(name.as_bytes());
@@ -104,12 +105,11 @@ async fn register_name_handler(name: String, pubkey: String, sig: String, nmc_rp
             let _r = nmc_rpc.generate_to_address(13, new_address.clone()).await;
             let _name_firstupdate_txid = nmc_rpc.name_firstupdate(&name, &rand, &name_new_txid, Some("hello world"), &name_address).await.unwrap();
             let _r = nmc_rpc.generate_to_address(1, new_address).await;
-// c        onfirm name_firstupdate_txid in the chain
+// TODO: confirm name_firstupdate_txid in the chain
             Ok(name)
         }
         Err(msg) => {
             Ok(msg)
-//            Err(warp::reject())
         }
     }
 }
@@ -138,7 +138,7 @@ async fn set_info_handler(contract_info: String, pubkey: String, sig: String, re
     Ok(format!("set contract info for {}", contract_info.name.0))
 }
 
-async fn get_name_handler(pubkey: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
+async fn get_names_handler(pubkey: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
     let options = NameScanOptions {
         name_encoding: "ascii".to_string(),
         value_encoding: "ascii".to_string(),
@@ -152,12 +152,7 @@ async fn get_name_handler(pubkey: String, nmc_rpc: NamecoinRpcClient) -> WebResu
     let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
     let namecoin_address = get_namecoin_address(&pubkey, NETWORK).unwrap();
     let controlled_players: Vec<NameStatus> = players.iter().filter(|p| p.address == namecoin_address).cloned().collect();
-    if controlled_players.len() > 0 {
-// TODO what if they registered multiple names ?
-        Ok(controlled_players[0].name.clone())
-    } else {
-        Err(warp::reject())
-    }
+    Ok(serde_json::to_string::<Vec<String>>(&controlled_players.iter().map(|p| p.name.replace("player/","")).collect()).unwrap())
 }
 
 fn redis_client() -> redis::Client {
@@ -170,19 +165,27 @@ fn redis_client() -> redis::Client {
 }
 
 async fn load_wallet(nmc_rpc_client: &NamecoinRpcClient) {
-    while let Some(err) = nmc_rpc_client.load_wallet("testwallet").await.unwrap().base.error {
-//        println!("err {}: {}", err.code, err.message);
-        match err.code {
-// wallet already loaded
-            -4 => {
-                break;
+    let mut wallet_loaded = false;
+    while !wallet_loaded {
+        if let Ok(r) = nmc_rpc_client.load_wallet("testwallet").await {
+            match r.base.error {
+                Some(err) => {
+                    match err.code {
+            // wallet already loaded
+                        -4 => {
+                            wallet_loaded = true;
+                        }
+            // no wallet loaded, try to create it
+                        -18 => nmc_rpc_client.create_wallet("testwallet").await.unwrap(),
+                        _ => ()
+                    }
+                }
+                None => wallet_loaded = true,
             }
-// no wallet loaded, try to create it
-            -18 => nmc_rpc_client.create_wallet("testwallet").await.unwrap(),
-            _ => ()
+
         }
         sleep(Duration::from_secs(1));
-    };
+    }
 }
 
 #[tokio::main]
@@ -217,10 +220,10 @@ async fn main() {
         .and(redis.clone())
         .and_then(get_info_handler);
 
-    let get_player_name = warp::path("get-player-name")
+    let get_player_name = warp::path("get-player-names")
         .and(warp::path::param::<String>())
         .and(nmc_rpc.clone())
-        .and_then(get_name_handler);
+        .and_then(get_names_handler);
 
     let routes = register_name
         .or(set_contract_info)
