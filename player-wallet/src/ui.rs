@@ -303,7 +303,10 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                     }
                 };
 
-                let arbiter_pubkey = ArbiterClient::new(ARBITER_PUBLIC_URL).get_escrow_pubkey().unwrap();
+                let arbiter_pubkey = match ArbiterClient::new(ARBITER_PUBLIC_URL).get_escrow_pubkey() {
+                    Ok(pubkey) => pubkey,
+                    Err(e) => return Err(TgError("can't create contract: couldn't get arbiter pubkey"))
+                };
 
 // TODO: this could fail if amount is too large
                 let contract = wallet.create_contract(p2_contract_info, amount, arbiter_pubkey);
