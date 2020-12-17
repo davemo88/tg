@@ -74,7 +74,6 @@ struct RbtrPublic {
 impl RbtrPublic {
     pub fn new(redis_client: redis::Client) -> Self {
         RbtrPublic {
-//            redis_client: redis::Client::open(REDIS_SERVER).unwrap()
             redis_client,
         }
     }

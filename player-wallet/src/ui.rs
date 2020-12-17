@@ -150,6 +150,9 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                         };
                         match wallet.db.insert_player(pr) {
                             Ok(_) => println!("registered player {}", name.0),
+// TODO: blockchain and wallet player db could be out of sync so
+// when registering a player, make sure it's not already in the database
+// and if it's already registered, see if we control it
                             Err(e) => println!("{:?}", e),
                         }
                     }
@@ -305,7 +308,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
 
                 let arbiter_pubkey = match ArbiterClient::new(ARBITER_PUBLIC_URL).get_escrow_pubkey() {
                     Ok(pubkey) => pubkey,
-                    Err(e) => return Err(TgError("can't create contract: couldn't get arbiter pubkey"))
+                    Err(_) => return Err(TgError("can't create contract: couldn't get arbiter pubkey"))
                 };
 
 // TODO: this could fail if amount is too large

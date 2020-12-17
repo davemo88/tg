@@ -45,6 +45,7 @@ use rpc::{
     NamecoinRpcClient,
     NameScanOptions,
     NameStatus,
+    STRING_ENCODING,
 };
 
 // docker-compose hostname
@@ -83,7 +84,6 @@ fn get_namecoin_address(pubkey: &PublicKey, network: Network) -> Result<Namecoin
 
 async fn register_name_handler(name: String, pubkey: String, sig: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
     let name = String::from_utf8(hex::decode(name).unwrap()).unwrap();
-    println!("register name \"{}\"", name);
     let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
     let sig = Signature::from_compact(&hex::decode(sig).unwrap()).unwrap();
     let mut engine = sha256::HashEngine::default();
@@ -140,8 +140,8 @@ async fn set_info_handler(contract_info: String, pubkey: String, sig: String, re
 
 async fn get_names_handler(pubkey: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
     let options = NameScanOptions {
-        name_encoding: "ascii".to_string(),
-        value_encoding: "ascii".to_string(),
+        name_encoding: STRING_ENCODING.to_string(),
+        value_encoding: STRING_ENCODING.to_string(),
         min_conf: None,
         max_conf: 99999,
         prefix: "player/".to_string(),

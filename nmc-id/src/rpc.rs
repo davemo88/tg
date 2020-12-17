@@ -10,7 +10,7 @@ use serde::{
 };
 use tglib::bdk::bitcoin::PublicKey;
 
-pub const NAME_ENCODING: &'static str = "ascii";
+pub const STRING_ENCODING: &'static str = "utf8";
 
 pub const JSONRPC_VERSION: &'static str = "1.0";
 pub const JSONRPC_ID: &'static str = "nmc-id-test";
@@ -91,7 +91,7 @@ impl NamecoinRpcClient {
         let params = format!("{}, {{\"destAddress\":{}, \"nameEncoding\":{}}}",
             serde_json::to_string(name).unwrap(),
             serde_json::to_string(dest_address).unwrap(),
-            serde_json::to_string(NAME_ENCODING).unwrap(),
+            serde_json::to_string(STRING_ENCODING).unwrap(),
         );
         let body = self.build_request_body("name_new", &params);
         match self.post(body).await {
@@ -102,7 +102,6 @@ impl NamecoinRpcClient {
                 } else {
                     let rpc_error = r.base.error.unwrap();
                     let e = format!("error {}: {}", rpc_error.code, rpc_error.message);
-                    println!("name new error: {}",e);
                     Err(e)
                 }
             },
@@ -111,17 +110,24 @@ impl NamecoinRpcClient {
     }
 
     pub async fn name_firstupdate(&self, name: &str, rand: &str, txid: &str, value: Option<&str>, dest_address: &str) -> RpcResult<String> {
-        let params = format!("{}, {}, {}, {}, {{\"destAddress\":{}, \"nameEncoding\":{}}}",
+        let params = format!("{}, {}, {}, {}, {{\"destAddress\":{}, \"nameEncoding\":{}, \"valueEncoding\":{}}}",
             serde_json::to_string(name).unwrap(),
             serde_json::to_string(rand).unwrap(),
             serde_json::to_string(txid).unwrap(),
             serde_json::to_string(value.unwrap_or_default()).unwrap(),
             serde_json::to_string(dest_address).unwrap(),
-            serde_json::to_string(NAME_ENCODING).unwrap(),
+            serde_json::to_string(STRING_ENCODING).unwrap(),
+            serde_json::to_string(STRING_ENCODING).unwrap(),
         );
         let body = self.build_request_body("name_firstupdate", &params);
         match self.post(body).await {
-            Ok(r) => Ok(r.json::<RpcResponse>().await.unwrap().result.unwrap()),
+            Ok(r) => {
+                let r = r.json::<RpcResponse>().await.unwrap();
+                match r.result {
+                    Some(txid) => Ok(txid),
+                    None => Err(format!("{:?}",r)),
+                }
+            },
             Err(e) => Err(e.to_string()),
         }
     }
@@ -143,7 +149,9 @@ impl NamecoinRpcClient {
         );
         let body = self.build_request_body("name_scan", &params);
         match self.post(body).await {
-            Ok(r) => Ok(r.json::<NameScanResponse>().await.unwrap().result),
+            Ok(r) => {
+                Ok(r.json::<NameScanResponse>().await.unwrap().result)
+            },
             Err(e) => Err(e.to_string()),
         }
     }
