@@ -30,7 +30,8 @@ impl PlayerNameService for PlayerNameClient {
         );
         let response = reqwest::blocking::get(&body).unwrap();
         let body = String::from(response.text().unwrap());
-// weird
+// response contrains name because the endpoint has to implement
+// the warp::Reply trait, and so can't return () for success
         if body == name.0 {
             Ok(())
         } else {
@@ -55,10 +56,13 @@ impl PlayerNameService for PlayerNameClient {
         Some(info)
     }
 
-    fn get_player_name(&self, pubkey: &PublicKey) -> Option<PlayerName> {
-        let response = reqwest::blocking::get(&format!("{}/get-player-name/{}", self.0, hex::encode(pubkey.to_bytes()))).unwrap();
-        let body = String::from(response.text().unwrap());
-        Some(PlayerName(body))
+    fn get_player_names(&self, pubkey: &PublicKey) -> Vec<PlayerName> {
+        let response = reqwest::blocking::get(&format!("{}/get-player-name/{}", self.0, hex::encode(pubkey.to_bytes())));
+        match response {
+            Ok(body) => body.json().unwrap(),
+            Err(_) => Vec::new(),
+        }
+//        response.json().unwrap()
     }
 
 }

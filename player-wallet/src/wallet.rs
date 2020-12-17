@@ -38,10 +38,6 @@ use tglib::{
         Contract,
         PlayerContractInfo,
     },
-    player::{
-        PlayerName,
-        PlayerNameService,
-    },
     wallet::{
         create_escrow_address,
         create_payout_script,
@@ -56,17 +52,14 @@ use tglib::{
         DB_NAME,
         ESCROW_SUBACCOUNT,
         ESCROW_KIX,
-        NAME_SERVICE_URL,
     },
 };
 use crate::{
     arbiter::ArbiterClient,
     db::DB,
-    player::PlayerNameClient,
 };
 
 pub struct PlayerWallet {
-//    fingerprint: Fingerprint,
     xpubkey: ExtendedPubKey,
     network: Network,
     pub wallet: Wallet<ElectrumBlockchain, MemoryDatabase>,
@@ -84,7 +77,6 @@ impl PlayerWallet {
         let _ = db.create_tables();
 
         PlayerWallet {
-//            fingerprint,
             xpubkey,
             network,
             wallet: Wallet::new(
@@ -97,10 +89,6 @@ impl PlayerWallet {
             db,
 
         }
-    }
-
-    pub fn player_name(&self) -> PlayerName {
-        PlayerName("wtf goes here lol".to_string())
     }
 
     pub fn balance(&self) -> Amount {
@@ -201,12 +189,6 @@ impl PlayerWallet {
 }
 
 impl NameWallet for PlayerWallet {
-    fn name(&self) -> PlayerName {
-// TODO: get from local config / cache
-        let player_name_client = PlayerNameClient::new(NAME_SERVICE_URL);
-        player_name_client.get_player_name(&self.name_pubkey()).unwrap()
-    }
-
     fn name_pubkey(&self) -> PublicKey {
         let secp = Secp256k1::new();
         let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX))).unwrap();

@@ -35,7 +35,6 @@ use crate::{
     TgError,
     contract::Contract,
     payout::Payout,
-    player::PlayerName,
     script::{
         TgScript,
         TgScriptEnv,
@@ -54,7 +53,6 @@ pub const NAME_SUBACCOUNT: &'static str = "17";
 pub const NAME_KIX: &'static str = "0";
 
 pub trait NameWallet {
-    fn name(&self) -> PlayerName;
     fn name_pubkey(&self) -> PublicKey;
 }
 

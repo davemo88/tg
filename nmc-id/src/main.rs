@@ -5,7 +5,6 @@ use std::{
 use redis::{
     self,
     AsyncCommands,
-    aio::Connection,
     RedisResult,
 };
 use warp::{
@@ -24,9 +23,7 @@ use tglib::{
                 Secp256k1,
                 Signature,
             },
-            util::{
-                base58,
-            },
+            util::base58,
             hashes::{
                 ripemd160,
                 sha256,
@@ -44,7 +41,11 @@ use tglib::{
 };
 
 mod rpc;
-use rpc::NamecoinRpcClient;
+use rpc::{
+    NamecoinRpcClient,
+    NameScanOptions,
+    NameStatus,
+};
 
 // docker-compose hostname
 pub const NAMECOIN_RPC_URL: &'static str = "http://guyledouche:yodelinbabaganoush@nmcd:18443";
@@ -82,6 +83,7 @@ fn get_namecoin_address(pubkey: &PublicKey, network: Network) -> Result<Namecoin
 
 async fn register_name_handler(name: String, pubkey: String, sig: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
     let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
+// if a player name is already controlled by this pubkey, deny registration
     let sig = Signature::from_compact(&hex::decode(sig).unwrap()).unwrap();
     let mut engine = sha256::HashEngine::default();
     engine.input(name.as_bytes());
@@ -110,7 +112,6 @@ async fn register_name_handler(name: String, pubkey: String, sig: String, nmc_rp
 //            Err(warp::reject())
         }
     }
-// TODO: need to handle case in which name is already registered
 }
 
 async fn get_info_handler(player_name: String, redis: redis::Client) -> WebResult<impl Reply>{
@@ -137,9 +138,26 @@ async fn set_info_handler(contract_info: String, pubkey: String, sig: String, re
     Ok(format!("set contract info for {}", contract_info.name.0))
 }
 
-async fn get_name_handler(pubkey: String, _nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
-    let _pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
-    Ok("unimplemented")
+async fn get_name_handler(pubkey: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
+    let options = NameScanOptions {
+        name_encoding: "ascii".to_string(),
+        value_encoding: "ascii".to_string(),
+        min_conf: None,
+        max_conf: 99999,
+        prefix: "player/".to_string(),
+        regexp: "".to_string(),
+    };
+
+    let players = nmc_rpc.name_scan(None, None, Some(options)).await.unwrap();
+    let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
+    let namecoin_address = get_namecoin_address(&pubkey, NETWORK).unwrap();
+    let controlled_players: Vec<NameStatus> = players.iter().filter(|p| p.address == namecoin_address).cloned().collect();
+    if controlled_players.len() > 0 {
+// TODO what if they registered multiple names ?
+        Ok(controlled_players[0].name.clone())
+    } else {
+        Err(warp::reject())
+    }
 }
 
 fn redis_client() -> redis::Client {

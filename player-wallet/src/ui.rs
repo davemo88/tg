@@ -132,7 +132,7 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
     if let (c, Some(a)) = subcommand {
         match c {
             "register" => {
-                let name = PlayerName(a.args["name"].vals[0].clone().into_string().unwrap());
+                let name = PlayerName(a.value_of("name").unwrap().to_string());
                 let name_client = PlayerNameClient::new(NAME_SERVICE_URL);
                 let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
                 let mut engine = sha256::HashEngine::default();
@@ -157,7 +157,7 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
             }
             "add" => {
                 let player = db::PlayerRecord {
-                    name:       PlayerName(a.args["name"].vals[0].clone().into_string().unwrap()),
+                    name:       PlayerName(a.value_of("name").unwrap().to_string()),
                 };
                 match wallet.db.insert_player(player.clone()) {
                     Ok(_) => println!("added player {}", player.name.0),
@@ -171,7 +171,7 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 }
             }
             "remove" => {
-                let player_name = PlayerName(a.args["name"].vals[0].clone().into_string().unwrap());
+                let player_name = PlayerName(a.value_of("name").unwrap().to_string());
                 match wallet.db.delete_player(player_name.clone()) {
                     Ok(num_deleted) => match num_deleted {
                         0 => println!("no player with that name"),
@@ -181,8 +181,9 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                     Err(e) => println!("{:?}", e),
                 }
             },
-            "name" => {
-                println!("{}", wallet.player_name().0);
+            "mine" => {
+                let names = PlayerNameClient::new(NAME_SERVICE_URL);
+                println!("{:?}", names.get_player_names(&wallet.name_pubkey()));
             }
             _ => {
                 println!("command '{}' is not implemented", c);
@@ -191,7 +192,6 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
     }
     Ok(())
 }
-
 
 pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
     App::new("contract")

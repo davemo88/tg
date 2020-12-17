@@ -106,17 +106,26 @@ impl NamecoinRpcClient {
         Ok(r.result.unwrap())
     }
 
-    pub async fn name_list(&self, name: Option<&str>) -> RpcResult<Vec<NameStatus>> {
-        let params = if let Some(name) = name {
-            serde_json::to_string(name).unwrap()
-        } else {
-            "".to_string()
-        };
+    pub async fn _name_list(&self, name: Option<&str>) -> RpcResult<Vec<NameStatus>> {
+        let params = serde_json::to_string(&name).unwrap();
         let body = self.build_request_body("name_list", &params);
         let r: NameListResponse = self.post(body).await.unwrap().json().await.unwrap();
         Ok(r.result)
     }
+
+    pub async fn name_scan(&self, start: Option<String>, count: Option<u32>, options: Option<NameScanOptions>) -> RpcResult<Vec<NameStatus>> {
+        let params = format!("{}, {}, {}",
+            serde_json::to_string(&start).unwrap(),
+            serde_json::to_string(&count).unwrap(),
+            serde_json::to_string(&options).unwrap(),
+        );
+        let body = self.build_request_body("name_scan", &params);
+        let r: Vec<NameStatus> = self.post(body).await.unwrap().json().await.unwrap();
+        Ok(r)
+    }
 }
+
+type RpcResult<T> = Result<T, String>;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RpcError {
@@ -182,4 +191,12 @@ pub struct NameStatus {
     pub expired: bool,
 }
 
-type RpcResult<T> = Result<T, String>;
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NameScanOptions {
+    pub name_encoding: String,
+    pub value_encoding: String,
+    pub min_conf: Option<i64>,
+    pub max_conf: i64,
+    pub prefix: String,
+    pub regexp: String,
+}
