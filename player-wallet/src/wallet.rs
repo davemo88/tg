@@ -74,7 +74,7 @@ impl PlayerWallet {
         let mut db_path = current_dir().unwrap();
         db_path.push(DB_NAME);
         let db = DB::new(&db_path).unwrap();
-        let _ = db.create_tables();
+        let _r = db.create_tables().unwrap();
 
         PlayerWallet {
             xpubkey,

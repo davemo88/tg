@@ -149,7 +149,7 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                             name: name.clone(),
                         };
                         match wallet.db.insert_player(pr) {
-                            Ok(_) => println!("added player {}", name.0),
+                            Ok(_) => println!("registered player {}", name.0),
                             Err(e) => println!("{:?}", e),
                         }
                     }
@@ -289,6 +289,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
 
                 let player_name_client = PlayerNameClient::new(NAME_SERVICE_URL);
                 if !player_name_client.get_player_names(&wallet.name_pubkey()).contains(&p1_name) {
+                    println!("can't create contract: p1 name not controlled by local wallet");
                     return Err(TgError("can't create contract: p1 name not controlled by local wallet"))
                 }
 
@@ -296,7 +297,10 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
 // if p2 is uneegistered, they can't have posted contract info
                 let p2_contract_info = match player_name_client.get_contract_info(p2_name.clone()) {
                     Some(info) => info,
-                    None => return Err(TgError("can't create contract: can't fetch p2 contract info")),
+                    None => {
+                        println!("can't create contract: can't fetch p2 contract info");
+                        return Err(TgError("can't create contract: couldn't fetch p2 contract info"))
+                    }
                 };
 
                 let arbiter_pubkey = ArbiterClient::new(ARBITER_PUBLIC_URL).get_escrow_pubkey().unwrap();

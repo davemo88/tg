@@ -52,8 +52,10 @@ impl PlayerNameService for PlayerNameClient {
     fn get_contract_info(&self, player_name: PlayerName) -> Option<PlayerContractInfo> {
         let response = reqwest::blocking::get(&format!("{}/get-contract-info/{}", self.0, player_name.0)).unwrap();
         let body = String::from(response.text().unwrap());
-        let info: PlayerContractInfo = serde_json::from_str(&body).unwrap();
-        Some(info)
+        match serde_json::from_str::<PlayerContractInfo>(&body) {
+            Ok(info) => Some(info),
+            Err(_) => None,
+        }
     }
 
     fn get_player_names(&self, pubkey: &PublicKey) -> Vec<PlayerName> {

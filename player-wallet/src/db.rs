@@ -59,7 +59,7 @@ impl DB {
         self.conn.execute_batch(
             "BEGIN;
                 CREATE TABLE IF NOT EXISTS player (
-                    name              TEXT PRIMARY KEY,
+                    name              TEXT PRIMARY KEY
                 );
                 CREATE TABLE IF NOT EXISTS contract (
                     cxid            TEXT PRIMARY KEY,
