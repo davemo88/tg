@@ -187,7 +187,10 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
             },
             "mine" => {
                 let names = PlayerNameClient::new(NAME_SERVICE_URL);
-                println!("{:?}", names.get_player_names(&wallet.name_pubkey()));
+                for pn in names.get_player_names(&wallet.name_pubkey()) {
+                    println!("{}", pn.0)
+                }
+//                println!("{}", names.get_player_names(&wallet.name_pubkey()));
             }
             _ => {
                 println!("command '{}' is not implemented", c);

@@ -1,5 +1,6 @@
 use std::{
     convert::From,
+    fmt,
 };
 use serde::{
     Serialize,
@@ -24,6 +25,13 @@ use crate::contract::PlayerContractInfo;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct PlayerName(pub String);
+
+impl fmt::Display for PlayerName {
+    // This trait requires `fmt` with this exact signature.
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 pub trait PlayerNameService {
     fn register_name(&self, name: PlayerName, pubkey: PublicKey, sig: Signature) -> Result<(), String>;
