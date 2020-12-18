@@ -121,7 +121,7 @@ async fn register_name_handler(name: String, pubkey: String, sig: String, nmc_rp
 
 async fn get_contract_info_handler(player_name: String, redis: redis::Client) -> WebResult<impl Reply>{
     let mut con = redis.get_async_connection().await.unwrap();
-    let r: RedisResult<String> = con.get(&player_name) .await;
+    let r: RedisResult<String> = con.get(&String::from_utf8(hex::decode(player_name).unwrap()).unwrap()).await;
     match r {
         Ok(info) => Ok(info),
         Err(_) => Err(warp::reject()),

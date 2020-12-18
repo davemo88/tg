@@ -60,7 +60,7 @@ impl PlayerNameService for PlayerNameClient {
     }
 
     fn get_contract_info(&self, player_name: PlayerName) -> Option<PlayerContractInfo> {
-        match self.get("get-contract-info", &hex::encode(player_name.0)) {
+        match self.get("get-contract-info", &hex::encode(player_name.0.as_bytes())) {
             Ok(response) => {
                 match serde_json::from_str::<PlayerContractInfo>(&response.text().unwrap()) {
                     Ok(info) => Some(info),
