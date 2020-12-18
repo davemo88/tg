@@ -119,7 +119,7 @@ async fn register_name_handler(name: String, pubkey: String, sig: String, nmc_rp
     }
 }
 
-async fn get_info_handler(player_name: String, redis: redis::Client) -> WebResult<impl Reply>{
+async fn get_contract_info_handler(player_name: String, redis: redis::Client) -> WebResult<impl Reply>{
     let mut con = redis.get_async_connection().await.unwrap();
     let r: RedisResult<String> = con.get(&player_name).await;
     if let Ok(info) = r {
@@ -129,7 +129,7 @@ async fn get_info_handler(player_name: String, redis: redis::Client) -> WebResul
     }
 }
 
-async fn set_info_handler(contract_info: String, pubkey: String, sig: String, redis: redis::Client) -> WebResult<impl Reply>{
+async fn set_contract_info_handler(contract_info: String, pubkey: String, sig: String, redis: redis::Client) -> WebResult<impl Reply>{
     let contract_info: PlayerContractInfo = serde_json::from_str(&contract_info).unwrap();
     let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
     let sig = Signature::from_compact(&hex::decode(sig).unwrap()).unwrap();
@@ -143,7 +143,7 @@ async fn set_info_handler(contract_info: String, pubkey: String, sig: String, re
     Ok(format!("set contract info for {}", contract_info.name.0))
 }
 
-async fn get_names_handler(pubkey: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
+async fn get_player_names_handler(pubkey: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
     let options = NameScanOptions {
         name_encoding: STRING_ENCODING.to_string(),
         value_encoding: STRING_ENCODING.to_string(),
@@ -218,17 +218,17 @@ async fn main() {
         .and(warp::path::param::<String>())
         .and(warp::path::param::<String>())
         .and(redis.clone())
-        .and_then(set_info_handler);
+        .and_then(set_contract_info_handler);
 
     let get_contract_info = warp::path("get-contract-info")
         .and(warp::path::param::<String>())
         .and(redis.clone())
-        .and_then(get_info_handler);
+        .and_then(get_contract_info_handler);
 
     let get_player_name = warp::path("get-player-names")
         .and(warp::path::param::<String>())
         .and(nmc_rpc.clone())
-        .and_then(get_names_handler);
+        .and_then(get_player_names_handler);
 
     let routes = register_name
         .or(set_contract_info)

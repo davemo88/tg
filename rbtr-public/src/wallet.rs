@@ -31,7 +31,6 @@ use tglib::{
 const ESCROW_KIX: u64 = 0;
 
 pub struct Wallet<B, D> where B: BlockchainMarker, D: BatchDatabase {
-//    fingerprint: Fingerprint,
     pub xpubkey: ExtendedPubKey,
     pub network: Network,
     escrow_kix: u64,
@@ -49,7 +48,6 @@ where
         let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
 
         Ok(Wallet {
-//            fingerprint,
             xpubkey,
             network,
             wallet: BdkWallet::new(
@@ -71,7 +69,6 @@ where
         let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
 
         Wallet {
-//            fingerprint,
             xpubkey,
             network,
             wallet: BdkWallet::new_offline(
