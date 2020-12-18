@@ -102,8 +102,13 @@ async fn register_name_handler(name: String, pubkey: String, sig: String, nmc_rp
     let new_address = nmc_rpc.get_new_address().await.unwrap();
     match nmc_rpc.name_new(&name, &new_address).await {
         Ok((name_new_txid, rand)) => {
+// need 12 blocks on top of the name_new
             let _r = nmc_rpc.generate_to_address(13, new_address.clone()).await;
-            let _name_firstupdate_txid = nmc_rpc.name_firstupdate(&name, &rand, &name_new_txid, Some("hello world"), &name_address).await.unwrap();
+//            let _name_firstupdate_txid = nmc_rpc.name_firstupdate(&name, &rand, &name_new_txid, Some("hello world"), &name_address).await.unwrap();
+            match nmc_rpc.name_firstupdate(&name, &rand, &name_new_txid, Some("hello world"), &name_address).await {
+                Ok(_txid) => (),
+                Err(e) => return Ok(e.to_string())
+            }
             let _r = nmc_rpc.generate_to_address(1, new_address).await;
 // TODO: confirm name_firstupdate_txid in the chain
             Ok(name)
@@ -171,11 +176,11 @@ async fn load_wallet(nmc_rpc_client: &NamecoinRpcClient) {
             match r.base.error {
                 Some(err) => {
                     match err.code {
-            // wallet already loaded
+// wallet already loaded
                         -4 => {
                             wallet_loaded = true;
                         }
-            // no wallet loaded, try to create it
+// no wallet loaded, try to create it
                         -18 => nmc_rpc_client.create_wallet("testwallet").await.unwrap(),
                         _ => ()
                     }
@@ -237,29 +242,10 @@ async fn main() {
 mod tests {
 
     use super::*;
-//    use std::str::FromStr;
-    use tglib::{
-        hex,
-//        bdk::bitcoin::{
-//            util::bip32::DerivationPath,
-//        },
-//        bip39::Mnemonic,
-//        wallet::{
-//            EscrowWallet,
-//            SigningWallet,
-//            BITCOIN_ACCOUNT_PATH,
-//        },
-//        mock::{
-//            Trezor,
-//            ESCROW_SUBACCOUNT,
-//            ESCROW_KIX,
-//            PLAYER_1_MNEMONIC,
-//        },
-    };
+    use tglib::hex;
 
     const PUBKEY: &'static str = "02123e6a7816f2149f90cca1ea1ba41b73e77db44cd71f01c184defd10961d03fc";
     const TESTNET_ADDRESS_FROM_NAMECOIND: &'static str = "mfuf8qvMsMJMgBqtEGBt8aCQPQi1qgANzo";
-//    const TEST_NAME: &'static str = "Arbor";
 
     #[test]
     fn test_get_namecoin_address() {
@@ -267,32 +253,4 @@ mod tests {
         let namecoin_address = get_namecoin_address(&pubkey, Network::Testnet).unwrap();
         assert_eq!(namecoin_address,TESTNET_ADDRESS_FROM_NAMECOIND)
     }
-
-//    #[test]
-//    fn test_name_list() {
-//        let nmc_id = NmcId::new();
-//        let r = nmc_id.rpc_client.name_list(None);
-//        for name_status in r.unwrap() {
-//            println!("{:?} => {:?}", name_status.address, name_status.name);
-//        } 
-//    }
-//
-//    #[test]
-//    fn test_register_name() {
-//        let wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-//        let pubkey = wallet.get_escrow_pubkey();
-//        
-//        let mut engine = sha256::HashEngine::default();
-//        engine.input(TEST_NAME.as_bytes());
-//        let hash: &[u8] = &sha256::Hash::from_engine(engine);
-//
-//        let sig = wallet.sign_message(
-//            Message::from_slice(hash).unwrap(),
-//            DerivationPath::from_str(&format!("m/{}/{}/{}", BITCOIN_ACCOUNT_PATH, ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(),
-//        ).unwrap();
-//
-//        let nmc_id = NmcId::new();
-//        let _r = nmc_id.rpc_client.load_wallet("testwallet");
-//        let _name = nmc_id.register_name(PlayerName(TEST_NAME.to_string()), pubkey, sig);
-//    }
 }
