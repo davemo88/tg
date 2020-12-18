@@ -20,8 +20,12 @@ use bdk::bitcoin::{
 };
 use crate::{
     Result,
-    contract::Contract,
+    contract::{
+        Contract,
+        PlayerContractInfo,
+    },
     payout::Payout,
+    player::PlayerName,
 };
 
 #[derive(Debug, Default, Clone)]
@@ -41,6 +45,8 @@ impl From<ExtendedPubKey> for ArbiterId {
 pub trait ArbiterService {
     fn get_escrow_pubkey(&self) -> Result<PublicKey>;
     fn get_fee_address(&self) -> Result<Address>;
+    fn set_contract_info(&self, info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<()>;
+    fn get_contract_info(&self, name: PlayerName) -> Option<PlayerContractInfo>;
     fn submit_contract(&self, contract: &Contract) -> Result<Signature>;
     fn submit_payout(&self, payout: &Payout) -> Result<PartiallySignedTransaction>;
 }

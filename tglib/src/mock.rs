@@ -128,7 +128,7 @@ impl SigningWallet for Trezor {
             }
             Err(e) => {
                 println!("err: {:?}", e);
-                Err(TgError("cannot sign transaction"))
+                Err(TgError("cannot sign transaction".to_string()))
             }
         }
     }
@@ -152,7 +152,7 @@ impl EscrowWallet for Trezor {
 
     fn validate_contract(&self, contract: &Contract) -> TgResult<()> {
         if contract.arbiter_pubkey != self.get_escrow_pubkey() {
-            return Err(TgError("unexpected arbiter pubkey"));
+            return Err(TgError("unexpected arbiter pubkey".to_string()));
         }
         contract.validate()
     }

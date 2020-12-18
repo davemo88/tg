@@ -78,7 +78,7 @@ impl Payout {
             return Ok(p)
         }
         else {
-            return Err(TgError("couldn't parse payout"))
+            return Err(TgError("couldn't parse payout".to_string()))
         }
     }
 
@@ -90,7 +90,7 @@ impl Payout {
                 return Ok(Address::from_script(&txout.script_pubkey, NETWORK).unwrap())
             }
         };
-        Err(TgError("couldn't determine payout address"))
+        Err(TgError("couldn't determine payout address".to_string()))
     }
 
     pub fn recipient_pubkey(&self) -> Result<PublicKey> {
@@ -100,7 +100,7 @@ impl Payout {
         } else if address == Address::p2wpkh(&self.contract.p2_pubkey, address.network).unwrap() {
             Ok(self.contract.p2_pubkey.clone())
         } else {
-            Err(TgError("couldn't determine recipient pubkey"))
+            Err(TgError("couldn't determine recipient pubkey".to_string()))
         }
     }
 }

@@ -95,7 +95,7 @@ where
 
     fn validate_contract(&self, contract: &Contract) -> Result<()> {
         if contract.arbiter_pubkey != EscrowWallet::get_escrow_pubkey(self) {
-            return Err(TgError("unexpected arbiter pubkey"));
+            return Err(TgError("unexpected arbiter pubkey".to_string()));
         }
         contract.validate()
     }

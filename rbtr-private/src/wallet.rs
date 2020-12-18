@@ -72,7 +72,7 @@ impl EscrowWallet for Wallet {
     fn validate_contract(&self, contract: &Contract) -> TgResult<()> {
 // TODO: better fee validation
         if contract.arbiter_pubkey != self.get_escrow_pubkey() {
-            return Err(TgError("unexpected arbiter pubkey"));
+            return Err(TgError("unexpected arbiter pubkey".to_string()));
         }
         contract.validate()
     }

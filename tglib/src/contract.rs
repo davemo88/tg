@@ -119,7 +119,7 @@ impl Contract {
             Ok(c)
         }
         else {
-            Err(TgError("couldn't parse contract"))
+            Err(TgError("couldn't parse contract".to_string()))
         }
     }
 
@@ -130,7 +130,7 @@ impl Contract {
                 return Ok(Amount::from_sat(txout.value))
             }
         }
-        Err(TgError("couldn't determine amount"))
+        Err(TgError("couldn't determine amount".to_string()))
     }
 
     pub fn fee(&self) -> Result<Address> {
@@ -140,7 +140,7 @@ impl Contract {
                return Ok(Address::from_script(&txout.script_pubkey, NETWORK).unwrap())
             }
         }
-        Err(TgError("fee not found"))
+        Err(TgError("fee not found".to_string()))
     }
 
     pub fn validate(&self) -> Result<()> {
@@ -165,7 +165,7 @@ impl Contract {
             NETWORK,
         );
         if self.payout_script != payout_script {
-            Err(TgError("invalid payout script"))
+            Err(TgError("invalid payout script".to_string()))
         } else {
             Ok(())
         }
@@ -179,10 +179,10 @@ impl Contract {
                 0 => self.p1_pubkey.key,
                 1 => self.p2_pubkey.key,
                 2 => self.arbiter_pubkey.key,
-                _ => return Err(TgError("too many signatures")),
+                _ => return Err(TgError("too many signatures".to_string())),
             };
             if secp.verify(&msg, &sig, &pubkey).is_err() {
-                return Err(TgError("invalid signature"))
+                return Err(TgError("invalid signature".to_string()))
             }
         };
         Ok(())

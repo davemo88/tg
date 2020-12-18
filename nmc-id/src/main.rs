@@ -2,11 +2,6 @@ use std::{
     thread::sleep,
     time::Duration,
 };
-use redis::{
-    self,
-    AsyncCommands,
-    RedisResult,
-};
 use warp::{
     Filter,
     Reply,
@@ -33,11 +28,7 @@ use tglib::{
         },
     },
     hex,
-    contract::PlayerContractInfo,
-    mock::{
-        NETWORK,
-        REDIS_SERVER,
-    }
+    mock::NETWORK,
 };
 
 mod rpc;
@@ -120,32 +111,6 @@ async fn register_name_handler(name: String, pubkey: String, sig: String, nmc_rp
     }
 }
 
-async fn get_contract_info_handler(player_name: String, redis: redis::Client) -> WebResult<impl Reply>{
-    let mut con = redis.get_async_connection().await.unwrap();
-    let r: RedisResult<String> = con.get(&String::from_utf8(hex::decode(player_name).unwrap()).unwrap()).await;
-    match r {
-        Ok(info) => Ok(info),
-        Err(_) => Err(warp::reject()),
-    }
-}
-
-async fn set_contract_info_handler(contract_info: String, pubkey: String, sig: String, redis: redis::Client) -> WebResult<impl Reply>{
-    let contract_info: PlayerContractInfo = serde_json::from_str(&String::from_utf8(hex::decode(&contract_info).unwrap()).unwrap()).unwrap();
-    let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
-    let sig = Signature::from_compact(&hex::decode(sig).unwrap()).unwrap();
-    let secp = Secp256k1::new();
-    if secp.verify(&Message::from_slice(&contract_info.hash()).unwrap(), &sig, &pubkey.key).is_err() {
-        return Err(warp::reject())
-    }
-
-    let mut con = redis.get_async_connection().await.unwrap();
-    let r: RedisResult<String> = con.set(contract_info.name.clone().0, &serde_json::to_string(&contract_info).unwrap()).await;
-    match r {
-        Ok(_string) => Ok(format!("set contract info for {}", contract_info.name.0)),
-        Err(_) => Err(warp::reject()),
-    }
-}
-
 async fn get_player_names_handler(pubkey: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
     let options = NameScanOptions {
         name_encoding: STRING_ENCODING.to_string(),
@@ -161,15 +126,6 @@ async fn get_player_names_handler(pubkey: String, nmc_rpc: NamecoinRpcClient) ->
     let namecoin_address = get_namecoin_address(&pubkey, NETWORK).unwrap();
     let controlled_players: Vec<NameStatus> = players.iter().filter(|p| p.address == namecoin_address).cloned().collect();
     Ok(serde_json::to_string::<Vec<String>>(&controlled_players.iter().map(|p| p.name.replace(PLAYER_NAME_PREFIX,"")).collect()).unwrap())
-}
-
-fn redis_client() -> redis::Client {
-    let mut client = redis::Client::open(REDIS_SERVER);
-    while client.is_err() {
-        sleep(Duration::from_secs(1));
-        client = redis::Client::open(REDIS_SERVER);
-    }
-    client.unwrap()
 }
 
 async fn load_wallet(nmc_rpc_client: &NamecoinRpcClient) {
@@ -205,8 +161,6 @@ async fn main() {
     let new_address = nmc_rpc_client.get_new_address().await.unwrap();
     let _r = nmc_rpc_client.generate_to_address(150, new_address).await;
 
-    let redis_client = redis_client();
-    let redis = warp::any().map(move || redis_client.clone()); 
     let nmc_rpc = warp::any().map(move || nmc_rpc_client.clone());
 
     let register_name = warp::path("register-name")
@@ -216,26 +170,12 @@ async fn main() {
         .and(nmc_rpc.clone())
         .and_then(register_name_handler);
 
-    let set_contract_info = warp::path("set-contract-info")
-        .and(warp::path::param::<String>())
-        .and(warp::path::param::<String>())
-        .and(warp::path::param::<String>())
-        .and(redis.clone())
-        .and_then(set_contract_info_handler);
-
-    let get_contract_info = warp::path("get-contract-info")
-        .and(warp::path::param::<String>())
-        .and(redis.clone())
-        .and_then(get_contract_info_handler);
-
     let get_player_name = warp::path("get-player-names")
         .and(warp::path::param::<String>())
         .and(nmc_rpc.clone())
         .and_then(get_player_names_handler);
 
     let routes = register_name
-        .or(set_contract_info)
-        .or(get_contract_info)
         .or(get_player_name);
 
     warp::serve(routes).run(([0, 0, 0, 0], 18420)).await;

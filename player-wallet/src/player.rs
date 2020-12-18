@@ -1,12 +1,10 @@
 use reqwest;
-use serde_json;
 use tglib::{
     bdk::bitcoin::{
         secp256k1::Signature,
         PublicKey,
     },
     hex,
-    contract::PlayerContractInfo,
     player::{
         PlayerName,
         PlayerNameService,
@@ -44,30 +42,6 @@ impl PlayerNameService for PlayerNameClient {
                 }
             }
             Err(_) => Err("rpc call to namecoind failed".to_string())
-        }
-    }
-
-    fn set_contract_info(&self, info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<(), String> {
-        let params = format!("{}/{}/{}",
-            hex::encode(serde_json::to_string(&info).unwrap().as_bytes()),
-            hex::encode(pubkey.key.serialize()),
-            hex::encode(sig.serialize_compact()),
-        );
-        match self.get("set-contract-info", &params) {
-            Ok(_success_message) => Ok(()),
-            Err(e) => Err(e.to_string())
-        }
-    }
-
-    fn get_contract_info(&self, player_name: PlayerName) -> Option<PlayerContractInfo> {
-        match self.get("get-contract-info", &hex::encode(player_name.0.as_bytes())) {
-            Ok(response) => {
-                match serde_json::from_str::<PlayerContractInfo>(&response.text().unwrap()) {
-                    Ok(info) => Some(info),
-                    Err(_) => None,
-                }
-            },
-            Err(_) => None,
         }
     }
 

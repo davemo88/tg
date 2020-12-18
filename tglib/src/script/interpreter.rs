@@ -50,7 +50,7 @@ impl TgScriptEnv {
     pub fn validate_payout(&mut self) -> Result<()> {
 
         if self.payout.is_none() {
-            return Err(TgError("cannot validate payout request - payout request is None"));
+            return Err(TgError("cannot validate payout request - payout request is None".to_string()));
         }
 
 // TODO: ensure payout_tx is signed by the same player making the request
@@ -67,14 +67,14 @@ impl TgScriptEnv {
         if payout.script_sig.is_some() {
             self.stack.push(payout.script_sig.unwrap().serialize_compact().to_vec());
         } else {
-            return Err(TgError("no script sig"));
+            return Err(TgError("no script sig".to_string()));
         };
 
         let _result = self.eval(payout.contract.payout_script.clone());
 
 // TODO: this is weird
         match self.validity {
-            None | Some(false)  => Err(TgError("invalid payout request")),
+            None | Some(false)  => Err(TgError("invalid payout request".to_string())),
             Some(true) => Ok(())
         }
     }
@@ -103,7 +103,7 @@ impl Default for TgScriptEnv {
 
 // TODO: refactor ops to return results? could be easier to handle invalid scripts
 pub trait TgScriptInterpreter {
-    fn eval(&mut self, _script: TgScript) -> Result<()> { Err(TgError("")) }
+    fn eval(&mut self, _script: TgScript) -> Result<()> { Err(TgError("".to_string())) }
 // NOTE: opcode functions - in own trait?
     fn op_pushdata1(&mut self, _n: u8, _bytes: Vec<u8>);
     fn op_pushdata2(&mut self, _n: u16, _bytes: Vec<u8>);

@@ -14,8 +14,12 @@ use tglib::{
     Result,
     TgError,
     arbiter::ArbiterService,
-    contract::Contract,
+    contract::{
+        Contract,
+        PlayerContractInfo,
+    },
     payout::Payout,
+    player::PlayerName,
 };
 
 
@@ -39,14 +43,38 @@ impl ArbiterService for ArbiterClient {
     fn get_escrow_pubkey(&self) -> Result<PublicKey> {
         match self.get("escrow-pubkey", None) {
             Ok(response) => Ok(PublicKey::from_str(&response.text().unwrap()).unwrap()),
-            Err(_) => Err(TgError("couldn't get result pubkey")),
+            Err(_) => Err(TgError("couldn't get result pubkey".to_string())),
         }
     }
 
     fn get_fee_address(&self) -> Result<Address> {
         match self.get("fee-address", None) {
             Ok(response) => Ok(Address::from_str(&response.text().unwrap()).unwrap()),
-            Err(_) => Err(TgError("couldn't get fee address")),
+            Err(_) => Err(TgError("couldn't get fee address".to_string())),
+        }
+    }
+
+    fn set_contract_info(&self, info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<()> {
+        let params = format!("{}/{}/{}",
+            hex::encode(serde_json::to_string(&info).unwrap().as_bytes()),
+            hex::encode(pubkey.key.serialize()),
+            hex::encode(sig.serialize_compact()),
+        );
+        match self.get("set-contract-info", Some(&params)) {
+            Ok(_success_message) => Ok(()),
+            Err(e) => Err(TgError(e.to_string()))
+        }
+    }
+
+    fn get_contract_info(&self, player_name: PlayerName) -> Option<PlayerContractInfo> {
+        match self.get("get-contract-info", Some(&hex::encode(player_name.0.as_bytes()))) {
+            Ok(response) => {
+                match serde_json::from_str::<PlayerContractInfo>(&response.text().unwrap()) {
+                    Ok(info) => Some(info),
+                    Err(_) => None,
+                }
+            },
+            Err(_) => None,
         }
     }
 
@@ -54,9 +82,9 @@ impl ArbiterService for ArbiterClient {
         match self.get("submit-contract", Some(&hex::encode(contract.to_bytes()))) {
             Ok(response) => match Signature::from_compact(&hex::decode(response.text().unwrap()).unwrap()) {
                 Ok(sig) => Ok(sig),
-                Err(_) => Err(TgError("invalid contract"))
+                Err(_) => Err(TgError("invalid contract".to_string()))
             }
-            Err(_) => Err(TgError("couldn't submit contract"))
+            Err(_) => Err(TgError("couldn't submit contract".to_string()))
         }
     }
 
@@ -64,9 +92,9 @@ impl ArbiterService for ArbiterClient {
         match self.get("submit-payout", Some(&hex::encode(payout.to_bytes()))) {
             Ok(response) => match consensus::deserialize(&hex::decode(response.text().unwrap()).unwrap()) {
                 Ok(psbt) => Ok(psbt),
-                Err(_) => Err(TgError("invalid payout")),
+                Err(_) => Err(TgError("invalid payout".to_string())),
             }
-            Err(_) => Err(TgError("couldn't submit payout")),
+            Err(_) => Err(TgError("couldn't submit payout".to_string())),
         }
     }
 }

@@ -19,7 +19,8 @@ pub mod script;
 pub mod wallet;
 
 #[derive(Debug)]
-pub struct TgError(pub &'static str);
+pub struct TgError(pub String);
+//pub struct TgError(pub &'static str);
 
 impl fmt::Display for TgError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

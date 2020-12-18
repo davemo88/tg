@@ -83,14 +83,14 @@ pub trait EscrowWallet {
             let payout_tx = payout.psbt.clone().extract_tx();
             let matching_tx = payout_tx.txid() == create_payout(&payout.contract, &payout_address).psbt.clone().extract_tx().txid();
             if !fully_signed {
-                return Err(TgError("invalid payout - contract not fully signed"))
+                return Err(TgError("invalid payout - contract not fully signed".to_string()))
             }
             if !matching_tx {
-                return Err(TgError("invalid payout - invalid payout tx"))
+                return Err(TgError("invalid payout - invalid payout tx".to_string()))
             }
             let recipient_pubkey = payout.recipient_pubkey();
             if recipient_pubkey.is_err() {
-                return Err(TgError("invalid payout - invalid recipient"))
+                return Err(TgError("invalid payout - invalid recipient".to_string()))
             }
             println!("{:?}", payout.psbt);
             if payout.psbt.inputs[0].partial_sigs.len() != 1 { //|| 
@@ -103,15 +103,15 @@ pub trait EscrowWallet {
 //  when creating payout tx psbt
 //      this might work great
 //
-                return Err(TgError("invalid payout - payout tx signed incorrectly"))
+                return Err(TgError("invalid payout - payout tx signed incorrectly".to_string()))
             };
             if payout.script_sig.is_none() {
-                return Err(TgError("invalid payout - no script sig"))
+                return Err(TgError("invalid payout - no script sig".to_string()))
             }
             let mut env = TgScriptEnv::new(payout.clone());
             env.validate_payout()
         } else {
-            Err(TgError("invalid payout"))
+            Err(TgError("invalid payout".to_string()))
         }
     }
 }
