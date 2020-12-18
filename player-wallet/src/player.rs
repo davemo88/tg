@@ -19,53 +19,62 @@ impl PlayerNameClient {
     pub fn new (host: &str) -> Self {
         PlayerNameClient(String::from(host))
     }
+
+    fn get(&self, command: &str, params: &str) -> reqwest::Result<reqwest::blocking::Response>{
+        reqwest::blocking::get(&format!("{}/{}/{}", self.0, command, params))
+    }
 }
 
 impl PlayerNameService for PlayerNameClient {
     fn register_name(&self, name: PlayerName, pubkey: PublicKey, sig: Signature) -> Result<(), String> {
-        let body = format!("{}/register-name/{}/{}/{}", self.0, 
+        let params = format!("{}/{}/{}", 
             hex::encode(&name.0.as_bytes()),
             hex::encode(pubkey.to_bytes()),
             hex::encode(sig.serialize_compact()),
         );
-        let response = reqwest::blocking::get(&body).unwrap();
-        let body = String::from(response.text().unwrap());
+        match self.get("register-name", &params) {
+            Ok(response) => {
 // response contrains name because the endpoint has to implement
 // the warp::Reply trait, and so can't return () for success
-        if body == format!("player/{}",name.0) {
-            Ok(())
-        } else {
-            Err(body)
+                let msg = response.text().unwrap();
+                if msg == format!("player/{}", name.0) {
+                    Ok(())
+                } else {
+                    Err(msg)
+                }
+            }
+            Err(_) => Err("rpc call to namecoind failed".to_string())
         }
     }
+
     fn set_contract_info(&self, info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<(), String> {
-        let body = format!("{}/set-contract-info/{}/{}/{}", self.0, 
-            serde_json::to_string(&info).unwrap(),
+        let params = format!("{}/{}/{}",
+            hex::encode(serde_json::to_string(&info).unwrap().as_bytes()),
             hex::encode(pubkey.key.serialize()),
             hex::encode(sig.serialize_compact()),
         );
-        let response = reqwest::blocking::get(&body).unwrap();
-        let _body = String::from(response.text().unwrap());
-        Ok(())
+        match self.get("set-contract-info", &params) {
+            Ok(_success_message) => Ok(()),
+            Err(e) => Err(e.to_string())
+        }
     }
 
     fn get_contract_info(&self, player_name: PlayerName) -> Option<PlayerContractInfo> {
-        let response = reqwest::blocking::get(&format!("{}/get-contract-info/{}", self.0, player_name.0)).unwrap();
-        let body = String::from(response.text().unwrap());
-        match serde_json::from_str::<PlayerContractInfo>(&body) {
-            Ok(info) => Some(info),
+        match self.get("get-contract-info", &hex::encode(player_name.0)) {
+            Ok(response) => {
+                match serde_json::from_str::<PlayerContractInfo>(&response.text().unwrap()) {
+                    Ok(info) => Some(info),
+                    Err(_) => None,
+                }
+            },
             Err(_) => None,
         }
     }
 
     fn get_player_names(&self, pubkey: &PublicKey) -> Vec<PlayerName> {
-//        let response = reqwest::blocking::get(&format!("{}/get-player-names/{}", self.0, hex::encode(pubkey.to_bytes())));
-//        println!("{}",response.unwrap().text().unwrap());
-        let response = reqwest::blocking::get(&format!("{}/get-player-names/{}", self.0, hex::encode(pubkey.to_bytes())));
-        match response {
+        match self.get("get-player-names", &hex::encode(pubkey.to_bytes())) {
             Ok(body) => body.json::<Vec<String>>().unwrap().iter().map(|name| PlayerName(name.to_string())).collect(),
             Err(_) => Vec::new(),
         }
     }
-
 }

@@ -25,38 +25,48 @@ impl ArbiterClient {
     pub fn new (host: &str) -> Self {
         ArbiterClient(String::from(host))
     }
+
+    fn get(&self, command: &str, params: Option<&str>) -> reqwest::Result<reqwest::blocking::Response> {
+        let mut url = format!("{}/{}", self.0, command);
+        if let Some(params) = params {
+            url += &format!("/{}",params);
+        }
+        reqwest::blocking::get(&url)
+    }
 }
 
 impl ArbiterService for ArbiterClient {
     fn get_escrow_pubkey(&self) -> Result<PublicKey> {
-        let response = reqwest::blocking::get(&format!("{}/escrow-pubkey", self.0)).unwrap();
-        let body = String::from(response.text().unwrap());
-        Ok(PublicKey::from_str(&body).unwrap())
+        match self.get("escrow-pubkey", None) {
+            Ok(response) => Ok(PublicKey::from_str(&response.text().unwrap()).unwrap()),
+            Err(_) => Err(TgError("couldn't get result pubkey")),
+        }
     }
 
     fn get_fee_address(&self) -> Result<Address> {
-        let response = reqwest::blocking::get(&format!("{}/fee-address", self.0)).unwrap();
-        let body = String::from(response.text().unwrap());
-        Ok(Address::from_str(&body).unwrap())
+        match self.get("fee-address", None) {
+            Ok(response) => Ok(Address::from_str(&response.text().unwrap()).unwrap()),
+            Err(_) => Err(TgError("couldn't get fee address")),
+        }
     }
 
     fn submit_contract(&self, contract: &Contract) -> Result<Signature> {
-        let response = reqwest::blocking::get(&format!("{}/submit-contract/{}", self.0, hex::encode(contract.to_bytes()))).unwrap();
-        let body = String::from(response.text().unwrap());
-        if let Ok(sig) = Signature::from_compact(&hex::decode(body).unwrap()) {
-            Ok(sig)
-        } else {
-            Err(TgError("invalid contract"))
+        match self.get("submit-contract", Some(&hex::encode(contract.to_bytes()))) {
+            Ok(response) => match Signature::from_compact(&hex::decode(response.text().unwrap()).unwrap()) {
+                Ok(sig) => Ok(sig),
+                Err(_) => Err(TgError("invalid contract"))
+            }
+            Err(_) => Err(TgError("couldn't submit contract"))
         }
     }
 
     fn submit_payout(&self, payout: &Payout) -> Result<PartiallySignedTransaction> {
-        let response = reqwest::blocking::get(&format!("{}/submit-payout/{}", self.0, hex::encode(payout.to_bytes()))).unwrap();
-        let body = String::from(response.text().unwrap());
-        if let Ok(psbt) = consensus::deserialize(&hex::decode(body).unwrap()) {
-            Ok(psbt)
-        } else {
-            Err(TgError("invalid payout"))
+        match self.get("submit-payout", Some(&hex::encode(payout.to_bytes()))) {
+            Ok(response) => match consensus::deserialize(&hex::decode(response.text().unwrap()).unwrap()) {
+                Ok(psbt) => Ok(psbt),
+                Err(_) => Err(TgError("invalid payout")),
+            }
+            Err(_) => Err(TgError("couldn't submit payout")),
         }
     }
 }

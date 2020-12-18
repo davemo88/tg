@@ -121,16 +121,15 @@ async fn register_name_handler(name: String, pubkey: String, sig: String, nmc_rp
 
 async fn get_contract_info_handler(player_name: String, redis: redis::Client) -> WebResult<impl Reply>{
     let mut con = redis.get_async_connection().await.unwrap();
-    let r: RedisResult<String> = con.get(&player_name).await;
-    if let Ok(info) = r {
-        Ok(info)
-    } else {
-        Err(warp::reject())
+    let r: RedisResult<String> = con.get(&player_name) .await;
+    match r {
+        Ok(info) => Ok(info),
+        Err(_) => Err(warp::reject()),
     }
 }
 
 async fn set_contract_info_handler(contract_info: String, pubkey: String, sig: String, redis: redis::Client) -> WebResult<impl Reply>{
-    let contract_info: PlayerContractInfo = serde_json::from_str(&contract_info).unwrap();
+    let contract_info: PlayerContractInfo = serde_json::from_str(&String::from_utf8(hex::decode(&contract_info).unwrap()).unwrap()).unwrap();
     let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
     let sig = Signature::from_compact(&hex::decode(sig).unwrap()).unwrap();
     let secp = Secp256k1::new();
@@ -139,8 +138,11 @@ async fn set_contract_info_handler(contract_info: String, pubkey: String, sig: S
     }
 
     let mut con = redis.get_async_connection().await.unwrap();
-    let _r: RedisResult<String> = con.set(contract_info.name.clone().0, &serde_json::to_string(&contract_info).unwrap()).await;
-    Ok(format!("set contract info for {}", contract_info.name.0))
+    let r: RedisResult<String> = con.set(contract_info.name.clone().0, &serde_json::to_string(&contract_info).unwrap()).await;
+    match r {
+        Ok(_string) => Ok(format!("set contract info for {}", contract_info.name.0)),
+        Err(_) => Err(warp::reject()),
+    }
 }
 
 async fn get_player_names_handler(pubkey: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
