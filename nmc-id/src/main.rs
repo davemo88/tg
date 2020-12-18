@@ -50,6 +50,7 @@ use rpc::{
 
 // docker-compose hostname
 pub const NAMECOIN_RPC_URL: &'static str = "http://guyledouche:yodelinbabaganoush@nmcd:18443";
+pub const PLAYER_NAME_PREFIX: &'static str = "player/";
 
 type WebResult<T> = std::result::Result<T, Rejection>;
 type NamecoinAddress = String;
@@ -98,7 +99,7 @@ async fn register_name_handler(name: String, pubkey: String, sig: String, nmc_rp
 // create namecoin address from supplied pubkey
     let name_address = get_namecoin_address(&pubkey, NETWORK).unwrap();
 //    println!("name_address: {}", name_address);
-    let name = format!("player/{}",name);
+    let name = format!("{}{}",PLAYER_NAME_PREFIX, name);
     let new_address = nmc_rpc.get_new_address().await.unwrap();
     match nmc_rpc.name_new(&name, &new_address).await {
         Ok((name_new_txid, rand)) => {
@@ -151,7 +152,7 @@ async fn get_player_names_handler(pubkey: String, nmc_rpc: NamecoinRpcClient) ->
         value_encoding: STRING_ENCODING.to_string(),
         min_conf: None,
         max_conf: 99999,
-        prefix: "player/".to_string(),
+        prefix: format!("{}", PLAYER_NAME_PREFIX),
         regexp: "".to_string(),
     };
 
@@ -159,7 +160,7 @@ async fn get_player_names_handler(pubkey: String, nmc_rpc: NamecoinRpcClient) ->
     let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
     let namecoin_address = get_namecoin_address(&pubkey, NETWORK).unwrap();
     let controlled_players: Vec<NameStatus> = players.iter().filter(|p| p.address == namecoin_address).cloned().collect();
-    Ok(serde_json::to_string::<Vec<String>>(&controlled_players.iter().map(|p| p.name.replace("player/","")).collect()).unwrap())
+    Ok(serde_json::to_string::<Vec<String>>(&controlled_players.iter().map(|p| p.name.replace(PLAYER_NAME_PREFIX,"")).collect()).unwrap())
 }
 
 fn redis_client() -> redis::Client {
