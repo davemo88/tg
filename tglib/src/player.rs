@@ -34,9 +34,8 @@ impl fmt::Display for PlayerName {
 
 pub trait PlayerNameService {
     fn register_name(&self, name: PlayerName, pubkey: PublicKey, sig: Signature) -> Result<(), String>;
-//    fn set_contract_info(&self, info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<(), String>;
-//    fn get_contract_info(&self, name: PlayerName) -> Option<PlayerContractInfo>;
     fn get_player_names(&self, pubkey: &PublicKey) -> Vec<PlayerName>;
+    fn get_name_address(&self, name: PlayerName) -> Result<String, &'static str>;
 }
 
 #[derive(Debug, Default, Clone)]

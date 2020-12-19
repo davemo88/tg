@@ -141,6 +141,22 @@ impl NamecoinRpcClient {
         }
     }
 
+    pub async fn name_show(&self, name: &str, options: Option<NameShowOptions>) -> RpcResult<Option<NameStatus>> {
+        let params = format!("{}, {}",
+            serde_json::to_string(name).unwrap(),
+            serde_json::to_string(&options).unwrap(),
+        );
+
+        let body = self.build_request_body("name_scan", &params);
+        match self.post(body).await {
+            Ok(r) => {
+                Ok(r.json::<NameShowResponse>().await.unwrap().result)
+            },
+            Err(e) => Err(e.to_string()),
+        }
+    }
+
+// BUG: this is broken if called with None for anything i think
     pub async fn name_scan(&self, start: Option<String>, count: Option<u32>, options: Option<NameScanOptions>) -> RpcResult<Vec<NameStatus>> {
         let params = format!("{}, {}, {}",
             serde_json::to_string(&start.unwrap_or("player/".to_string())).unwrap(),
@@ -223,6 +239,21 @@ pub struct NameStatus {
     pub height: u64,
     pub expires_in: i64,
     pub expired: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NameShowResponse {
+    pub result: Option<NameStatus>,
+    #[serde(flatten)]
+    pub base: BaseResponse,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NameShowOptions {
+    pub name_encoding: String,
+    pub value_encoding: String,
+    pub by_hash: String,
+    pub allow_expired: Option<bool>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

@@ -1,4 +1,3 @@
-use reqwest;
 use tglib::{
     bdk::bitcoin::{
         secp256k1::Signature,
@@ -49,6 +48,13 @@ impl PlayerNameService for PlayerNameClient {
         match self.get("get-player-names", &hex::encode(pubkey.to_bytes())) {
             Ok(body) => body.json::<Vec<String>>().unwrap().iter().map(|name| PlayerName(name.to_string())).collect(),
             Err(_) => Vec::new(),
+        }
+    }
+
+    fn get_name_address(&self, name: PlayerName) -> Result<String, &'static str> {
+        match self.get("get-name-address", &hex::encode(name.0.as_bytes())) {
+            Ok(response) => Ok(response.text().unwrap()),
+            Err(_) => Err("couldn't get address"),
         }
     }
 }

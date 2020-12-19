@@ -11,16 +11,13 @@ use serde_json;
 use tglib::{
     bdk::{
         bitcoin::{
-            Network,
             PublicKey,
             secp256k1::{
                 Message,
                 Secp256k1,
                 Signature,
             },
-            util::base58,
             hashes::{
-                ripemd160,
                 sha256,
                 HashEngine,
                 Hash as BitcoinHash,
@@ -28,6 +25,7 @@ use tglib::{
         },
     },
     hex,
+    wallet::get_namecoin_address,
     mock::NETWORK,
 };
 
@@ -35,6 +33,7 @@ mod rpc;
 use rpc::{
     NamecoinRpcClient,
     NameScanOptions,
+    NameShowOptions,
     NameStatus,
     STRING_ENCODING,
 };
@@ -44,35 +43,6 @@ pub const NAMECOIN_RPC_URL: &'static str = "http://guyledouche:yodelinbabaganous
 pub const PLAYER_NAME_PREFIX: &'static str = "player/";
 
 type WebResult<T> = std::result::Result<T, Rejection>;
-type NamecoinAddress = String;
-
-// mainnet
-//const NAMECOIN_VERSION_BYTE: u8 = 0x34;//52
-// testnet / regtest, same as bitcoin?
-const NAMECOIN_TESTNET_VERSION_BYTE: u8 = 0x6F;//111
-
-fn get_namecoin_address(pubkey: &PublicKey, network: Network) -> Result<NamecoinAddress, String> {
-    let mut sha256_engine = sha256::HashEngine::default();
-    sha256_engine.input(&pubkey.key.serialize());
-    let hash: &[u8] = &sha256::Hash::from_engine(sha256_engine);
-
-    let mut ripemd160_engine = ripemd160::HashEngine::default();
-    ripemd160_engine.input(hash);
-    let hash = &ripemd160::Hash::from_engine(ripemd160_engine);
-
-    let mut hash = hash.to_vec();
-    match network {
-        Network::Bitcoin => {
-            panic!("nice try, sucker");
-//            hash.insert(0,NAMECOIN_VERSION_BYTE);
-        },
-        Network::Regtest | Network::Testnet => {
-            hash.insert(0,NAMECOIN_TESTNET_VERSION_BYTE);
-        }
-    }
-
-    Ok(base58::check_encode_slice(&hash))
-}
 
 async fn register_name_handler(name: String, pubkey: String, sig: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
     let name = String::from_utf8(hex::decode(name).unwrap()).unwrap();
@@ -111,7 +81,7 @@ async fn register_name_handler(name: String, pubkey: String, sig: String, nmc_rp
     }
 }
 
-async fn get_player_names_handler(pubkey: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
+async fn get_player_names_handler(pubkey: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply> {
     let options = NameScanOptions {
         name_encoding: STRING_ENCODING.to_string(),
         value_encoding: STRING_ENCODING.to_string(),
@@ -126,6 +96,25 @@ async fn get_player_names_handler(pubkey: String, nmc_rpc: NamecoinRpcClient) ->
     let namecoin_address = get_namecoin_address(&pubkey, NETWORK).unwrap();
     let controlled_players: Vec<NameStatus> = players.iter().filter(|p| p.address == namecoin_address).cloned().collect();
     Ok(serde_json::to_string::<Vec<String>>(&controlled_players.iter().map(|p| p.name.replace(PLAYER_NAME_PREFIX,"")).collect()).unwrap())
+}
+
+async fn get_name_address_handler(name_hex: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply> {
+    let options = NameShowOptions {
+        name_encoding: STRING_ENCODING.to_string(),
+        value_encoding: STRING_ENCODING.to_string(),
+        by_hash: "direct".to_string(),
+        allow_expired: None,
+    };
+// TODO maybe just put namecoind in hex encoding mode
+    let name = String::from_utf8(hex::decode(name_hex).unwrap()).unwrap();
+    let name_status = match nmc_rpc.name_show(&name, Some(options)).await {
+        Ok(r) => match r {
+            Some(name_status) => name_status,
+            None => return Err(warp::reject())
+        }
+        Err(_) => return Err(warp::reject())
+    };
+    Ok(name_status.address)
 }
 
 async fn load_wallet(nmc_rpc_client: &NamecoinRpcClient) {
@@ -170,13 +159,19 @@ async fn main() {
         .and(nmc_rpc.clone())
         .and_then(register_name_handler);
 
-    let get_player_name = warp::path("get-player-names")
+    let get_player_names = warp::path("get-player-names")
         .and(warp::path::param::<String>())
         .and(nmc_rpc.clone())
         .and_then(get_player_names_handler);
 
+    let get_name_address = warp::path("get-name-address")
+        .and(warp::path::param::<String>())
+        .and(nmc_rpc.clone())
+        .and_then(get_name_address_handler);
+
     let routes = register_name
-        .or(get_player_name);
+        .or(get_player_names)
+        .or(get_name_address);
 
     warp::serve(routes).run(([0, 0, 0, 0], 18420)).await;
 }
@@ -185,7 +180,10 @@ async fn main() {
 mod tests {
 
     use super::*;
-    use tglib::hex;
+    use tglib::{
+        bdk::bitcoin::Network,
+        hex,
+    };
 
     const PUBKEY: &'static str = "02123e6a7816f2149f90cca1ea1ba41b73e77db44cd71f01c184defd10961d03fc";
     const TESTNET_ADDRESS_FROM_NAMECOIND: &'static str = "mfuf8qvMsMJMgBqtEGBt8aCQPQi1qgANzo";

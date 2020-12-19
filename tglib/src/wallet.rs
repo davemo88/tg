@@ -15,12 +15,19 @@ use bdk::bitcoin::{
         opcodes::all as Opcodes,
         transaction::OutPoint,
     },
+    hashes::{
+        ripemd160,
+        sha256,
+        HashEngine,
+        Hash as BitcoinHash,
+    },
     secp256k1::{
         Secp256k1,
         Message,
         Signature,
     },
     util::{
+        base58,
         bip32::{
             ExtendedPubKey,
             ExtendedPrivKey,
@@ -51,6 +58,11 @@ pub const NAMECOIN_ACCOUNT_PATH: &'static str = "44'/7'/0'";
 pub const ESCROW_SUBACCOUNT: &'static str = "7";
 pub const NAME_SUBACCOUNT: &'static str = "17";
 pub const NAME_KIX: &'static str = "0";
+
+// mainnet
+//const NAMECOIN_VERSION_BYTE: u8 = 0x34;//52
+// testnet / regtest, same as bitcoin?
+const NAMECOIN_TESTNET_VERSION_BYTE: u8 = 0x6F;//111
 
 pub trait NameWallet {
     fn name_pubkey(&self) -> PublicKey;
@@ -240,6 +252,29 @@ pub fn derive_account_xprivkey(mnemonic: &Mnemonic, network: Network) -> Extende
 pub fn derive_account_xpubkey(mnemonic: &Mnemonic, network: Network) -> ExtendedPubKey {
         let secp = Secp256k1::new();
         ExtendedPubKey::from_private(&secp, &derive_account_xprivkey(mnemonic, network))
+}
+
+pub fn get_namecoin_address(pubkey: &PublicKey, network: Network) -> Result<String, String> {
+    let mut sha256_engine = sha256::HashEngine::default();
+    sha256_engine.input(&pubkey.key.serialize());
+    let hash: &[u8] = &sha256::Hash::from_engine(sha256_engine);
+
+    let mut ripemd160_engine = ripemd160::HashEngine::default();
+    ripemd160_engine.input(hash);
+    let hash = &ripemd160::Hash::from_engine(ripemd160_engine);
+
+    let mut hash = hash.to_vec();
+    match network {
+        Network::Bitcoin => {
+            panic!("nice try, sucker");
+//            hash.insert(0,NAMECOIN_VERSION_BYTE);
+        },
+        Network::Regtest | Network::Testnet => {
+            hash.insert(0,NAMECOIN_TESTNET_VERSION_BYTE);
+        }
+    }
+
+    Ok(base58::check_encode_slice(&hash))
 }
 
 #[cfg(test)]
