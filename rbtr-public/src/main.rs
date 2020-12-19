@@ -73,16 +73,6 @@ fn wallet() -> Wallet<ElectrumBlockchain, MemoryDatabase> {
     Wallet::<ElectrumBlockchain, MemoryDatabase>::new(Fingerprint::from_str(ARBITER_FINGERPRINT).unwrap(), ExtendedPubKey::from_str(ARBITER_XPUBKEY).unwrap(), ElectrumBlockchain::from(client.unwrap()), NETWORK).unwrap()
 }
 
-async fn push_contract(con: &mut Connection, hex: &str) -> RedisResult<String> {
-    con.rpush("contracts", hex).await?;
-    Ok(String::from(hex))
-}
-
-async fn push_payout(con: &mut Connection, hex: &str) -> RedisResult<String> {
-    con.rpush("payouts", hex).await?;
-    Ok(String::from(hex))
-}
-
 fn get_escrow_pubkey() -> Result<PublicKey> {
     Ok(EscrowWallet::get_escrow_pubkey(&wallet()))
 }
@@ -91,6 +81,16 @@ fn get_fee_address() -> Result<Address> {
     let w = wallet();
     let a = w.xpubkey.derive_pub(&Secp256k1::new(), &DerivationPath::from_str("m/0/0").unwrap()).unwrap();
     Ok(Address::p2wpkh(&a.public_key, w.network).unwrap())
+}
+
+async fn push_contract(con: &mut Connection, hex: &str) -> RedisResult<String> {
+    con.rpush("contracts", hex).await?;
+    Ok(String::from(hex))
+}
+
+async fn push_payout(con: &mut Connection, hex: &str) -> RedisResult<String> {
+    con.rpush("payouts", hex).await?;
+    Ok(String::from(hex))
 }
 
 async fn submit_contract(con: &mut Connection, contract: &Contract) -> Result<Signature> {
@@ -160,7 +160,7 @@ async fn get_contract_info_handler(player_name: String, redis_client: redis::Cli
     }
 }
 
-async fn contract_handler(contract_hex: String, redis_client: redis::Client) -> WebResult<impl Reply> {
+async fn submit_contract_handler(contract_hex: String, redis_client: redis::Client) -> WebResult<impl Reply> {
     let mut con = redis_client.get_async_connection().await.unwrap();
     let contract = Contract::from_bytes(hex::decode(contract_hex.clone()).unwrap()).unwrap();
     if let Ok(sig) = submit_contract(&mut con, &contract).await {
@@ -171,7 +171,7 @@ async fn contract_handler(contract_hex: String, redis_client: redis::Client) -> 
 }
 
 // TODO: somehow break out of serialize(decode( hell
-async fn payout_handler(payout_hex: String, redis_client: redis::Client) -> WebResult<impl Reply> {
+async fn submit_payout_handler(payout_hex: String, redis_client: redis::Client) -> WebResult<impl Reply> {
     let mut con = redis_client.get_async_connection().await.unwrap();
     let payout = Payout::from_bytes(hex::decode(payout_hex.clone()).unwrap()).unwrap();
     if let Ok(tx) = submit_payout(&mut con, &payout).await {
@@ -198,7 +198,7 @@ async fn main() {
     let fee_address = get_fee_address().unwrap();
     let fee_address = warp::any().map(move || fee_address.clone());
     let redis_client = redis_client();
-    let  redis_client= warp::any().map(move || redis_client.clone());
+    let redis_client= warp::any().map(move || redis_client.clone());
 
     let get_escrow_pubkey = warp::path("escrow-pubkey")
         .and(escrow_pubkey)
@@ -224,12 +224,12 @@ async fn main() {
     let submit_contract = warp::path("submit-contract")
         .and(warp::path::param::<String>())
         .and(redis_client.clone())
-        .and_then(contract_handler);
+        .and_then(submit_contract_handler);
 
     let submit_payout = warp::path("submit-payout")
         .and(warp::path::param::<String>())
         .and(redis_client.clone())
-        .and_then(payout_handler);
+        .and_then(submit_payout_handler);
 
     let routes = get_escrow_pubkey
         .or(get_fee_address)
