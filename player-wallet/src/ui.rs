@@ -172,8 +172,8 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
         }
 
         let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
-// TODO: p2_name is registered, or just let the future contract info check fail
-// if p2gistered, they can't have posted contract info
+// TODO: check if p2_name is registered, or just let the future contract info check fail
+// if p2 isn't registered, they couldn't have posted contract info
         let p2_contract_info = match arbiter_client.get_contract_info(p2_name.clone()) {
             Some(info) => info,
             None => {
@@ -187,7 +187,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
             Err(_) => return Err(TgError("can't create contract: couldn't get arbiter pubkey".to_string()))
         };
 
-// TODO:uld fail if amount is too large
+// TODO: could fail if amount is too large
         let contract = self.create_contract(p2_contract_info, amount, arbiter_pubkey);
 
         let contract_record = db::ContractRecord {

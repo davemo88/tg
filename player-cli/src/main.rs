@@ -251,7 +251,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 Ok(()) => println!("contract deleted"),
                 Err(e) => println!("{}", e),
             }
-            "list" => for c in DocumentUI::<ContractRecord>::list(wallet) { println!("{:?}", c)},
+            "list" => for c in DocumentUI::<ContractRecord>::list(wallet) { println!("{:?}", c) },
             _ => {
                 println!("command '{}' is not implemented", c);
             }
