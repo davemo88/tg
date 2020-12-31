@@ -7,7 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bdk = { git = "https://github.com/bitcoindevkit/bdk" }
+# bdk = { git = "https://github.com/bitcoindevkit/bdk" }
+bdk = "0.2"
 bip39 = "1.0.0-rc1"
 hex = "0.4.2"
 nom = "5.1.2"

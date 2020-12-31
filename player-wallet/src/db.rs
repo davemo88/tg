@@ -154,7 +154,7 @@ impl DB {
         }
     }
 
-    pub fn delete_contract(&self, cxid: String) -> Result<usize> {
+    pub fn delete_contract(&self, cxid: &str) -> Result<usize> {
         self.conn.execute(
             "DELETE FROM contract WHERE cxid = ?1",
             params![cxid],
@@ -210,7 +210,7 @@ impl DB {
         }
     }
 
-    pub fn delete_payout(&self, cxid: String) -> Result<usize> {
+    pub fn delete_payout(&self, cxid: &str) -> Result<usize> {
         self.conn.execute(
             "DELETE FROM payout WHERE cxid = ?1",
             params![cxid],

@@ -78,20 +78,20 @@ pub trait PlayerUI {
 }
 
 // contracts and payouts
-trait DocumentUI<T> {
+pub trait DocumentUI<T> {
     fn new(&self, params: NewDocumentParams) -> TgResult<()>;
-    fn import(&self, hex: String) -> TgResult<()>;
-    fn export(&self, cxid: String) -> Option<String>;
-    fn get(&self, cxid: String) -> Option<T>;
+    fn import(&self, hex: &str) -> TgResult<()>;
+    fn export(&self, cxid: &str) -> Option<String>;
+    fn get(&self, cxid: &str) -> Option<T>;
     fn sign(&self, params: SignDocumentParams) -> TgResult<()>;
-    fn submit(&self, cxid: String) -> TgResult<()>;
-    fn broadcast(&self, cxid: String) -> TgResult<()>;
+    fn submit(&self, cxid: &str) -> TgResult<()>;
+    fn broadcast(&self, cxid: &str) -> TgResult<()>;
     fn list(&self) -> Vec<T>;
-    fn delete(&self, cxid: String) -> TgResult<()>;
+    fn delete(&self, cxid: &str) -> TgResult<()>;
 }
 
 pub enum NewDocumentParams {
-    NewContractParams { name: PlayerName, amount: Amount, desc: Option<String> },
+    NewContractParams { p1_name: PlayerName, p2_name: PlayerName, amount: Amount, desc: Option<String> },
     NewPayoutParams { cxid: String, name: PlayerName, amount: Amount },
 }
 
@@ -162,13 +162,10 @@ impl PlayerUI for PlayerWallet {
 
 impl DocumentUI<ContractRecord> for PlayerWallet {
     fn new(&self, params: NewDocumentParams) -> TgResult<()> {
-        let (p2_name, amount, desc) = match params {
-            NewDocumentParams::NewContractParams { name, amount, desc } => (name, amount, desc),
+        let (p1_name, p2_name, amount, desc) = match params {
+            NewDocumentParams::NewContractParams { p1_name, p2_name, amount, desc } => (p1_name, p2_name, amount, desc),
             _ => return Err(TgError("invalid params".to_string())),
         };
-// TODO: selected player or something
-        let p1_name = self.mine()[0].clone();
-//        let desc = a.value_of("desc").unwrap_or("");
 
         if !self.mine().contains(&p1_name) {
             return Err(TgError("can't create contract: p1 name not controlled by local wallet".to_string()))
@@ -207,7 +204,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
         }
     }
 
-    fn import(&self, hex: String) -> TgResult<()> {
+    fn import(&self, hex: &str) -> TgResult<()> {
 // accept both contracts and contract records in binary
 // contract record binary encoding can be defined in player-wallet libs
 // is not a necessarily standardized encoding like contract
@@ -226,7 +223,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
 //               p1_name: PlayerName::from(contract.p1_pubkey),
 //               p2_name: PlayerName::from(contract.p2_pubkey),
 //               hex: hex::encode(contract.to_bytes()),
-//               desc: String::default(),
+//               desc: &str::default(),
 //           };
 //           match wallet.db.insert_contract(contract_record.clone()) {
 //               Ok(_) => println!("imported contract {}", hex::encode(contract.cxid())),
@@ -239,7 +236,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
 
     }
 
-    fn export(&self, cxid: String) -> Option<String> {
+    fn export(&self, cxid: &str) -> Option<String> {
         if let Some(contract_record) = self.db.get_contract(&cxid) {
             Some(contract_record.hex)
         } else {
@@ -247,7 +244,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
         }
     }
 
-    fn get(&self, cxid: String) -> Option<ContractRecord> {
+    fn get(&self, cxid: &str) -> Option<ContractRecord> {
         self.db.get_contract(&cxid)
     }
 
@@ -277,7 +274,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
 
     }
 
-    fn submit(&self, cxid: String) -> TgResult<()> {
+    fn submit(&self, cxid: &str) -> TgResult<()> {
         if let Some(cr) = self.db.get_contract(&cxid) {
             let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
             let mut contract = Contract::from_bytes(hex::decode(cr.hex.clone()).unwrap()).unwrap();
@@ -295,7 +292,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
         }
     }
 
-    fn broadcast(&self, cxid: String) -> TgResult<()> {
+    fn broadcast(&self, cxid: &str) -> TgResult<()> {
         if let Some(cr) = self.db.get_contract(&cxid) {
             let contract = Contract::from_bytes(hex::decode(cr.hex.clone()).unwrap()).unwrap();
             let _r = self.wallet.broadcast(contract.funding_tx.extract_tx());
@@ -309,7 +306,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
         self.db.all_contracts().unwrap()
     }
 
-    fn delete(&self, cxid: String) -> TgResult<()> {
+    fn delete(&self, cxid: &str) -> TgResult<()> {
         match self.db.delete_contract(cxid) {
             Ok(_) => Ok(()),
             Err(e) => Err(TgError(e.to_string())),
@@ -332,7 +329,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
         Ok(())
     }
 
-    fn import(&self, hex: String) -> TgResult<()> {
+    fn import(&self, hex: &str) -> TgResult<()> {
         if let Ok(payout_record) = serde_json::from_str::<PayoutRecord>(&hex) {
             let _r = self.db.insert_payout(payout_record.clone());
             Ok(())
@@ -342,7 +339,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
         }
     }
 
-    fn export(&self, cxid: String) -> Option<String> {
+    fn export(&self, cxid: &str) -> Option<String> {
         let cr = self.db.get_contract(&cxid).unwrap();
         let pr = self.db.get_payout(&cxid).unwrap();
         let p = Payout {
@@ -354,7 +351,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
         Some(hex::encode(p.to_bytes()))
     }
 
-    fn get(&self, cxid: String) -> Option<PayoutRecord> {
+    fn get(&self, cxid: &str) -> Option<PayoutRecord> {
         self.db.get_payout(&cxid)
     }
 
@@ -384,7 +381,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
         }
     }
 
-    fn submit(&self, cxid: String) -> TgResult<()> {
+    fn submit(&self, cxid: &str) -> TgResult<()> {
         let cr = self.db.get_contract(&cxid).unwrap();
         let pr = self.db.get_payout(&cxid).unwrap();
         let p = Payout {
@@ -404,7 +401,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
         }
     }
 
-    fn broadcast(&self, cxid: String) -> TgResult<()> {
+    fn broadcast(&self, cxid: &str) -> TgResult<()> {
          if let Some(pr) = self.db.get_payout(&cxid) {
              let tx: PartiallySignedTransaction = consensus::deserialize(&hex::decode(pr.psbt).unwrap()).unwrap();
              let _r = self.wallet.broadcast(tx.extract_tx());
@@ -424,11 +421,10 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
 
     }
 
-    fn delete(&self, cxid: String) -> TgResult<()> {
+    fn delete(&self, cxid: &str) -> TgResult<()> {
         match self.db.delete_payout(cxid) {
             Ok(_) => Ok(()),
             Err(e) => Err(TgError(e.to_string())),
         }
     }
-
 }
