@@ -177,7 +177,6 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
         let p2_contract_info = match arbiter_client.get_contract_info(p2_name.clone()) {
             Some(info) => info,
             None => {
-                println!("can't create contract: can't fetch p2 contract info");
                 return Err(TgError("can't create contract: couldn't fetch p2 contract info".to_string()))
             }
         };
@@ -393,7 +392,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
         let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
         if let Ok(psbt) = arbiter_client.submit_payout(&p) {
 // TODO: store updated payout in local db
-           println!("arbiter signed tx: {:?}", psbt.extract_tx().txid());
+//           println!("arbiter signed tx: {:?}", psbt.extract_tx().txid());
            Ok(())
         }
         else {
