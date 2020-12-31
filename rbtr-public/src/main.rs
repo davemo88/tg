@@ -198,7 +198,7 @@ async fn main() {
     let fee_address = get_fee_address().unwrap();
     let fee_address = warp::any().map(move || fee_address.clone());
     let redis_client = redis_client();
-    let redis_client= warp::any().map(move || redis_client.clone());
+    let redis_client = warp::any().map(move || redis_client.clone());
 
     let get_escrow_pubkey = warp::path("escrow-pubkey")
         .and(escrow_pubkey)

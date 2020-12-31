@@ -175,23 +175,3 @@ async fn main() {
 
     warp::serve(routes).run(([0, 0, 0, 0], 18420)).await;
 }
-
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-    use tglib::{
-        bdk::bitcoin::Network,
-        hex,
-    };
-
-    const PUBKEY: &'static str = "02123e6a7816f2149f90cca1ea1ba41b73e77db44cd71f01c184defd10961d03fc";
-    const TESTNET_ADDRESS_FROM_NAMECOIND: &'static str = "mfuf8qvMsMJMgBqtEGBt8aCQPQi1qgANzo";
-
-    #[test]
-    fn test_get_namecoin_address() {
-        let pubkey = PublicKey::from_slice(&hex::decode(PUBKEY).unwrap()).unwrap();
-        let namecoin_address = get_namecoin_address(&pubkey, Network::Testnet).unwrap();
-        assert_eq!(namecoin_address,TESTNET_ADDRESS_FROM_NAMECOIND)
-    }
-}

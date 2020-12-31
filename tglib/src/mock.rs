@@ -121,8 +121,8 @@ impl SigningWallet for Trezor {
         let escrow_key = account_key.derive_priv(&secp, &path).unwrap();
         let mut maybe_signed = psbt.clone();
 //        println!("psbt to sign: {:?}", psbt);
-//        match Signer::sign(&escrow_key.private_key, &mut maybe_signed, Some(0)) {
-        match Signer::sign(&escrow_key.private_key, &mut maybe_signed, Some(0), &secp) {
+        match Signer::sign(&escrow_key.private_key, &mut maybe_signed, Some(0)) {
+//        match Signer::sign(&escrow_key.private_key, &mut maybe_signed, Some(0), &secp) {
             Ok(()) => {
                 Ok(maybe_signed)
             }
