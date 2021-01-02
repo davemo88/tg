@@ -103,15 +103,16 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 Ok(()) => println!("added player"),
                 Err(e) => println!("{}", e),
             }
-            "list" => for p in PlayerUI::list(wallet) { println!("{}", p.name.0) },
             "remove" => match wallet.remove(PlayerName(a.value_of("name").unwrap().to_string())) {
                 Ok(()) => println!("removed player"),
                 Err(e) => println!("{}", e),
             }
-            "mine" => for p in wallet.mine() { println!("{}", p.0) },
+            "list" => PlayerUI::list(wallet).iter().for_each(|p| println!("{}", p.name.0) ),
+//            "mine" => for p in wallet.mine() { println!("{}", p.0) },
+            "mine" => wallet.mine().iter().for_each(|p| println!("{}", p.0) ),
             _ => { 
                 println!("command '{}' is not implemented", c);
-            },
+            }
         }
     }
 }

@@ -268,7 +268,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
             Ok(())
 
         } else {
-            Err(TgError("no such contract".to_string()))
+            Err(TgError("unknown contract".to_string()))
         }
 
     }
@@ -283,11 +283,11 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
                Ok(())
             }
             else {
-                Err(TgError("arbiter rejected contract".to_string()))
+                Err(TgError("contract rejected".to_string()))
             }
         }
         else {
-            Err(TgError("no such contract".to_string()))
+            Err(TgError("unknown contract".to_string()))
         }
     }
 
@@ -297,7 +297,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
             let _r = self.wallet.broadcast(contract.funding_tx.extract_tx());
             Ok(())
         } else {
-            Err(TgError("no such contract".to_string()))
+            Err(TgError("unknown contract".to_string()))
         }
     }
 
@@ -367,7 +367,6 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
             self.db.insert_payout(db::PayoutRecord {
                 cxid: pr.cxid, 
                 psbt,
-// TODO: here is another place the interface for contracts and payouts diverges
                 sig: match script_sig {
                     Some(sig) => hex::encode(sig.serialize_compact()),
                     None => String::default(),
@@ -376,7 +375,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
             Ok(())
         }
         else {
-            Err(TgError("no such payout".to_string()))
+            Err(TgError("unknown payout".to_string()))
         }
     }
 
@@ -385,18 +384,25 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
         let pr = self.db.get_payout(&cxid).unwrap();
         let p = Payout {
             version: PAYOUT_VERSION,
+// TODO: poster child for serde hell
             contract: Contract::from_bytes(hex::decode(cr.hex).unwrap()).unwrap(),
             psbt: consensus::deserialize(&hex::decode(pr.psbt).unwrap()).unwrap(),
             script_sig: Signature::from_compact(&hex::decode(pr.sig).unwrap()).ok()
         };
         let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
         if let Ok(psbt) = arbiter_client.submit_payout(&p) {
-// TODO: store updated payout in local db
-//           println!("arbiter signed tx: {:?}", psbt.extract_tx().txid());
+            self.db.insert_payout(db::PayoutRecord {
+                cxid, 
+                psbt,
+                sig: match script_sig {
+                    Some(sig) => hex::encode(sig.serialize_compact()),
+                    None => String::default(),
+                }
+            }).unwrap();
            Ok(())
         }
         else {
-            Err(TgError("arbiter rejected payout".to_string()))
+            Err(TgError("payout rejected".to_string()))
         }
     }
 
@@ -407,7 +413,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
              Ok(())
          }
          else {
-             Err(TgError("no such payout".to_string()))
+             Err(TgError("unknown payout".to_string()))
          }
     }
 
