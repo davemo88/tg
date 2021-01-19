@@ -382,7 +382,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
     fn submit(&self, cxid: &str) -> TgResult<()> {
         let cr = self.db.get_contract(&cxid).unwrap();
         let pr = self.db.get_payout(&cxid).unwrap();
-        let p = Payout {
+        let mut p = Payout {
             version: PAYOUT_VERSION,
 // TODO: poster child for serde hell
             contract: Contract::from_bytes(hex::decode(cr.hex).unwrap()).unwrap(),
@@ -391,15 +391,9 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
         };
         let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
         if let Ok(psbt) = arbiter_client.submit_payout(&p) {
-            self.db.insert_payout(db::PayoutRecord {
-                cxid, 
-                psbt,
-                sig: match script_sig {
-                    Some(sig) => hex::encode(sig.serialize_compact()),
-                    None => String::default(),
-                }
-            }).unwrap();
-           Ok(())
+            p.psbt = psbt; 
+            self.db.insert_payout(PayoutRecord::from(p)).unwrap();
+            Ok(())
         }
         else {
             Err(TgError("payout rejected".to_string()))
