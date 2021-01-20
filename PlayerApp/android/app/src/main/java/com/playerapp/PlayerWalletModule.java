@@ -14,6 +14,8 @@ public class PlayerWalletModule extends ReactContextBaseJavaModule {
         Log.d("PlayerWalletModule", "loaded test native lib");
     }
 
+    public static native String hello(String name);
+
     PlayerWalletModule(ReactApplicationContext context) {
         super(context);
     }
@@ -24,8 +26,14 @@ public class PlayerWalletModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void player_mine() {
+    public void hello_react(String name) {
         Log.d("PlayerWalletModule", "playerUiMine");
+        Log.d("PlayerWalletModule", PlayerWalletModule.hello(name));
     }
+
+//    @ReactMethod
+//    public void native_hello(String name) {
+//        Log.d("PlayerWalletModule", PlayerWalletModule.hello("y'all"));
+//    }
 }
 

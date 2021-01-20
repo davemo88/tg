@@ -33,7 +33,7 @@ declare const global: {HermesInternal: null | {}};
 
 const NewModuleButton = () => {
   const onPress = () => {
-    PlayerWalletModule.player_mine();
+    PlayerWalletModule.hello_react("buddy");
   };
 
   return (
