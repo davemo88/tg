@@ -45,7 +45,10 @@ pub fn cli(line: String, conf: Conf) -> String {
     if matches.is_ok() {
         if let (c, Some(a)) = matches.unwrap().subcommand() {
             let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-            let client = Client::new(&conf.electrs_url).unwrap();
+            let client = match Client::new(&conf.electrs_url) {
+                Ok(c) => c,
+                Err(e) => return format!("{:?}", e)
+            };
             let wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK, client);
             match c {
                 "balance" => format!("{}", wallet.balance()),

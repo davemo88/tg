@@ -11,10 +11,9 @@ import android.util.Log;
 public class PlayerWalletModule extends ReactContextBaseJavaModule {
     static {
         System.loadLibrary("test");
-        Log.d("PlayerWalletModule", "loaded test native lib");
     }
 
-    public static native String hello(String name);
+    public static native String cli(String command);
 
     PlayerWalletModule(ReactApplicationContext context) {
         super(context);
@@ -26,8 +25,8 @@ public class PlayerWalletModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void hello_react(String name) {
-        Log.d("PlayerWalletModule", PlayerWalletModule.hello(name));
+    public void call_cli(String command) {
+        Log.d("PlayerWalletModule", PlayerWalletModule.cli(command));
     }
 }
 

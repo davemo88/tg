@@ -1,6 +1,6 @@
 import { NativeModules } from 'react-native';
 const { PlayerWalletModule } = NativeModules
 interface PlayerWalletInterface {
-   hello_react(): void;
+   call_cli(string): void;
 }
 export default PlayerWalletModule as PlayerWalletInterface;
