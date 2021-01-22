@@ -33,14 +33,20 @@ use player_wallet::{
     wallet::PlayerWallet,
 };
 
-pub fn cli(line: String) -> String {
-    let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-    let client = Client::new("tcp://localhost:60401").unwrap();
-    let wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK, client);
+pub struct Conf {
+    pub electrs_url: String,
+    pub name_url: String,
+    pub arbiter_url: String,
+}
+
+pub fn cli(line: String, conf: Conf) -> String {
     let split_line = shell_words::split(&line).unwrap();
     let matches = player_cli().get_matches_from_safe(split_line);
     if matches.is_ok() {
         if let (c, Some(a)) = matches.unwrap().subcommand() {
+            let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
+            let client = Client::new(&conf.electrs_url).unwrap();
+            let wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK, client);
             match c {
                 "balance" => format!("{}", wallet.balance()),
                 "deposit" => format!("{}", wallet.deposit()),

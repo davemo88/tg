@@ -29,7 +29,12 @@ fn main() -> Result<(), Error> {
         let readline = rl.readline(">> ");
         match readline {
             Ok(line) => {
-                println!("{}", libcli::cli(line));
+                let conf = libcli::Conf {
+                    electrs_url: "tcp://localhost:60401".into(),
+                    name_url: "http://localhost:18420".into(),
+                    arbiter_url: "http://localhost:5000".into(),
+                };
+                println!("{}", libcli::cli(line, conf));
             }
             Err(ReadlineError::Interrupted) => {
                 println!("CTRL-C");

@@ -57,6 +57,8 @@ pub const PLAYER_2_ESCROW_PUBKEY: &'static str = "03b0e39d8787171dc23888fb8698c6
 pub const ARBITER_MNEMONIC: &'static str = "meadow found language where fringe casual print marine segment throw old tackle industry chest screen group huge output";
 pub const ARBITER_FINGERPRINT: &'static str = "1af44eee";
 pub const ARBITER_XPUBKEY: &'static str = "tpubDCoCzmZtfuft3oM8Y5RnaT5GFq27NR7iYLbj5r1HZyfbgMAT1AAeAxCoyMnKGQ67GAeZDcekJgsaSMTb7SpmRJ3vGbPXZxDToKHTRa3mBS2";
+// TODO: localhost is no good any more, e.g. need 10.0.2.2 for android dev, needs to be
+// configurable
 pub const ARBITER_PUBLIC_URL: &'static str = "http://localhost:5000";
 pub const NAME_SERVICE_URL: &'static str = "http://localhost:18420";
 pub const REFEREE_PRIVKEY: &'static str = "L52hw8to1fdBj9eP8HESBNrfcbehxvKU1vsqWjmHJavxNEi9q91i";
