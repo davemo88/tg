@@ -62,4 +62,7 @@ buck-out/
 # CocoaPods
 /ios/Pods/
 
+# my rust lib
 rust/target/*
+# symlinks to native libs
+jniLibs/

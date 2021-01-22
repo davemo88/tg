@@ -1,6 +1,5 @@
 use std::str::FromStr;
 use bdk::{
-    OfflineWallet,
     Wallet,
     bitcoin::{
         PrivateKey,
@@ -76,7 +75,7 @@ pub fn get_referee_signature(msg: Message) -> Signature {
 
 pub struct Trezor {
     mnemonic: Mnemonic,
-    pub wallet: OfflineWallet<MemoryDatabase>,
+    pub wallet: Wallet<(), MemoryDatabase>,
 }
 
 impl Trezor {

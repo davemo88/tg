@@ -221,7 +221,9 @@ apply from: file("../../node_modules/@react-native-community/cli-platform-androi
 apply plugin: 'org.mozilla.rust-android-gradle.rust-android'
 
 cargo {
+    apiLevel = 29
     module  = "../../rust"
     libname = "test"
-    targets = ["arm", "x86"]
+//    targets = ["arm", "x86"]
+    targets = ["x86"]
 }

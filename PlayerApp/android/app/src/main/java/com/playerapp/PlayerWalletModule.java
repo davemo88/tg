@@ -27,7 +27,6 @@ public class PlayerWalletModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void hello_react(String name) {
-        Log.d("PlayerWalletModule", "playerUiMine");
         Log.d("PlayerWalletModule", PlayerWalletModule.hello(name));
     }
 
