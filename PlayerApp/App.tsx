@@ -1,112 +1,40 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * Generated with the TypeScript template
- * https://github.com/react-native-community/react-native-template-typescript
- *
- * @format
- */
-
+import 'react-native-gesture-handler';
 import React from 'react';
-import {
-  Button,
-  NativeModules,
-  SafeAreaView,
-  StyleSheet,
-  ScrollView,
-  View,
-  Text,
-  StatusBar,
-} from 'react-native';
+import { Provider } from 'react-redux';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
 
-import {
-  Header,
-  LearnMoreLinks,
-  Colors,
-  DebugInstructions,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+import { store } from './src/redux.ts';
+
+import { LocalPlayerSelect } from './src/components/screens/local-player-select.tsx';
+import { Home } from './src/components/screens/home.tsx';
+import { ContractDetails } from './src/components/screens/contract-details.tsx';
+import { NewLocalPlayer } from './src/components/screens/new-local-player.tsx';
+import { AddPlayer } from './src/components/screens/add-player.tsx';
+import { NewContract } from './src/components/screens/new-contract.tsx';
+import { RequestPayout } from './src/components/screens/request-payout.tsx';
+
 import PlayerWalletModule from './src/PlayerWallet';
 
-declare const global: {HermesInternal: null | {}};
+import { loadLocalData }  from './src/mock.ts';
+loadLocalData();
 
-const NewModuleButton = () => {
-  const onPress = () => {
-    PlayerWalletModule.call_cli("balance");
-  };
+const Stack = createStackNavigator();
 
+export default function App() {
   return (
-    <Button
-      title="Click to invoke your native module!"
-      color="#841584"
-      onPress={onPress}
-    />
+    <Provider store={store}>
+      <NavigationContainer>
+        <Stack.Navigator>
+          <Stack.Screen name="Player Select" component={LocalPlayerSelect} />
+          <Stack.Screen name="Home" component={Home} />
+          <Stack.Screen name="Contract Details" component={ContractDetails} />
+          <Stack.Screen name="New Local Player" component={NewLocalPlayer} />
+          <Stack.Screen name="Add Player" component={AddPlayer} />
+          <Stack.Screen name="New Contract" component={NewContract} />
+          <Stack.Screen name="Request Payout" component={RequestPayout} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </Provider>
   );
-};
-
-const App = () => {
-  return (
-    <>
-      <StatusBar barStyle="dark-content" />
-      <SafeAreaView>
-        <ScrollView
-          contentInsetAdjustmentBehavior="automatic"
-          style={styles.scrollView}>
-          <Header />
-          {global.HermesInternal == null ? null : (
-            <View style={styles.engine}>
-              <Text style={styles.footer}>Engine: Hermes</Text>
-            </View>
-          )}
-          <View style={styles.body}>
-            <View style={styles.sectionContainer}>
-              <NewModuleButton />
-            </View>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </>
-  );
-};
-
-const styles = StyleSheet.create({
-  scrollView: {
-    backgroundColor: Colors.lighter,
-  },
-  engine: {
-    position: 'absolute',
-    right: 0,
-  },
-  body: {
-    backgroundColor: Colors.white,
-  },
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: Colors.black,
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-    color: Colors.dark,
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-  footer: {
-    color: Colors.dark,
-    fontSize: 12,
-    fontWeight: '600',
-    padding: 4,
-    paddingRight: 12,
-    textAlign: 'right',
-  },
-});
-
-export default App;
+}

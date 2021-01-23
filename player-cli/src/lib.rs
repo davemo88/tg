@@ -88,6 +88,9 @@ fn player_cli<'a, 'b>() -> App<'a, 'b> {
         .subcommand(player_ui())
         .subcommand(contract_ui())
         .subcommand(payout_ui())
+        .arg(Arg::with_name("json-output")
+            .help("output json instead of user-friendly messages")
+            .required(false))
 }
 
 
