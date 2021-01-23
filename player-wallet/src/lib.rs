@@ -67,11 +67,11 @@ mod tests {
     #[test]
     fn fund_players() {
         let p1_signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap()); 
-        let p1_wallet = PlayerWallet::new(p1_signing_wallet.fingerprint(), p1_signing_wallet.xpubkey(), NETWORK, local_electrum_client());
+        let p1_wallet = PlayerWallet::new(p1_signing_wallet.fingerprint(), p1_signing_wallet.xpubkey(), NETWORK, local_electrum_client()).unwrap();
         let p1_addr = p1_wallet.new_address();
 
         let p2_signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_2_MNEMONIC).unwrap()); 
-        let p2_wallet = PlayerWallet::new(p2_signing_wallet.fingerprint(), p2_signing_wallet.xpubkey(), NETWORK, local_electrum_client());
+        let p2_wallet = PlayerWallet::new(p2_signing_wallet.fingerprint(), p2_signing_wallet.xpubkey(), NETWORK, local_electrum_client()).unwrap();
         let p2_addr = p2_wallet.new_address();
 
         let rpc = RpcClient::new("http://127.0.0.1:18443".to_string(), Auth::UserPass("admin".to_string(), "passw".to_string())).unwrap();
@@ -85,7 +85,7 @@ mod tests {
 
     fn create_contract() -> Contract {
         let p1_signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap()); 
-        let p1_wallet = PlayerWallet::new(p1_signing_wallet.fingerprint(), p1_signing_wallet.xpubkey(), NETWORK, local_electrum_client());
+        let p1_wallet = PlayerWallet::new(p1_signing_wallet.fingerprint(), p1_signing_wallet.xpubkey(), NETWORK, local_electrum_client()).unwrap();
         let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
         let arbiter_pubkey = arbiter_client.get_escrow_pubkey().unwrap();
 //        let p2_contract_info = local_player_id_client().get_player_info(PlayerId(String::from("player 2"))).unwrap();
@@ -95,7 +95,7 @@ mod tests {
 
     fn create_signed_contract() -> Contract {
         let p1_signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap()); 
-        let p1_wallet = PlayerWallet::new(p1_signing_wallet.fingerprint(), p1_signing_wallet.xpubkey(), NETWORK, local_electrum_client());
+        let p1_wallet = PlayerWallet::new(p1_signing_wallet.fingerprint(), p1_signing_wallet.xpubkey(), NETWORK, local_electrum_client()).unwrap();
         let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
         let arbiter_pubkey = arbiter_client.get_escrow_pubkey().unwrap();
         let p2_contract_info = arbiter_client.get_contract_info(PlayerName(String::from("player 2"))).unwrap();

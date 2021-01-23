@@ -75,10 +75,10 @@ impl PlayerWallet {
             Ok(dir) => dir,
             Err(e) => return Err(format!("{:?}", e)),
         };
-        db_path.push("data/data/com.playerapp/files/");
+// TODO: need to use the right path depending on platform
+// android path
+//        db_path.push("data/data/com.playerapp/files/");
         db_path.push(DB_NAME);
-// TODO: handle these errors
-//        return Err(format!("{:?}", db_path));
         let db = match DB::new(&db_path) {
             Ok(db) => db,
             Err(e) => return Err(format!("{:?}", e)),
