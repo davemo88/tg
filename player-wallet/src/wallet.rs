@@ -80,10 +80,7 @@ impl PlayerWallet {
         }
         db_path.push(DB_NAME);
         let db = DB::new(&db_path).unwrap();
-        let _r = db.create_tables().unwrap();// {
-//            Ok(_) => (),
-//            Err(e) => return Err(format!("{:?}", e)),
-//        };
+        let _r = db.create_tables().unwrap();
 
         PlayerWallet {
             xpubkey,
