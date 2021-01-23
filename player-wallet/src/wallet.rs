@@ -1,5 +1,6 @@
 use std::{
     env::current_dir,
+    path::PathBuf,
     str::FromStr,
 };
 use tglib::{
@@ -67,28 +68,24 @@ pub struct PlayerWallet {
 }
 
 impl PlayerWallet {
-    pub fn new(fingerprint: Fingerprint, xpubkey: ExtendedPubKey, network: Network, electrum_client: Client) -> Result<Self, String> {
+    pub fn new(fingerprint: Fingerprint, xpubkey: ExtendedPubKey, network: Network, electrum_client: Client) ->  Self {
         let descriptor_key = format!("[{}/{}]{}", fingerprint, BITCOIN_ACCOUNT_PATH, xpubkey);
         let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
         let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
-        let mut db_path = match current_dir() {
-            Ok(dir) => dir,
-            Err(e) => return Err(format!("{:?}", e)),
-        };
+        let mut db_path = current_dir().unwrap();
 // TODO: need to use the right path depending on platform
-// android path
-//        db_path.push("data/data/com.playerapp/files/");
+        if db_path == PathBuf::from("/") {
+// we're probably on android
+            db_path.push("data/data/com.playerapp/files/");
+        }
         db_path.push(DB_NAME);
-        let db = match DB::new(&db_path) {
-            Ok(db) => db,
-            Err(e) => return Err(format!("{:?}", e)),
-        };
-        let _r = match db.create_tables() {
-            Ok(_) => (),
-            Err(e) => return Err(format!("{:?}", e)),
-        };
+        let db = DB::new(&db_path).unwrap();
+        let _r = db.create_tables().unwrap();// {
+//            Ok(_) => (),
+//            Err(e) => return Err(format!("{:?}", e)),
+//        };
 
-        Ok(PlayerWallet {
+        PlayerWallet {
             xpubkey,
             network,
             wallet: Wallet::new(
@@ -100,7 +97,7 @@ impl PlayerWallet {
             ).unwrap(),
             db,
 
-        })
+        }
     }
 
     pub fn balance(&self) -> Amount {
