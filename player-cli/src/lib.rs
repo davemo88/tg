@@ -49,7 +49,10 @@ pub fn cli(line: String, conf: Conf) -> String {
                 Ok(c) => c,
                 Err(e) => return format!("{:?}", e)
             };
-            let wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK, client);
+            let wallet = match PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK, client) {
+                Ok(wallet) => wallet,
+                Err(e) => return e,
+            };
             match c {
                 "balance" => format!("{}", wallet.balance()),
                 "deposit" => format!("{}", wallet.deposit()),

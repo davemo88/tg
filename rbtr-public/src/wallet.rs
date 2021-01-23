@@ -13,10 +13,7 @@ use tglib::{
                 Fingerprint,
             }
         },
-        blockchain::{
-            Blockchain,
-            BlockchainMarker,
-        },
+        blockchain::Blockchain,
     },
     Result,
     TgError,
@@ -30,7 +27,7 @@ use tglib::{
 
 const ESCROW_KIX: u64 = 0;
 
-pub struct Wallet<B, D> where B: BlockchainMarker, D: BatchDatabase {
+pub struct Wallet<B, D> where D: BatchDatabase {
     pub xpubkey: ExtendedPubKey,
     pub network: Network,
     escrow_kix: u64,
@@ -39,7 +36,7 @@ pub struct Wallet<B, D> where B: BlockchainMarker, D: BatchDatabase {
 
 impl<B, D> Wallet<B, D> 
 where 
-    B: BlockchainMarker + Blockchain,
+    B: Blockchain,
     D: BatchDatabase + Default,
 {
     pub fn new(fingerprint: Fingerprint, xpubkey: ExtendedPubKey, client: B, network: Network) -> Result<Self> {
@@ -61,7 +58,12 @@ where
             escrow_kix: ESCROW_KIX,
         })
     }
-    
+}
+
+impl<D> Wallet<(),D>
+where
+    D: BatchDatabase + Default 
+{
     #[allow(dead_code)]
     pub fn new_offline(fingerprint: Fingerprint, xpubkey: ExtendedPubKey, network: Network) -> Self {
         let descriptor_key = format!("[{}/{}]{}", fingerprint, BITCOIN_ACCOUNT_PATH, xpubkey);
@@ -84,7 +86,6 @@ where
 
 impl<B, D> EscrowWallet for Wallet<B, D>
 where 
-    B: BlockchainMarker,
     D: BatchDatabase + Default,
 {
     fn get_escrow_pubkey(&self) -> PublicKey {
