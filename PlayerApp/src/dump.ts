@@ -1,4 +1,4 @@
-import { store, localPlayerSelectors, contractSelectors, payoutRequestSelectors } from './redux.ts';
+import { store, contractSelectors, payoutRequestSelectors } from './redux.ts';
 
 import { Player, Contract, ContractStatus, PayoutRequest, PayoutRequestStatus, } from './datatypes.ts';
 
@@ -22,7 +22,7 @@ export const getContractStatus = (contract: Contract ): ContractStatus => {
       switch (+payoutRequestStatus) {
         case PayoutRequestStatus.Unsigned:
           break;
-        case PayoutRequestStatus.LocalPlayerSigned:
+        case PayoutRequestStatus.SelectedPlayerSigned:
           return ContractStatus.PayoutRequestIssued;
         case PayoutRequestStatus.OtherPlayerSigned:
           return ContractStatus.PayoutRequestReceived;
@@ -66,7 +66,7 @@ export const getPayoutRequestStatus = (payoutRequest: PayoutRequest ): PayoutReq
     return PayoutRequestStatus.Live;
   }
   else if (isPayoutRequestSignedBy(payoutRequest, selectedPlayerId)) {
-    return PayoutRequestStatus.LocalPlayerSigned; 
+    return PayoutRequestStatus.SelectedPlayerSigned; 
   }
   else if (isPayoutRequestSignedBy(payoutRequest, getOtherPlayerId(selectedPlayerId, contract))) {
     return PayoutRequestStatus.OtherPlayerSigned; 

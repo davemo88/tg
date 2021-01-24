@@ -14,8 +14,6 @@ import { PlayerPortrait } from './player-portrait.tsx';
 import { SignatureSwitch } from './signature-switch.tsx';
 
 export const ContractAction = (props) => {
-//  const selectedPlayer: player = localPlayerSelectors.selectById(store.getState(), store.getState().selectedPlayerId);
-
   const [isSigned, setIsSigned] = React.useState(false);
   return(
     <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
@@ -126,7 +124,7 @@ const ActionLive = (props) => {
 
 // TODO: arbitrated payout request how
 // 3bools:
-// local or other
+// mine or other
 // tx broadcast or not
 // arbiter or not
 // then signature state

@@ -6,7 +6,7 @@ import { styles } from '../../styles.ts';
 
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, } from '../../redux.ts';
 import { Player, Contract, ContractStatus, getContractStatus } from '../../datatypes.ts';
-import { newLocalPlayer } from '../../mock.ts';
+import { newPlayer } from '../../mock.ts';
 
 import { PlayerPortrait } from '../player-portrait.tsx';
 
@@ -38,7 +38,7 @@ export const NewPlayer = ({ navigation }) => {
         <Button 
           title="Ok" 
           onPress={() => {
-            newLocalPlayer(playerName, pictureUrl);
+            newPlayer(playerName, pictureUrl);
             navigation.reset({ index:0, routes: [{ name: 'Player Select' }] })
           } }
         />

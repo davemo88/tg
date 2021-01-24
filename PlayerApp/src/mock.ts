@@ -1,6 +1,6 @@
 import { nanoid } from '@reduxjs/toolkit';
-import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, contractSelectors, contractSlice, payoutRequestSelectors, payoutRequestSlice, selectedLocalPlayerIdSlice, } from './redux.ts';
-import { LocalPlayer, Player, Url, Contract, PayoutRequest, } from './datatypes.ts';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutRequestSelectors, payoutRequestSlice, selectedPlayerIdSlice, } from './redux.ts';
+import { Player, Url, Contract, PayoutRequest, } from './datatypes.ts';
 
 // probably still s3 somewhere
 export const STATIC_CONTENT_HOST: string = 'https://whatchadoinhere.s3.amazonaws.com/';
@@ -93,7 +93,7 @@ export const loadLocalData = () => {
   }));
 }
 
-// delete some local data? set local flag more likely
+// delete some local data? set flag in db more likely
 export const declineContract = (contractId: ContractId) => {
   store.dispatch(contractSlice.actions.contractRemoved(contractId));
 }
@@ -128,10 +128,8 @@ export const arbiterSignPayoutRequest = (payoutRequest: PayoutRequest) => {
 // below functions need crypto wallet functions
 //
 
-export const newLocalPlayer = (playerName: string, pictureUrl: Url) => {
-  const newPlayerId = nanoid();
-  store.dispatch(playerSlice.actions.playerAdded({ id: newPlayerId, name: playerName, pictureUrl: pictureUrl }));
-  store.dispatch(localPlayerSlice.actions.localPlayerAdded({ id: nanoid(), playerId: newPlayerId, balance: 0 }));
+export const newPlayer = (playerName: string, pictureUrl: Url) => {
+  store.dispatch(playerSlice.actions.playerAdded({ id: nanoid(), name: playerName, pictureUrl: pictureUrl, balance: 0 }));
 }
 
 export const createContract = (contract: Contract) => {
@@ -143,7 +141,7 @@ export const createPayoutRequest = (contract: Contract) => {
 }
 
 export const signContract = (contract: Contract) => {
-  const selectedPlayerId = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId).playerId;
+  const selectedPlayerId = store.getState().selectedPlayerId;
   let action = {id: contract.id, changes: {}};
   if (contract.playerOneId === selectedPlayerId) {
     action.changes.playerOneSig = true;
@@ -155,7 +153,7 @@ export const signContract = (contract: Contract) => {
 }
 
 export const signPayoutRequest = (payoutRequest: PayoutRequest) => {
-  const selectedPlayerId = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId).playerId;
+  const selectedPlayerId = store.getState().selectedPlayerId;
   const contract = contractSelectors.selectById(store.getState(), payoutRequest.contractId);
   let action = {id: payoutRequest.id, changes: {}};
   if (contract.playerOneId === selectedPlayerId) {
