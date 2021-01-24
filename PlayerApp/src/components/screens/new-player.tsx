@@ -4,13 +4,13 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 
 import { styles } from '../../styles.ts';
 
-import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, contractSelectors, contractSlice, selectedLocalPlayerIdSlice, } from '../../redux.ts';
-import { Player, LocalPlayer, Contract, ContractStatus, getContractStatus } from '../../datatypes.ts';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, } from '../../redux.ts';
+import { Player, Contract, ContractStatus, getContractStatus } from '../../datatypes.ts';
 import { newLocalPlayer } from '../../mock.ts';
 
 import { PlayerPortrait } from '../player-portrait.tsx';
 
-export const NewLocalPlayer = ({ navigation }) => {
+export const NewPlayer = ({ navigation }) => {
   const [playerName, setPlayerName] = React.useState('');
   const [pictureUrl, setPictureUrl] = React.useState('');
 

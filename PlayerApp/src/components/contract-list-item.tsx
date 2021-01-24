@@ -5,16 +5,16 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 import { getOtherPlayerId } from '../dump.ts';
 import { styles } from '../styles.ts';
 
-import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, contractSelectors, contractSlice, selectedLocalPlayerIdSlice, } from '../redux.ts';
-import { Player, LocalPlayer, Contract, ContractStatus, getContractStatus } from '../datatypes.ts';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, } from '../redux.ts';
+import { Player, Contract, ContractStatus, getContractStatus } from '../datatypes.ts';
 
 import { Currency } from './currency.tsx';
 import { PlayerPortrait } from './player-portrait.tsx';
 import { ContractSummary } from './contract-summary.tsx';
 
 export const ContractListItem = (props) => {
-  const selectedLocalPlayer: LocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
-  const otherPlayer = playerSelectors.selectById(store.getState(), getOtherPlayerId(selectedLocalPlayer.playerId, props.contract));
+  const selectedPlayer: Player = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerId);
+  const otherPlayer = playerSelectors.selectById(store.getState(), getOtherPlayerId(selectedPlayer.id, props.contract));
 
   return (
     <View style={{ flexDirection: 'row', backgroundColor: 'slategrey', margin: 2, padding: 2 }}>

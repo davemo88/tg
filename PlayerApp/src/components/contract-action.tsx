@@ -4,8 +4,8 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 
 import { styles } from '../styles.ts';
 
-import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, contractSelectors, contractSlice, payoutRequestSelectors, payoutRequestSlice, selectedLocalPlayerIdSlice, } from '../redux.ts';
-import { Player, LocalPlayer, Contract, ContractStatus, } from '../datatypes.ts';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutRequestSelectors, payoutRequestSlice, selectedPlayerIdSlice, } from '../redux.ts';
+import { Player, Contract, ContractStatus, } from '../datatypes.ts';
 import { getContractStatus } from '../dump.ts';
 import { broadcastFundingTx, broadcastPayoutTx, signPayoutRequest, signContract, arbiterSignContract, declineContract, dismissContract, denyPayoutRequest, } from '../mock.ts';
 
@@ -14,7 +14,7 @@ import { PlayerPortrait } from './player-portrait.tsx';
 import { SignatureSwitch } from './signature-switch.tsx';
 
 export const ContractAction = (props) => {
-  const selectedLocalPlayer: LocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
+//  const selectedPlayer: player = localPlayerSelectors.selectById(store.getState(), store.getState().selectedPlayerId);
 
   const [isSigned, setIsSigned] = React.useState(false);
   return(

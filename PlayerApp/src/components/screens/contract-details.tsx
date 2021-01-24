@@ -3,8 +3,8 @@ import { Text, Button, View, } from 'react-native';
 
 import { styles } from '../../styles.ts';
 
-import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, contractSelectors, contractSlice, selectedLocalPlayerIdSlice, } from '../../redux.ts';
-import { Player, LocalPlayer, Contract, ContractStatus, getContractStatus } from '../../datatypes.ts'
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, } from '../../redux.ts';
+import { Player, Contract, ContractStatus, getContractStatus } from '../../datatypes.ts'
 import { dismissContract } from '../../mock.ts';
 
 import { ContractSummary } from '../contract-summary.tsx';
@@ -16,7 +16,7 @@ import { Currency } from '../currency.tsx';
 export const ContractDetails = ({ route, navigation }) => {
   const { contractId } = route.params;
   const contract = contractSelectors.selectById(store.getState(), contractId);
-  const selectedLocalPlayer: LocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
+  const selectedPlayer: Player = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerId);
   const playerOne = playerSelectors.selectById(store.getState(), contract.playerOneId);
   const playerTwo = playerSelectors.selectById(store.getState(), contract.playerTwoId);
 

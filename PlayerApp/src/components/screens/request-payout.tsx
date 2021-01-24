@@ -5,8 +5,8 @@ import Slider from '@react-native-community/slider';
 
 import { styles } from '../../styles.ts';
 
-import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, contractSelectors, contractSlice, selectedLocalPlayerIdSlice, payoutRequestSlice, } from '../../redux.ts';
-import { Player, LocalPlayer, Contract, PayoutRequest, ContractStatus, getContractStatus } from '../../datatypes.ts';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, payoutRequestSlice, } from '../../redux.ts';
+import { Player, Contract, PayoutRequest, ContractStatus, getContractStatus } from '../../datatypes.ts';
 
 import { Arbiter } from '../arbiter.tsx';
 import { Currency } from '../currency.tsx';
@@ -18,7 +18,7 @@ export const RequestPayout = ({ route, navigation }) => {
   const contract = contractSelectors.selectById(store.getState(), contractId);
   const playerOne = playerSelectors.selectById(store.getState(), contract.playerOneId)
   const playerTwo = playerSelectors.selectById(store.getState(), contract.playerTwoId)
-  const selectedLocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
+  const selectedPlayer = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerId);
   const [playerOnePayout, setPlayerOnePayout] = React.useState(contract.pot);
   const [playerTwoPayout, setPlayerTwoPayout] = React.useState(0);
   const [isArbitratedPayout, setIsArbitratedPayout] = React.useState(false);
@@ -97,8 +97,8 @@ export const RequestPayout = ({ route, navigation }) => {
                 id: nanoid(),
                 contractId: contract.id,
                 payoutTx: false,
-                playerOneSig: (contract.playerOneId === selectedLocalPlayer.playerId),
-                playerTwoSig: (contract.playerTwoId === selectedLocalPlayer.playerId),
+                playerOneSig: (contract.playerOneId === selectedPlayer.id),
+                playerTwoSig: (contract.playerTwoId === selectedPlayer.id),
                 arbiterSig: isArbitratedPayout ? true : false,
                 payoutScriptSig: isArbitratedPayout ? true : false,
                 playerOneAmount: playerOnePayout,

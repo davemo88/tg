@@ -1,6 +1,6 @@
 import { store, localPlayerSelectors, contractSelectors, payoutRequestSelectors } from './redux.ts';
 
-import { LocalPlayer, Player, Contract, ContractStatus, PayoutRequest, PayoutRequestStatus, } from './datatypes.ts';
+import { Player, Contract, ContractStatus, PayoutRequest, PayoutRequestStatus, } from './datatypes.ts';
 
 
 // TODO: this function checks the blockchain for the expected payout transactions for the contract
@@ -8,7 +8,7 @@ import { LocalPlayer, Player, Contract, ContractStatus, PayoutRequest, PayoutReq
 // TODO: can only tell if contract is resolved by looking for txs that spend from fundingTx appropriately. suppose there are inappapropriate ones - then we refuse all payout requests?
 // TODO: S is whatever the store type is, idk how to get it atm
 export const getContractStatus = (contract: Contract ): ContractStatus => {
-  const selectedPlayerId = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId).playerId;
+  const selectedPlayerId = store.getState().selectedPlayerId;
 
   const allSigned: bool = (contract.playerOneSig && contract.playerTwoSig && contract.arbiterSig);
 
@@ -53,7 +53,7 @@ export const getContractStatus = (contract: Contract ): ContractStatus => {
 }
 
 export const getPayoutRequestStatus = (payoutRequest: PayoutRequest ): PayoutRequestStatus => {
-  const selectedPlayerId = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId).playerId;
+  const selectedPlayerId = store.getState().selectedPlayerId;
   const contract = contractSelectors.selectById(store.getState(), payoutRequest.contractId);
   if (payoutRequest.payoutTx) {
     return PayoutRequestStatus.Resolved;

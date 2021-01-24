@@ -1,25 +1,18 @@
-export type PlayerId = string;
-export type LocalPlayerId = string;
-export type ContractId = string;
-export type PayoutRequestId = string;
-export type Url = string;
+// for redux toolkit entity adapter
+export type EntityId = string;
 
 export interface Player {
-  id:               PlayerId;
+  id:               EntityId;
   name:             string;
-  pictureUrl:       Url;
-}
-
-export interface LocalPlayer {
-  id:               LocalPlayerId;
-  playerId:         PlayerId;
-  balance:          number;
+  pictureUrl:       string;
+  mine:             bool;
 }
 
 export interface Contract {
-  id:               ContractId;
-  playerOneId:      PlayerId;
-  PlayerTwoId:      PlayerId;
+  id:               EntityId;
+  playerOneId:      EntityId;
+  PlayerTwoId:      EntityId;
+  cxid:             string,
   pot:              number;
   fundingTx:        bool;
   playerOneSig:     bool;
@@ -28,8 +21,8 @@ export interface Contract {
 }
 
 export interface PayoutRequest {
-  id:               PayoutRequestId;
-  contractId:      ContractId;
+  id:               EntityId;
+  cxid:             string;
   payoutTx:         bool;
   playerOneSig:     bool;
   playerTwoSig:     bool;

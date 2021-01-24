@@ -4,15 +4,15 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 
 import { styles } from '../../styles.ts';
 
-import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, contractSelectors, contractSlice, selectedLocalPlayerIdSlice, } from '../../redux.ts';
-import { Player, LocalPlayer, Contract, ContractStatus, getContractStatus } from '../../datatypes.ts';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, } from '../../redux.ts';
+import { Player, Contract, ContractStatus, getContractStatus } from '../../datatypes.ts';
 import { NETWORK, TITLE_IMAGE_SOURCE, TEST_IMAGE_SOURCE, LIVE_IMAGE_SOURCE, } from '../../mock.ts';
 
 import { PlayerSelector } from '../player-selector.tsx';
 
-export const LocalPlayerSelect = ({ navigation }) => {
-  const localPlayers = localPlayerSelectors.selectAll(store.getState());
-  const [selectedPlayerId, setSelectedPlayerId] = React.useState(localPlayers[0].playerId)
+export const PlayerSelect = ({ navigation }) => {
+  const players = playerSelectors.selectAll(store.getState());
+  const [selectedPlayerId, setSelectedPlayerId] = React.useState(players[0].id)
 
 // TODO: move Test / Live images to navigation header
   return (
@@ -31,7 +31,7 @@ export const LocalPlayerSelect = ({ navigation }) => {
           <PlayerSelector 
             selectedPlayerId={selectedPlayerId}
             setSelectedPlayerId={setSelectedPlayerId}
-            playerIds={localPlayers.map(l => l.playerId)}
+            playerIds={players.map(p => p.id)}
           />
         </View>
       </View>
@@ -40,17 +40,17 @@ export const LocalPlayerSelect = ({ navigation }) => {
           <Button 
             title="Ok" 
             onPress={() => {
-              const selectedLocalPlayer = localPlayers.find(l => l.playerId === selectedPlayerId);
-              store.dispatch(selectedLocalPlayerIdSlice.actions.setSelectedLocalPlayerId(selectedLocalPlayer.id));
+              const selectedPlayer = players.find(p => p.id === selectedPlayerId);
+              store.dispatch(selectedPlayerIdSlice.actions.setSelectedPlayerId(selectedPlayer.id));
               navigation.reset({ index:0,   routes: [{ name: 'Home' }] })
             } }
           />
         </View>
         <View style={{ flex: 1 }}>
           <Button 
-            title="New Local Player" 
+            title="New Player" 
             onPress={() => {
-              navigation.navigate('New Local Player')
+              navigation.navigate('New Player')
             } }
           />
         </View>

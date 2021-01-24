@@ -4,8 +4,8 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 
 import { styles } from '../../styles.ts';
 
-import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, contractSelectors, contractSlice, selectedLocalPlayerIdSlice, } from '../../redux.ts';
-import { Player, LocalPlayer, Contract, ContractStatus, getContractStatus } from '../../datatypes.ts';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, } from '../../redux.ts';
+import { Player, Contract, ContractStatus, getContractStatus } from '../../datatypes.ts';
 import { SignContract } from '../../mock.ts';
 
 import { Currency } from '../currency.tsx';
@@ -15,10 +15,10 @@ import { PlayerSelector } from '../player-selector.tsx';
 
 // TODO: add referee / game-domain expertise delegate pubkey input
 export const NewContract = ({ navigation }) => {
-  const selectedLocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
+  const selectedPlayer = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerId);
   const playerTwos = playerSelectors
     .selectAll(store.getState())
-    .filter((player, i, a) => player.id != selectedLocalPlayer.playerId);
+    .filter((player, i, a) => player.id != selectedPlayer.id);
   const [contractAmount, onChangeContractAmount] = React.useState('0');
   const [playerTwoId, setPlayerTwoId] = React.useState(playerTwos[0].id);
   const [isSigned, setIsSigned] = React.useState(false);
@@ -58,14 +58,14 @@ export const NewContract = ({ navigation }) => {
             disabled={!valid()}
             title="Issue" 
             onPress={() => {
-              store.dispatch(localPlayerSlice.actions.localPlayerUpdated({ 
-                id: selectedLocalPlayer.id,
-                changes: { balance: selectedLocalPlayer.balance - Math.ceil(contractAmount/2) }
+              store.dispatch(playerSlice.actions.playerUpdated({ 
+                id: selectedPlayer.id,
+                changes: { balance: selectedPlayer.balance - Math.ceil(contractAmount/2) }
               }))
 // native code here
               store.dispatch(contractSlice.actions.contractAdded({ 
                 id: nanoid(),
-                playerOneId: selectedLocalPlayer.playerId,
+                playerOneId: selectedPlayer.id,
                 playerTwoId: playerTwoId,
                 pot: contractAmount,
                 fundingTx: false,

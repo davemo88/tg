@@ -5,8 +5,8 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 
 import { styles } from '../../styles.ts';
 
-import { store, playerSlice, playerSelectors, localPlayerSlice, localPlayerSelectors, contractSelectors, contractSlice, selectedLocalPlayerIdSlice, } from '../../redux.ts';
-import { Player, LocalPlayer, Contract, ContractStatus} from '../../datatypes.ts';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, } from '../../redux.ts';
+import { Player, Contract, ContractStatus} from '../../datatypes.ts';
 import { getContractStatus } from '../../dump.ts';
 
 import { Currency } from '../currency.tsx';
@@ -16,12 +16,11 @@ import { ContractListItem } from '../contract-list-item.tsx';
 
 export const Home = ({ navigation }) => {
   
-  const selectedLocalPlayer = localPlayerSelectors.selectById(store.getState(), store.getState().selectedLocalPlayerId);
-  const selectedPlayer = playerSelectors.selectById(store.getState(), selectedLocalPlayer.playerId);
+  const selectedPlayer = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerId);
 
   const contracts = contractSelectors.selectAll(store.getState())
   .filter((contract, i, a) =>{ return (
-    (contract.playerOneId === selectedLocalPlayer.playerId || contract.playerTwoId === selectedLocalPlayer.playerId) 
+    (contract.playerOneId === selectedPlayer.id || contract.playerTwoId === selectedPlayer.id) 
     && 
     (getContractStatus(contract) != ContractStatus.Resolved)
   )})
@@ -43,7 +42,7 @@ export const Home = ({ navigation }) => {
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, margin: 5, backgroundColor: 'slategrey', }}>
             <PlayerPortrait name={selectedPlayer.name} pictureUrl={selectedPlayer.pictureUrl} />
             <View style={{ alignItems: 'center' }}>
-              <Currency amount={selectedLocalPlayer.balance} />
+              <Currency amount={selectedPlayer.balance} />
               <Text style={{ textDecorationLine: 'underline', color: 'lightblue' }}>Address</Text>
             </View>
           </View> 
