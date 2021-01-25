@@ -92,6 +92,7 @@ fn player_cli<'a, 'b>() -> App<'a, 'b> {
         .arg(Arg::with_name("json-output")
             .help("output json instead of user-friendly messages")
             .required(false)
+            .global(true)
             .long("json-output"))
 }
 
