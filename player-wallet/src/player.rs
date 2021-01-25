@@ -40,7 +40,7 @@ impl PlayerNameService for PlayerNameClient {
                     Err(msg)
                 }
             }
-            Err(_) => Err("rpc call to namecoind failed".to_string())
+            Err(e) => Err(format!("{:?}", e))
         }
     }
 
