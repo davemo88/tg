@@ -56,6 +56,7 @@ use tglib::{
     },
 };
 use crate::{
+    player::PlayerNameClient,
     arbiter::ArbiterClient,
     db::DB,
 };
@@ -63,12 +64,15 @@ use crate::{
 pub struct PlayerWallet {
     xpubkey: ExtendedPubKey,
     network: Network,
+// TODO: allow for offline wallet
     pub wallet: Wallet<ElectrumBlockchain, MemoryDatabase>,
     pub db: DB,
+    pub name_client: PlayerNameClient,
+    pub arbiter_client: ArbiterClient,
 }
 
 impl PlayerWallet {
-    pub fn new(fingerprint: Fingerprint, xpubkey: ExtendedPubKey, network: Network, electrum_client: Client) ->  Self {
+    pub fn new(fingerprint: Fingerprint, xpubkey: ExtendedPubKey, network: Network, electrum_client: Client, name_client: PlayerNameClient, arbiter_client: ArbiterClient) ->  Self {
         let descriptor_key = format!("[{}/{}]{}", fingerprint, BITCOIN_ACCOUNT_PATH, xpubkey);
         let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
         let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
@@ -93,7 +97,8 @@ impl PlayerWallet {
                 ElectrumBlockchain::from(electrum_client)
             ).unwrap(),
             db,
-
+            name_client,
+            arbiter_client,
         }
     }
 

@@ -20,10 +20,12 @@ use tglib::{
     },
 };
 use player_wallet::{
+    arbiter::ArbiterClient,
     db::{
         ContractRecord,
         PayoutRecord,
     },
+    player::PlayerNameClient,
     ui::{
         DocumentUI,
         NewDocumentParams,
@@ -35,7 +37,7 @@ use player_wallet::{
 };
 
 pub struct Conf {
-    pub electrs_url: String,
+    pub electrum_url: String,
     pub name_url: String,
     pub arbiter_url: String,
 }
@@ -46,11 +48,13 @@ pub fn cli(line: String, conf: Conf) -> String {
     if matches.is_ok() {
         if let (c, Some(a)) = matches.unwrap().subcommand() {
             let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-            let client = match Client::new(&conf.electrs_url) {
+            let electrum_client = match Client::new(&conf.electrum_url) {
                 Ok(c) => c,
                 Err(e) => return format!("{:?}", e)
             };
-            let wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK, client);
+            let name_client = PlayerNameClient::new(&conf.name_url);
+            let arbiter_client = ArbiterClient::new(&conf.arbiter_url);
+            let wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK, electrum_client, name_client, arbiter_client);
             match c {
                 "balance" => format!("{}", wallet.balance()),
                 "deposit" => format!("{}", wallet.deposit()),

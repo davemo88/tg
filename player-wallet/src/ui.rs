@@ -41,23 +41,19 @@ use tglib::{
     },
     mock::{
         Trezor,
-        ARBITER_PUBLIC_URL,
         ESCROW_KIX,
         NETWORK,
         PAYOUT_VERSION,
-        NAME_SERVICE_URL,
         PLAYER_1_MNEMONIC,
     },
 };
 use crate::{
-    arbiter::ArbiterClient,
     db::{
         self,
         ContractRecord,
         PayoutRecord,
         PlayerRecord,
     },
-    player::PlayerNameClient,
     wallet::PlayerWallet,
 };
 
@@ -116,7 +112,6 @@ impl WalletUI for PlayerWallet {
 
 impl PlayerUI for PlayerWallet {
     fn register(&self, name: PlayerName) -> TgResult<()> {
-        let name_client = PlayerNameClient::new(NAME_SERVICE_URL);
         let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
         let mut engine = sha256::HashEngine::default();
         engine.input(name.0.as_bytes());
@@ -125,7 +120,7 @@ impl PlayerUI for PlayerWallet {
             Message::from_slice(hash).unwrap(),
             DerivationPath::from_str(&format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX)).unwrap(),
         ).unwrap();
-        match name_client.register_name(name.clone(), self.name_pubkey(), sig) {
+        match self.name_client.register_name(name.clone(), self.name_pubkey(), sig) {
             Ok(()) => PlayerUI::add(self, name),
             Err(e) => Err(TgError(e))
         }
@@ -155,8 +150,7 @@ impl PlayerUI for PlayerWallet {
     }
 
     fn mine(&self) -> Vec<PlayerName> {
-        let names = PlayerNameClient::new(NAME_SERVICE_URL);
-        names.get_player_names(&self.name_pubkey())
+        self.name_client.get_player_names(&self.name_pubkey())
     }
 }
 
@@ -171,17 +165,16 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
             return Err(TgError("can't create contract: p1 name not controlled by local wallet".to_string()))
         }
 
-        let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
 // TODO: check if p2_name is registered, or just let the future contract info check fail
 // if p2 isn't registered, they couldn't have posted contract info
-        let p2_contract_info = match arbiter_client.get_contract_info(p2_name.clone()) {
+        let p2_contract_info = match self.arbiter_client.get_contract_info(p2_name.clone()) {
             Some(info) => info,
             None => {
                 return Err(TgError("can't create contract: couldn't fetch p2 contract info".to_string()))
             }
         };
 
-        let arbiter_pubkey = match arbiter_client.get_escrow_pubkey() {
+        let arbiter_pubkey = match self.arbiter_client.get_escrow_pubkey() {
             Ok(pubkey) => pubkey,
             Err(_) => return Err(TgError("can't create contract: couldn't get arbiter pubkey".to_string()))
         };
@@ -275,9 +268,8 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
 
     fn submit(&self, cxid: &str) -> TgResult<()> {
         if let Some(cr) = self.db.get_contract(&cxid) {
-            let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
             let mut contract = Contract::from_bytes(hex::decode(cr.hex.clone()).unwrap()).unwrap();
-            if let Ok(sig) = arbiter_client.submit_contract(&contract) {
+            if let Ok(sig) = self.arbiter_client.submit_contract(&contract) {
                contract.sigs.push(sig);
                let _r = self.db.add_signature(cr.cxid, hex::encode(contract.to_bytes()));
                Ok(())
@@ -389,8 +381,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
             psbt: consensus::deserialize(&hex::decode(pr.psbt).unwrap()).unwrap(),
             script_sig: Signature::from_compact(&hex::decode(pr.sig).unwrap()).ok()
         };
-        let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
-        if let Ok(psbt) = arbiter_client.submit_payout(&p) {
+        if let Ok(psbt) = self.arbiter_client.submit_payout(&p) {
             p.psbt = psbt; 
             self.db.insert_payout(PayoutRecord::from(p)).unwrap();
             Ok(())

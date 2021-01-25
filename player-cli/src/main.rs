@@ -30,7 +30,7 @@ fn main() -> Result<(), Error> {
         match readline {
             Ok(line) => {
                 let conf = libcli::Conf {
-                    electrs_url: "tcp://localhost:60401".into(),
+                    electrum_url: "tcp://localhost:60401".into(),
                     name_url: "http://localhost:18420".into(),
                     arbiter_url: "http://localhost:5000".into(),
                 };

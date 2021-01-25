@@ -16,7 +16,8 @@ export const PlayerSelect = ({ navigation }) => {
   const players = playerSelectors.selectAll(store.getState());
   const [selectedPlayerId, setSelectedPlayerId] = React.useState(players[0].id)
   
-//  PlayerWalletModule.call_cli("player register boobnnana");
+  PlayerWalletModule.call_cli("player register gordonstern");
+  PlayerWalletModule.call_cli("player list --json-output");
 
 // TODO: move Test / Live images to navigation header
   return (
