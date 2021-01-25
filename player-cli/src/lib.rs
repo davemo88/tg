@@ -1,4 +1,5 @@
 use clap::{App, Arg, ArgMatches, SubCommand, AppSettings};
+use serde_json;
 use shell_words;
 use tglib::{
     bdk::{
@@ -90,7 +91,8 @@ fn player_cli<'a, 'b>() -> App<'a, 'b> {
         .subcommand(payout_ui())
         .arg(Arg::with_name("json-output")
             .help("output json instead of user-friendly messages")
-            .required(false))
+            .required(false)
+            .long("json-output"))
 }
 
 
@@ -137,9 +139,16 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 Ok(()) => format!("removed player"),
                 Err(e) => format!("{}", e),
             }
-            "list" => PlayerUI::list(wallet).iter().fold(String::default(), |acc, p| acc + &format!("{}\n", p.name.0) ),
-//            "mine" => for p in wallet.mine() { format!("{}", p.0) },
-            "mine" => wallet.mine().iter().fold(String::default(), |acc, p| acc + &format!("{}", p.0) ),
+            "list" => if a.value_of("json-output").is_some() {
+                    serde_json::to_string(&PlayerUI::list(wallet)).unwrap()
+                } else {
+                    PlayerUI::list(wallet).iter().fold(String::default(), |acc, p| acc + &format!("{}\n", p.name.0) )
+                }
+            "mine" => if a.value_of("json-output").is_some() {
+                    serde_json::to_string(&wallet.mine()).unwrap()
+                } else {
+                    wallet.mine().iter().fold(String::default(), |acc, p| acc + &format!("{}", p.0) )
+                },
             _ => format!("command '{}' is not implemented", c),
         }
     }

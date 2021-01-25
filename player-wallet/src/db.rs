@@ -11,7 +11,7 @@ use tglib::{
     payout::Payout,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayerRecord {
     pub name:       PlayerName,
 }

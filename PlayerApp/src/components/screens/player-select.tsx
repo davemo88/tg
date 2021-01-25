@@ -8,11 +8,15 @@ import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, 
 import { Player, Contract, ContractStatus, getContractStatus } from '../../datatypes.ts';
 import { NETWORK, TITLE_IMAGE_SOURCE, TEST_IMAGE_SOURCE, LIVE_IMAGE_SOURCE, } from '../../mock.ts';
 
+import PlayerWalletModule from './../../PlayerWallet';
+
 import { PlayerSelector } from '../player-selector.tsx';
 
 export const PlayerSelect = ({ navigation }) => {
   const players = playerSelectors.selectAll(store.getState());
   const [selectedPlayerId, setSelectedPlayerId] = React.useState(players[0].id)
+  
+//  PlayerWalletModule.call_cli("player register boobnnana");
 
 // TODO: move Test / Live images to navigation header
   return (

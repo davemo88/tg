@@ -45,12 +45,21 @@ export const selectedPlayerIdSlice = createSlice({
   }
 })
 
+export const balanceSlice = createSlice({
+  name: 'balance',
+  initialState: 0,
+  reducers: {
+    setBalance:  (state, action) => action.payload
+  }
+})
+
 export const store = configureStore({
   reducer: {
     players: playerSlice.reducer,
     contracts: contractSlice.reducer,
     payoutRequests: payoutRequestSlice.reducer,
     selectedPlayerId: selectedPlayerIdSlice.reducer,
+    balance: balanceSlice.reducer,
   }
 })
 

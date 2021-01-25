@@ -25,8 +25,10 @@ public class PlayerWalletModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void call_cli(String command) {
-        Log.d("PlayerWalletModule", PlayerWalletModule.cli(command));
+    public String call_cli(String command) {
+        String cli_output = PlayerWalletModule.cli(command);
+        Log.d("PlayerWalletModule", cli_output);
+        return cli_output;
     }
 }
 

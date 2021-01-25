@@ -58,8 +58,6 @@ pub struct Contract {
     pub p1_pubkey:          PublicKey,
     pub p2_pubkey:          PublicKey,
     pub arbiter_pubkey:     PublicKey,
-// TODO: convert to psbt
-//    pub funding_tx:         Transaction,
     pub funding_tx:         PartiallySignedTransaction,
     pub payout_script:      TgScript,
     pub sigs:               Vec<Signature>, 

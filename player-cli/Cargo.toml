@@ -20,3 +20,5 @@ player-wallet = { path = "../player-wallet" }
 clap = "2"
 rustyline = "6.2.0"
 shell-words= "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
