@@ -144,12 +144,12 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 Ok(()) => format!("removed player"),
                 Err(e) => format!("{}", e),
             }
-            "list" => if a.value_of("json-output").is_some() {
+            "list" => if a.is_present("json-output") {
                     serde_json::to_string(&PlayerUI::list(wallet)).unwrap()
                 } else {
                     PlayerUI::list(wallet).iter().fold(String::default(), |acc, p| acc + &format!("{}\n", p.name.0) )
                 }
-            "mine" => if a.value_of("json-output").is_some() {
+            "mine" => if a.is_present("json-output") {
                     serde_json::to_string(&wallet.mine()).unwrap()
                 } else {
                     wallet.mine().iter().fold(String::default(), |acc, p| acc + &format!("{}", p.0) )

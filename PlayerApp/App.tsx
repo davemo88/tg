@@ -16,7 +16,7 @@ import { RequestPayout } from './src/components/screens/request-payout.tsx';
 
 import PlayerWalletModule from './src/PlayerWallet';
 
-import { loadLocalData }  from './src/mock.ts';
+import { loadLocalData }  from './src/wallet.ts';
 loadLocalData();
 
 const Stack = createStackNavigator();

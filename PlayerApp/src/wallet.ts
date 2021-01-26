@@ -1,7 +1,9 @@
+import { LogBox } from 'react-native';
 import { nanoid } from '@reduxjs/toolkit';
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutRequestSelectors, payoutRequestSlice, selectedPlayerIdSlice, } from './redux.ts';
 import { Player, Contract, PayoutRequest, } from './datatypes.ts';
-import { PlayerWalletModule } from './PlayerWallet.ts';
+
+import PlayerWalletModule from './PlayerWallet.ts';
 
 // probably still s3 somewhere
 export const STATIC_CONTENT_HOST: string = 'https://whatchadoinhere.s3.amazonaws.com/';
@@ -14,7 +16,11 @@ export const LIVE_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'live.png';
 export const NETWORK: string = 'Test';
 export const loadLocalData = () => {
 // get player list
-  let player_list = PlayerWalletModule.call_cli("player list --json-output"); 
+  console.log("load local data player list");
+  let r = async () =>  {
+    const output = await PlayerWalletModule.call_cli("player list --json-output");
+    store.dispatch(playerSlice.actions.playerAdded({ id: nanoid(), name: player_list[0].name, pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0', mine: false }));
+  }
 // set "mine" flags on players
 // get wallet balance
 // get list of contracts
