@@ -10,6 +10,8 @@ import { newPlayer } from '../../mock.ts';
 
 import { PlayerPortrait } from '../player-portrait.tsx';
 
+import PlayerWalletModule from './../../PlayerWallet';
+
 export const NewPlayer = ({ navigation }) => {
   const [playerName, setPlayerName] = React.useState('');
   const [pictureUrl, setPictureUrl] = React.useState('');
@@ -38,7 +40,8 @@ export const NewPlayer = ({ navigation }) => {
         <Button 
           title="Ok" 
           onPress={() => {
-            newPlayer(playerName, pictureUrl);
+            PlayerWalletModule.call_cli(`player register ${playerName}`); 
+//            newPlayer(playerName, pictureUrl);
             navigation.reset({ index:0, routes: [{ name: 'Player Select' }] })
           } }
         />
