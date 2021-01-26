@@ -16,12 +16,15 @@ import { RequestPayout } from './src/components/screens/request-payout.tsx';
 
 import PlayerWalletModule from './src/PlayerWallet';
 
-import { loadLocalData }  from './src/wallet.ts';
-loadLocalData();
+import { loadData }  from './src/wallet.ts';
+loadData();
 
 const Stack = createStackNavigator();
 
 export default function App() {
+// TODO: https://thecodingmachine.github.io/react-native-boilerplate/docs/SplashScreenLoadingData/
+  const [loadingComplete, setLoadingComplete] = UseState(false);
+
   return (
     <Provider store={store}>
       <NavigationContainer>

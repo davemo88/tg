@@ -14,9 +14,9 @@ export const LIVE_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'live.png';
 
 // this is appdata
 export const NETWORK: string = 'Test';
-export const loadLocalData = () => {
+export const loadData = async () => {
 // get player list
-  console.log("load local data player list");
+  console.log("load data player list");
   let r = async () =>  {
     const output = await PlayerWalletModule.call_cli("player list --json-output");
     store.dispatch(playerSlice.actions.playerAdded({ id: nanoid(), name: player_list[0].name, pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0', mine: false }));
