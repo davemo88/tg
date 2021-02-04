@@ -25,6 +25,26 @@ export const loadPlayers = createAsyncThunk('players/loadPlayers', async (_, thu
     }
 });
 
+export const myLoadPlayers = async function (dispatch) {
+    try {
+        const output = await PlayerWalletModule.call_cli("player list --json-output");
+        console.log("my load players");
+        console.log("cli output:", output);
+        let player_list = JSON.parse(output);
+        player_list.push({name: "Tom"});
+        console.log("player list:", player_list);
+        player_list.forEach(function (p) { 
+            p.id = nanoid(); 
+            p.pictureUrl = "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0";
+            p.mine = false;
+        });
+        return dispatch(playerSlice.actions.playerAddedMany(player_list));
+//        return player_list;
+    } catch (error) {
+        console.log(error);
+    }
+}
+
 export const playerSlice = createSlice({
     name: 'players',
     initialState: playerAdapter.getInitialState(),
@@ -32,11 +52,11 @@ export const playerSlice = createSlice({
         playerAdded: playerAdapter.addOne,
         playerAddedMany: playerAdapter.addMany,
     },
-    extraReducers: {
-        [loadPlayers.fulfilled]: (state, action) => {
-            
-        },
-    }
+//    extraReducers: {
+//        [loadPlayers.fulfilled]: (state, action) => {
+//            
+//        },
+//    }
 })
 
 const contractAdapter = createEntityAdapter<Contract>({});

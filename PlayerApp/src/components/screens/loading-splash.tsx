@@ -3,24 +3,24 @@ import React, { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { Text, View, } from 'react-native';
 
-import { store, loadPlayers, playerSlice, } from '../../redux';
+import { store, loadPlayers, myLoadPlayers, playerSlice, } from '../../redux';
 
 export const LoadingSplash = ({ navigation }) => {
     const dispatch = useDispatch();
     const [playersLoaded, setPlayersLoaded] = React.useState(false);
 
     console.log("players loaded:", playersLoaded);
-    useEffect(() => {
+//    useEffect(() => {
         if (!playersLoaded) {
 // set a timer here too maybe?
-            setPlayersLoaded(true);
-            dispatch(loadPlayers())
+//            setPlayersLoaded(true);
+            dispatch(myLoadPlayers)
                 .then(() => {
                     console.log("load players completed");
                     navigation.reset({ index:0,   routes: [{ name: 'Player Select' }] });
                 });
        }
-    }, [])
+//    }, [])
 
     return (
         <View>

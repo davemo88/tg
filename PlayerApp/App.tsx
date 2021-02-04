@@ -4,21 +4,16 @@ import { Provider } from 'react-redux';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
-import { store } from './src/redux.ts';
+import { store } from './src/redux';
 
-import { LoadingSplash } from './src/components/screens/loading-splash.tsx';
-import { PlayerSelect } from './src/components/screens/player-select.tsx';
-import { Home } from './src/components/screens/home.tsx';
-import { ContractDetails } from './src/components/screens/contract-details.tsx';
-import { NewPlayer } from './src/components/screens/new-player.tsx';
-import { AddPlayer } from './src/components/screens/add-player.tsx';
-import { NewContract } from './src/components/screens/new-contract.tsx';
-import { RequestPayout } from './src/components/screens/request-payout.tsx';
-
-import PlayerWalletModule from './src/PlayerWallet';
-
-//import { loadData }  from './src/wallet.ts';
-//loadData();
+import { LoadingSplash } from './src/components/screens/loading-splash';
+import { PlayerSelect } from './src/components/screens/player-select';
+import { Home } from './src/components/screens/home';
+import { ContractDetails } from './src/components/screens/contract-details';
+import { NewPlayer } from './src/components/screens/new-player';
+import { AddPlayer } from './src/components/screens/add-player';
+import { NewContract } from './src/components/screens/new-contract';
+import { RequestPayout } from './src/components/screens/request-payout';
 
 const Stack = createStackNavigator();
 
