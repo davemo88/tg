@@ -3,30 +3,14 @@ import { nanoid } from '@reduxjs/toolkit';
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutRequestSelectors, payoutRequestSlice, selectedPlayerIdSlice, } from './redux.ts';
 import { Player, Contract, PayoutRequest, } from './datatypes.ts';
 
-import PlayerWalletModule from './PlayerWallet.ts';
-
 // probably still s3 somewhere
 export const STATIC_CONTENT_HOST: string = 'https://whatchadoinhere.s3.amazonaws.com/';
 export const TITLE_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'cc.png'; 
 export const TEST_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'test.png'; 
 export const LIVE_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'live.png'; 
 
-
 // this is appdata
 export const NETWORK: string = 'Test';
-export const loadData = async () => {
-// get player list
-  console.log("load data player list");
-  let r = async () =>  {
-    const output = await PlayerWalletModule.call_cli("player list --json-output");
-    store.dispatch(playerSlice.actions.playerAdded({ id: nanoid(), name: player_list[0].name, pictureUrl: 'https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0', mine: false }));
-  }
-// set "mine" flags on players
-// get wallet balance
-// get list of contracts
-// get list of payouts
-// set redux store state
-}
 
 export const newPlayer = (playerName: string, pictureUrl: Url) => {
   store.dispatch(playerSlice.actions.playerAdded({ id: nanoid(), name: playerName, pictureUrl: pictureUrl, balance: 0 }));

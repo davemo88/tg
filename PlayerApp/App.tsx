@@ -6,6 +6,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 
 import { store } from './src/redux.ts';
 
+import { LoadingSplash } from './src/components/screens/loading-splash.tsx';
 import { PlayerSelect } from './src/components/screens/player-select.tsx';
 import { Home } from './src/components/screens/home.tsx';
 import { ContractDetails } from './src/components/screens/contract-details.tsx';
@@ -16,28 +17,27 @@ import { RequestPayout } from './src/components/screens/request-payout.tsx';
 
 import PlayerWalletModule from './src/PlayerWallet';
 
-import { loadData }  from './src/wallet.ts';
-loadData();
+//import { loadData }  from './src/wallet.ts';
+//loadData();
 
 const Stack = createStackNavigator();
 
 export default function App() {
-// TODO: https://thecodingmachine.github.io/react-native-boilerplate/docs/SplashScreenLoadingData/
-  const [loadingComplete, setLoadingComplete] = UseState(false);
 
-  return (
-    <Provider store={store}>
-      <NavigationContainer>
-        <Stack.Navigator>
-          <Stack.Screen name="Player Select" component={PlayerSelect} />
-          <Stack.Screen name="Home" component={Home} />
-          <Stack.Screen name="Contract Details" component={ContractDetails} />
-          <Stack.Screen name="New Player" component={NewPlayer} />
-          <Stack.Screen name="Add Player" component={AddPlayer} />
-          <Stack.Screen name="New Contract" component={NewContract} />
-          <Stack.Screen name="Request Payout" component={RequestPayout} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </Provider>
-  );
+    return (
+      <Provider store={store}>
+        <NavigationContainer>
+          <Stack.Navigator>
+            <Stack.Screen name="Loading Splash" component={LoadingSplash} />
+            <Stack.Screen name="Player Select" component={PlayerSelect} />
+            <Stack.Screen name="Home" component={Home} />
+            <Stack.Screen name="Contract Details" component={ContractDetails} />
+            <Stack.Screen name="New Player" component={NewPlayer} />
+            <Stack.Screen name="Add Player" component={AddPlayer} />
+            <Stack.Screen name="New Contract" component={NewContract} />
+            <Stack.Screen name="Request Payout" component={RequestPayout} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </Provider>
+    );
 }
