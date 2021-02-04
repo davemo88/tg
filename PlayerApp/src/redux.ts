@@ -1,8 +1,8 @@
 import { createStore } from 'redux';
 import { nanoid, createEntityAdapter, createSlice, createReducer, createAction, configureStore, createAsyncThunk } from '@reduxjs/toolkit'
-import { Player, Contract, PayoutRequest, } from './datatypes.ts'
+import { Player, Contract, PayoutRequest, } from './datatypes'
 
-import PlayerWalletModule from './PlayerWallet.ts'
+import PlayerWalletModule from './PlayerWallet'
 
 const playerAdapter = createEntityAdapter<Player>({});
 
@@ -10,7 +10,7 @@ export const loadPlayers = createAsyncThunk('players/loadPlayers', async (_, thu
     try {
         const output = await PlayerWalletModule.call_cli("player list --json-output");
         console.log("cli output:", output);
-        let player_list: [Player] = JSON.parse(output);
+        let player_list = JSON.parse(output);
         player_list.push({name: "Tom"});
         console.log("player list:", player_list);
         player_list.forEach(function (p) { 
