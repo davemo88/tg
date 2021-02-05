@@ -6,26 +6,7 @@ import PlayerWalletModule from './PlayerWallet'
 
 const playerAdapter = createEntityAdapter<Player>({});
 
-export const loadPlayers = createAsyncThunk('players/loadPlayers', async (_, thunkAPI) => {
-    try {
-        const output = await PlayerWalletModule.call_cli("player list --json-output");
-        console.log("cli output:", output);
-        let player_list = JSON.parse(output);
-        player_list.push({name: "Tom"});
-        console.log("player list:", player_list);
-        player_list.forEach(function (p) { 
-            p.id = nanoid(); 
-            p.pictureUrl = "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0";
-            p.mine = false;
-        });
-        return thunkAPI.dispatch(playerSlice.actions.playerAddedMany(player_list));
-//        return player_list;
-    } catch (error) {
-        console.log(error);
-    }
-});
-
-export const myLoadPlayers = async function (dispatch) {
+export const loadPlayers = async function (dispatch) {
     try {
         let output = await PlayerWalletModule.call_cli("player list --json-output");
         console.log("player list output:", output);
@@ -44,6 +25,32 @@ export const myLoadPlayers = async function (dispatch) {
         return dispatch(playerSlice.actions.playerAddedMany(players));
     } catch (error) {
         console.log(error);
+    }
+}
+
+// might want to actually use createAsyncThunk for this one
+export const newPlayer = (name: string) => {
+    return async (dispatch) => {
+        try {
+// confusing because of native module. what should its signature in typescript be?
+            let cli_response: string = await PlayerWalletModule.call_cli(`player register "${name}"`); 
+            console.log(cli_response);
+            if (cli_response === "registered player") {
+                const p: Player = {
+                    id: nanoid(), 
+                    name: name,
+                    mine: true,
+// yeah yeah i know 
+                    pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0",
+                }
+                return dispatch(playerSlice.actions.playerAdded(p));
+            } else {
+                throw(cli_response);
+            }
+        } catch (error) {
+            return Promise.reject(error);
+//            console.log(error);
+        }
     }
 }
 

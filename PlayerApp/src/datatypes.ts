@@ -4,7 +4,7 @@ export type EntityId = string;
 export interface Player {
   id:               EntityId;
   name:             string;
-  mine:             bool;
+  mine:             boolean;
 }
 
 export interface Contract {
@@ -13,19 +13,19 @@ export interface Contract {
   PlayerTwoId:      EntityId;
   cxid:             string,
   amount:           number;
-  fundingTx:        bool;
-  playerOneSig:     bool;
-  playerTwoSig:     bool;
-  arbiterSig:       bool;
+  fundingTx:        boolean;
+  playerOneSig:     boolean;
+  playerTwoSig:     boolean;
+  arbiterSig:       boolean;
 }
 
 export interface PayoutRequest {
   id:               EntityId;
   cxid:             string;
-  payoutTx:         bool;
-  playerOneSig:     bool;
-  playerTwoSig:     bool;
-  arbiterSig:       bool;
+  payoutTx:         boolean;
+  playerOneSig:     boolean;
+  playerTwoSig:     boolean;
+  arbiterSig:       boolean;
   payoutToken:      string;
   playerOneAmount:  number;
   playerTwoAmount:  number;
