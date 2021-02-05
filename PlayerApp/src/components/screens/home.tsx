@@ -3,19 +3,18 @@ import { StackActions } from '@react-navigation/native'
 import { nanoid } from '@reduxjs/toolkit'
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
-import { styles } from '../../styles.ts';
+import { styles } from '../../styles';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, } from '../../redux.ts';
-import { Player, Contract, ContractStatus} from '../../datatypes.ts';
-import { getContractStatus } from '../../dump.ts';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, } from '../../redux';
+import { Player, Contract, ContractStatus} from '../../datatypes';
+import { getContractStatus } from '../../dump';
 
-import { Currency } from '../currency.tsx';
-import { PlayerPortrait } from '../player-portrait.tsx';
-import { ContractListItem } from '../contract-list-item.tsx';
+import { Currency } from '../currency';
+import { PlayerPortrait } from '../player-portrait';
+import { ContractListItem } from '../contract-list-item';
 
 
 export const Home = ({ navigation }) => {
-  
   const selectedPlayer = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerId);
 
   const contracts = contractSelectors.selectAll(store.getState())

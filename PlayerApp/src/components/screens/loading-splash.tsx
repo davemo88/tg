@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { Text, View, } from 'react-native';
 
-import { store, loadPlayers } from '../../redux';
+import { store, loadPlayers, loadAll } from '../../redux';
 
 export const LoadingSplash = ({ navigation }) => {
 //    const [playersLoading, setPlayersLoading] = React.useState(false);
@@ -15,9 +15,9 @@ export const LoadingSplash = ({ navigation }) => {
         console.log("using effect");
 //        if (!playersLoading) {
 //            setPlayersLoading(true);
-            dispatch(loadPlayers)
+            dispatch(loadAll())
                 .then(() => {
-                    console.log("load players completed");
+                    console.log("loading completed");
                     navigation.reset({ index:0, routes: [{ name: 'Player Select' }] });
                 });
 //        }

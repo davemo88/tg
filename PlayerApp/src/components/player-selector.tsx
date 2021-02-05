@@ -1,12 +1,12 @@
 import React from 'react';
 import { Button, Text, View, } from 'react-native';
 
-import { styles } from '../styles.ts';
+import { styles } from '../styles';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerSlice, } from '../redux.ts';
-import { Player, Contract, ContractStatus, getContractStatus } from '../datatypes.ts';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, } from '../redux';
+import { Player, Contract, ContractStatus } from '../datatypes';
 
-import { PlayerPortrait } from './player-portrait.tsx';
+import { PlayerPortrait } from './player-portrait';
 
 export interface PlayerSelectorProps {
   playerIds: string[];
@@ -30,7 +30,7 @@ export const PlayerSelector: React.FC<PlayerSelectorProps> = (props) => {
 }
 
 interface PlayerSelectorButtonProps {
-  forward: bool;
+  forward: boolean;
   playerIds: string[];
   selectedPlayerId: string;
   setSelectedPlayerId: (newPlayerId: string) => void;

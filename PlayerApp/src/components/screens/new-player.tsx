@@ -1,6 +1,6 @@
 import React, { useState, } from 'react';
 import { nanoid } from '@reduxjs/toolkit'
-import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
+import { Switch, FlatList, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
 import { styles } from '../../styles';
 
@@ -43,16 +43,16 @@ export const NewPlayer = ({ navigation }) => {
             title="Ok" 
             disabled={registeringPlayer}
             onPress={() => {
-              setRegisteringPlayer(true);
-              dispatch(newPlayer(playerName))
-                .then(
-                    success => {
-                        setRegisteringPlayer(false);
-                        navigation.reset({ index:0, routes: [{ name: 'Player Select' }]});
-                    },
-// show reason for failure, e.g. name already taken
-                    failure => setRegisteringPlayer(false),
-                );
+                setRegisteringPlayer(true);
+                dispatch(newPlayer(playerName))
+                    .then(
+                        success => {
+                            setRegisteringPlayer(false);
+                            navigation.reset({ index:0, routes: [{ name: 'Player Select' }] });
+                        },
+// show reason   f  or failure, e.g. name already taken
+                        failure => setRegisteringPlayer(false),
+                    );
             } }
           />
         </View>
