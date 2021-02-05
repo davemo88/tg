@@ -27,19 +27,21 @@ export const loadPlayers = createAsyncThunk('players/loadPlayers', async (_, thu
 
 export const myLoadPlayers = async function (dispatch) {
     try {
-        const output = await PlayerWalletModule.call_cli("player list --json-output");
-        console.log("my load players");
-        console.log("cli output:", output);
-        let player_list = JSON.parse(output);
-        player_list.push({name: "Tom"});
-        console.log("player list:", player_list);
-        player_list.forEach(function (p) { 
+        let output = await PlayerWalletModule.call_cli("player list --json-output");
+        console.log("player list output:", output);
+        let players = JSON.parse(output);
+        players.push({name: "Tom"});
+        console.log("player list:", players);
+        output = await PlayerWalletModule.call_cli("player mine --json-output");
+        console.log("player mine output:", output);
+        const my_players = JSON.parse(output);
+        console.log("my players:", my_players);
+        players.forEach(function (p) { 
             p.id = nanoid(); 
             p.pictureUrl = "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0";
-            p.mine = false;
+            p.mine = my_players.some(mp => mp.name === p.name);
         });
-        return dispatch(playerSlice.actions.playerAddedMany(player_list));
-//        return player_list;
+        return dispatch(playerSlice.actions.playerAddedMany(players));
     } catch (error) {
         console.log(error);
     }
