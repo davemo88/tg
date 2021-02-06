@@ -19,7 +19,7 @@ export const PlayerSelect = ({ navigation }) => {
 //   TODO: move Test / Live images to navigation header
     return (
         <View style={styles.container}>
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 3 }}>
                 <View style={{ flex: 2, padding: 5, alignItems: 'center' }}>
                     <Image style={{ width: 256, height: 126 }} source={{uri: TITLE_IMAGE_SOURCE}} />
                     { NETWORK === 'Test' &&
@@ -30,34 +30,34 @@ export const PlayerSelect = ({ navigation }) => {
                     }
                 </View>
                 { selectedPlayerId !== null && 
-                    <View style = {{ flex: 1, justifyContent: 'flex-end' }}>
-                        <PlayerSelector 
-                          selectedPlayerId={selectedPlayerId}
-                          setSelectedPlayerId={setSelectedPlayerId}
-                          playerIds={players.map(p => p.id)}
-                        />
+                    <View style = {{ flex: 2, alignItems: 'center' }}>
+                        <View style = {{ flex: 1, justifyContent: 'flex-end' }}>
+                            <PlayerSelector 
+                              selectedPlayerId={selectedPlayerId}
+                              setSelectedPlayerId={setSelectedPlayerId}
+                              playerIds={players.filter(p => p.mine).map(p => p.id)}
+                            />
+                        </View>
+                        <View style={{ flex: 1, width: 60 }}>
+                            <Button 
+                              title="Ok" 
+                              onPress={() => {
+                                const selectedPlayer = players.find(p => p.id === selectedPlayerId);
+                                dispatch(selectedPlayerIdSlice.actions.setSelectedPlayerId(selectedPlayer.id));
+                                navigation.reset({ index:0,   routes: [{ name: 'Home' }] })
+                              } }
+                            />
+                        </View>
                     </View>
                 }
             </View>
             <View style={{ flex: 1 }}>
-                <View style={{ flex: 1 }}>
-                    <Button 
-                      title="Ok" 
-                      onPress={() => {
-                        const selectedPlayer = players.find(p => p.id === selectedPlayerId);
-                        dispatch(selectedPlayerIdSlice.actions.setSelectedPlayerId(selectedPlayer.id));
-                        navigation.reset({ index:0,   routes: [{ name: 'Home' }] })
-                      } }
-                    />
-                </View>
-                <View style={{ flex: 1 }}>
-                    <Button 
-                        title="New Player" 
-                        onPress={() => {
-                          navigation.navigate('New Player')
-                        } }
-                    />
-                </View>
+                <Button 
+                    title="New Player" 
+                    onPress={() => {
+                      navigation.navigate('New Player')
+                    } }
+                />
             </View>
         </View>
     );

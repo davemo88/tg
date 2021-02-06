@@ -101,6 +101,33 @@ export const loadContracts = () => {
     }
 }
 
+export const newContract = (p1Id: string, p2Id: string, sats: number) => {
+    return async (dispatch, getState) => {
+        try {
+// TODO: need to get player names for cli call
+            let cli_response: string = await PlayerWalletModule.call_cli(`contract new "${p1Name}" "${p2Name}" ${sats}`); 
+            console.log(cli_response);
+            if (cli_response === "created contract") {
+                return dispatch(contractSlice.actions.contractAdded({
+                    id: nanoid(), 
+                    playerOneId: p1Id,
+                    playerTwoId: p2Id,
+                    cxid: "",
+                    amount: sats,
+                    fundingTx: false,
+                    playerOneSig: false,
+                    playerTwoSig: false,
+                    arbiterSig: false,
+                }));
+            } else {
+                throw(cli_response);
+            }
+        } catch (error) {
+            return Promise.reject(error);
+        }
+    }
+}
+
 export const contractSlice = createSlice({
   name: 'contracts',
   initialState: contractAdapter.getInitialState(),

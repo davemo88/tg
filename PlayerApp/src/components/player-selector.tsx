@@ -14,6 +14,7 @@ export interface PlayerSelectorProps {
   setSelectedPlayerId: (newPlayerId: string) => void;
 }
 
+// TODO: fix moving buttons based on name length
 export const PlayerSelector: React.FC<PlayerSelectorProps> = (props) => {
   const selectedPlayer = playerSelectors.selectById(store.getState(), props.selectedPlayerId);
 
