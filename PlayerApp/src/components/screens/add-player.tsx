@@ -15,37 +15,39 @@ export const AddPlayer = ({ navigation }) => {
 
     return (
       <View style={styles.container}>
-        <Image
-          style={styles.mediumEmote}
-          source={{uri: "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0"}}
-        />
-        <View style={{alignItems: 'center', backgroundColor: 'lightslategrey', margin: 10, padding: 10 }}>
-          <TextInput
-            onChangeText={text => setPlayerName(text)}
-            value={playerName}
-            style={{ borderWidth: 1, flex: 1, margin: 10, padding: 4, }}
-          />     
-          <Text>Enter Player Name or Address</Text>
-        </View>
-        <View style={{flexDirection: 'row' }}>
-          <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey' }}>
-            <Button 
-                title="Ok" 
-                disabled={addingPlayer}
-                onPress={() => {
-                    setAddingPlayer(true);
-                    dispatch(addPlayer(playerName))
-                        .then(
-                            success => {
-                                setAddingPlayer(false);
-                                navigation.reset({ index:0, routes: [{ name: 'Home' }, { name: 'New Contract' }] })
-                            },
-                            failure => setAddingPlayer(false),
-                        );
-                } }
+        <View style={{ flex: 1, alignItems: 'center', margin: 100 }}>
+            <Image
+              style={styles.mediumEmote}
+              source={{uri: "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0"}}
             />
-         </View>
-       </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'lightslategrey', margin: 10, padding: 10 }}>
+              <Text>Name</Text>
+              <View style={{ flex: 1 }}>
+                <TextInput
+                  onChangeText={text => setPlayerName(text)}
+                  value={playerName}
+                  style={{ borderWidth: 1, margin: 10, padding: 4, fontSize: 17 }}
+                />     
+              </View>
+            </View>
+            <View style={{ margin: 10, marginBottom: 100, padding: 10, backgroundColor: 'lightslategrey' }}>
+              <Button 
+                  title="Ok" 
+                  disabled={addingPlayer}
+                  onPress={() => {
+                      setAddingPlayer(true);
+                      dispatch(addPlayer(playerName))
+                          .then(
+                              success => {
+                                  setAddingPlayer(false);
+                                  navigation.reset({ index:0, routes: [{ name: 'Home' }, { name: 'New Contract' }] })
+                              },
+                              failure => setAddingPlayer(false),
+                          );
+                  } }
+              />
+            </View>
+        </View>
      </View>
     );
 }

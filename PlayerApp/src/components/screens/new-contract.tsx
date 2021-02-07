@@ -2,23 +2,23 @@ import React from 'react';
 import { nanoid } from '@reduxjs/toolkit'
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
-import { styles } from '../../styles.ts';
+import { styles } from '../../styles';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, } from '../../redux.ts';
-import { Player, Contract, ContractStatus, getContractStatus } from '../../datatypes.ts';
-import { SignContract } from '../../mock.ts';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, } from '../../redux';
+import { Player, Contract, ContractStatus } from '../../datatypes';
+import { signContract } from '../../mock';
 
-import { Currency } from '../currency.tsx';
-import { SignatureSwitch } from '../signature-switch.tsx';
-import { PlayerPortrait } from '../player-portrait.tsx';
-import { PlayerSelector } from '../player-selector.tsx';
+import { Currency } from '../currency';
+import { SignatureSwitch } from '../signature-switch';
+import { PlayerPortrait } from '../player-portrait';
+import { PlayerSelector } from '../player-selector';
 
 // TODO: add referee / game-domain expertise delegate pubkey input
 export const NewContract = ({ navigation }) => {
   const selectedPlayer = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerId);
   const playerTwos = playerSelectors
     .selectAll(store.getState())
-    .filter((player, i, a) => player.id != selectedPlayer.id);
+    .filter((player: Player, i, a) => player.id != selectedPlayer.id);
   const [contractAmount, onChangeContractAmount] = React.useState('0');
   const [playerTwoId, setPlayerTwoId] = React.useState(playerTwos[0].id);
   const [isSigned, setIsSigned] = React.useState(false);
@@ -33,7 +33,7 @@ export const NewContract = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <Text style={{ fontSize: 20 }}>Choose Player</Text>
-      <PlayerSelector selectedPlayerId={playerTwoId} setSelectedPlayerId={setPlayerTwoId} playerIds={playerTwos.map(p => p.id)} />
+      <PlayerSelector selectedPlayerId={playerTwoId} setSelectedPlayerId={setPlayerTwoId} playerIds={playerTwos.map((p: Player) => p.id)} />
       <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
         <Button 
           title="Add Player" 
@@ -51,7 +51,7 @@ export const NewContract = ({ navigation }) => {
           />     
         </View>
       </View>
-      <View style={{ flexDirection: 'row' }}>
+      <View style={{ flexDirection: 'row', margin: 60 }}>
         <SignatureSwitch isSigned={isSigned} setIsSigned={setIsSigned} />
         <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
           <Button 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, Image, View, } from 'react-native';
 
-import { styles } from '../styles.ts';
+import { styles } from '../styles';
 
 export interface PlayerPortraitProps {
   name: string;
