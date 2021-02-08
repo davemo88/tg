@@ -137,8 +137,7 @@ impl PlayerWallet {
         for utxo in &p2_contract_info.utxos {
             if total > sats_per_player {
                 break
-            }
-            else {
+            } else {
                 total += utxo.txout.value;
                 input.push(TxIn{
                     previous_output: utxo.outpoint, 

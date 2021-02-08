@@ -3,8 +3,6 @@ use tglib::{
     bdk::bitcoin::{
         Address,
         Amount,
-//        PublicKey,
-//        Transaction,
         consensus,
         hashes::{
             sha256,
@@ -25,7 +23,10 @@ use tglib::{
     Result as TgResult,
     TgError,
     arbiter::ArbiterService,
-    contract::Contract,
+    contract::{
+        Contract,
+        PlayerContractInfo,
+    },
     payout::Payout,
     player::{
         PlayerName,
@@ -71,6 +72,7 @@ pub trait PlayerUI {
     fn remove(&self, name: PlayerName) -> TgResult<()>;
     fn list(&self) -> Vec<PlayerRecord>;
     fn mine(&self) -> Vec<PlayerName>;
+    fn post(&self, name: PlayerName, amount: Amount) -> TgResult<()>;
 }
 
 // contracts and payouts
@@ -151,6 +153,34 @@ impl PlayerUI for PlayerWallet {
 
     fn mine(&self) -> Vec<PlayerName> {
         self.name_client.get_player_names(&self.name_pubkey())
+    }
+
+    fn post(&self, name: PlayerName, amount: Amount) -> TgResult<()> {
+        let mut utxos = vec!();
+        let mut total: u64 = 0;
+        for utxo in self.wallet.list_unspent().unwrap() {
+            if total >= amount.as_sat() {
+                break
+            } else {
+                total += utxo.txout.value;
+                utxos.push(utxo.clone());
+            }
+        }
+        if total < amount.as_sat()  {
+            return Err(TgError("insufficient funds".to_string()))
+        }
+        let info = PlayerContractInfo {
+            name,
+            escrow_pubkey: self.get_escrow_pubkey(),
+            change_address: self.new_address(),
+            utxos,
+        };
+
+        let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
+        let sig = signing_wallet.sign_message(Message::from_slice(&info.hash()).unwrap(), DerivationPath::from_str(&format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX)).unwrap()).unwrap();
+
+        let _r = self.arbiter_client.set_contract_info(info, self.name_pubkey(), sig);
+        Ok(())
     }
 }
 

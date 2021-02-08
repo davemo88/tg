@@ -21,7 +21,6 @@ export const loadPlayers = () => {
             let output = await PlayerWalletModule.call_cli("player list --json-output");
             console.log("player list output:", output);
             let players = JSON.parse(output);
-            players.push({name: "Tom"});
             console.log("player list:", players);
             output = await PlayerWalletModule.call_cli("player mine --json-output");
             console.log("player mine output:", output);
@@ -87,11 +86,21 @@ export const addPlayer = (name: string) => {
 
 const contractAdapter = createEntityAdapter<Contract>({});
 
+export const contractSlice = createSlice({
+  name: 'contracts',
+  initialState: contractAdapter.getInitialState(),
+  reducers: {
+    contractAdded: contractAdapter.addOne,
+    contractAddedMany: contractAdapter.addMany,
+    contractUpdated: contractAdapter.updateOne,
+    contractRemoved: contractAdapter.removeOne,
+  }
+})
+
 export const loadContracts = () => {
     return async (dispatch) => {
         try {
             let cli_response = await PlayerWalletModule.call_cli("contract list --json-output");
-            console.log("contract list:", cli_response);
             let contracts = JSON.parse(cli_response);
             contracts.forEach(function (c) {c.id = nanoid();});
             return dispatch(contractSlice.actions.contractAddedMany(contracts));
@@ -104,10 +113,12 @@ export const loadContracts = () => {
 export const newContract = (p1Id: string, p2Id: string, sats: number) => {
     return async (dispatch, getState) => {
         try {
-// TODO: need to get player names for cli call
-            let cli_response: string = await PlayerWalletModule.call_cli(`contract new "${p1Name}" "${p2Name}" ${sats}`); 
-            console.log(cli_response);
-            if (cli_response === "created contract") {
+            let p1 = playerSelectors.selectById(getState(), p1Id);
+            let p2 = playerSelectors.selectById(getState(), p2Id);
+            let cli_response = await PlayerWalletModule.call_cli(`contract new "${p1.name}" "${p2.name}" ${sats}`); 
+            console.log("cli response", cli_response);
+            if (cli_response === "contract created") {
+                dispatch(balanceSlice.actions.setBalance(getState().balance - Math.ceil(sats/2)));
                 return dispatch(contractSlice.actions.contractAdded({
                     id: nanoid(), 
                     playerOneId: p1Id,
@@ -127,17 +138,6 @@ export const newContract = (p1Id: string, p2Id: string, sats: number) => {
         }
     }
 }
-
-export const contractSlice = createSlice({
-  name: 'contracts',
-  initialState: contractAdapter.getInitialState(),
-  reducers: {
-    contractAdded: contractAdapter.addOne,
-    contractAddedMany: contractAdapter.addMany,
-    contractUpdated: contractAdapter.updateOne,
-    contractRemoved: contractAdapter.removeOne,
-  }
-})
 
 const payoutRequestAdapter = createEntityAdapter<PayoutRequest>({});
 

@@ -29,7 +29,7 @@ export const Home = ({ navigation }) => {
       <View style={{ minWidth: 360, flex:1, alignItems: 'stretch' }}>
         <View style={{ flex: 1, justifyContent: 'flex-start', }}>
         <View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, backgroundColor: 'white', padding: 5, margin: 5, height: 42, }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'white', padding: 5, margin: 5, height: 42, }}>
             <View>
               <Text style={{ fontSize: 20, }}>Player</Text>
             </View>
@@ -48,7 +48,7 @@ export const Home = ({ navigation }) => {
         </View> 
         </View>
         <View style={{ flex: 3, }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, backgroundColor: 'white', padding: 5, margin: 5, height: 42, }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'white', padding: 5, margin: 5, height: 42, }}>
             <View>
               <Text style={{ fontSize: 20, }}>Contracts</Text>
             </View>

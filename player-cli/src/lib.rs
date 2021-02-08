@@ -126,6 +126,15 @@ pub fn player_ui<'a, 'b>() -> App<'a, 'b> {
                     .required(true)),
             SubCommand::with_name("list").about("list known players"),
             SubCommand::with_name("mine").about("show local player names"),
+            SubCommand::with_name("post").about("post contract info to public")
+                .arg(Arg::with_name("name")
+                    .index(1)
+                    .help("player to post info for")
+                    .required(true))
+                .arg(Arg::with_name("amount")
+                    .index(2)
+                    .help("total utxo amount to post")
+                    .required(true)),
         ])
 }
 
@@ -154,6 +163,10 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 } else {
                     wallet.mine().iter().fold(String::default(), |acc, p| acc + &format!("{}", p.0) )
                 },
+            "post" => match wallet.post(PlayerName(a.value_of("name").unwrap().to_string()), Amount::from_sat(a.value_of("amount").unwrap().parse::<u64>().unwrap())) {
+                Ok(_) => format!("posted contract info"),
+                Err(e) => format!("{}", e),
+            }
             _ => format!("command '{}' is not implemented", c),
         }
     }
@@ -271,7 +284,9 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 None => format!("no such contract"),
             }
             "details" => match DocumentUI::<ContractRecord>::get(wallet, a.value_of("cxid").unwrap()) {
-                Some(cr) => format!("{:?}", cr),
+                Some(cr) => {
+                    format!("{:?}", cr)
+                }
                 None => format!("no such contract"),
             }
             "sign" => match DocumentUI::<ContractRecord>::sign(
@@ -295,7 +310,11 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 Ok(()) => format!("contract deleted"),
                 Err(e) => format!("{}", e),
             }
-            "list" => DocumentUI::<ContractRecord>::list(wallet).iter().fold(String::default(),|acc, c| acc + &format!("{:?}", c)),
+            "list" => if a.is_present("json-output") {
+                    serde_json::to_string(&DocumentUI::<ContractRecord>::list(wallet)).unwrap()
+                } else {
+                    DocumentUI::<ContractRecord>::list(wallet).iter().fold(String::default(),|acc, c| acc + &format!("{:?}", c))
+                }
             _ => {
                 format!("command '{}' is not implemented", c)
             }

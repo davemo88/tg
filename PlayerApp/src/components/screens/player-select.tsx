@@ -29,7 +29,7 @@ export const PlayerSelect = ({ navigation }) => {
                       <Image style={{ width: 133, height: 45 }} source={{uri: LIVE_IMAGE_SOURCE}} />
                     }
                 </View>
-                { selectedPlayerId !== null && 
+                { selectedPlayerId !== null ? 
                     <View style = {{ flex: 2, alignItems: 'center' }}>
                         <View style = {{ flex: 1, justifyContent: 'flex-end' }}>
                             <PlayerSelector 
@@ -49,6 +49,7 @@ export const PlayerSelect = ({ navigation }) => {
                             />
                         </View>
                     </View>
+                    : <Text>No Players</Text>
                 }
             </View>
             <View style={{ flex: 1 }}>
