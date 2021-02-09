@@ -1,8 +1,9 @@
 use std::{
-    str::FromStr,
-    fs::File,
     env::current_dir,
+    fs::File,
+    io::Write,
     path::PathBuf,
+    str::FromStr,
 };
 use clap::{App, Arg, ArgMatches, SubCommand, AppSettings};
 use serde_json;
@@ -58,6 +59,7 @@ fn player_cli<'a, 'b>() -> App<'a, 'b> {
         .subcommand(SubCommand::with_name("init").about("initialize new wallet")
             .arg(Arg::with_name("passphrase")
                 .long("passphrase")
+                .index(1)
                 .required(true)
                 .takes_value(true)
                 .help("wallet passphrase"))
@@ -86,16 +88,12 @@ fn player_cli<'a, 'b>() -> App<'a, 'b> {
             .required(false)
             .takes_value(false)
             .long("json-output"))
-        .arg(Arg::with_name("seed-path")
-            .help("specify path to wallet seed")
+        .arg(Arg::with_name("wallet-path")
+            .help("specify path to wallet")
             .required(false)
+            .global(true)
             .takes_value(true)
-            .long("seed-path"))
-        .arg(Arg::with_name("db-path")
-            .help("specify path to wallet db")
-            .required(false)
-            .takes_value(true)
-            .long("db-path"))
+            .long("wallet-path"))
 }
 
 pub struct Conf {
@@ -110,10 +108,12 @@ pub fn cli(line: String, conf: Conf) -> String {
     if matches.is_ok() {
         if let (c, Some(a)) = matches.unwrap().subcommand() {
 
-            let mut seed_path = match a.value_of("seed_path") {
+            let wallet_path = match a.value_of("wallet-path") {
                 Some(p) => PathBuf::from(p),
                 None => current_dir().unwrap(),
             };
+
+            let mut seed_path = wallet_path.clone();
             seed_path.push(SEED_NAME);
             let seed = match File::open(&seed_path) {
                 Ok(reader) => match c {
@@ -129,16 +129,18 @@ pub fn cli(line: String, conf: Conf) -> String {
                             }
                             None => None,
                         };
-                        SavedSeed::new(a.value_of("passphrase").unwrap(), mnemonic)
+                        let new_seed = SavedSeed::new(a.value_of("passphrase").unwrap(), mnemonic);
+                        match File::create(&seed_path) {
+                            Ok(mut writer) => writer.write_all(serde_json::to_string(&new_seed).unwrap().as_bytes()).unwrap(),
+                            Err(e) => return format!("{:?}", e),
+                        };
+                        return format!("wallet initialized")
                     }
                     _ => return format!("no seed. initialize wallet first"),
                 }
             };
 
-            let mut db_path = match a.value_of("db_path") {
-                Some(p) => PathBuf::from(p),
-                None => current_dir().unwrap(),
-            };
+            let mut db_path = wallet_path.clone();
             db_path.push(DB_NAME);
             let db = DB::new(&db_path).unwrap();
             let _r = db.create_tables().unwrap();

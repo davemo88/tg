@@ -95,7 +95,7 @@ impl SavedSeed {
         let seed = match mnemonic {
             Some(m) => m.to_seed(""),
 //  else generate random BIP 39 seed
-            None => Mnemonic::from_entropy(&rand::thread_rng().gen::<[u8; 8]>()).unwrap().to_seed(""),
+            None => Mnemonic::from_entropy(&rand::thread_rng().gen::<[u8; 32]>()).unwrap().to_seed(""),
         };
 //  compute root key fingerprint and bitcoin account xpubkey
         let root_key = ExtendedPrivKey::new_master(NETWORK, &seed).unwrap();
@@ -113,7 +113,7 @@ impl SavedSeed {
             encrypted
         };
 //  generate salt
-        let pw_salt = rand::thread_rng().gen::<[u8; 4]>().to_vec();
+        let pw_salt = rand::thread_rng().gen::<[u8; 32]>().to_vec();
         let config = Config::default();
 //  hash pw + salt
         let pw_hash = argon2::hash_encoded(pw.as_bytes(), &pw_salt, &config).unwrap().as_bytes().to_vec();
