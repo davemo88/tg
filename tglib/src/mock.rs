@@ -1,29 +1,13 @@
-use std::str::FromStr;
-use secrecy::Secret;
-use bdk::{
-    Wallet,
-    bitcoin::{
-        PrivateKey,
-        PublicKey,
-        util::{
-            bip32::{
-                DerivationPath,
-                ExtendedPubKey,
-                ExtendedPrivKey,
-            },
-            psbt::PartiallySignedTransaction,
-        },
-        secp256k1::{
-            Secp256k1,
-            Message,
-            Signature,
-        },
-        Network,
+use bdk::bitcoin::{
+    PrivateKey,
+    PublicKey,
+    secp256k1::{
+        Secp256k1,
+        Message,
+        Signature,
     },
-    database::MemoryDatabase,
-    signer::Signer,
+    Network,
 };
-use bip39::Mnemonic;
 pub use crate::{
     Result as TgResult,
     TgError,
@@ -37,8 +21,6 @@ pub use crate::{
         ESCROW_SUBACCOUNT,
     },
 };
-
-
 
 pub const DB_NAME: &'static str = "dev-app.db";
 pub const SEED_NAME: &'static str = "dev-seed.json";
@@ -78,82 +60,3 @@ pub fn get_referee_signature(msg: Message) -> Signature {
     let key = PrivateKey::from_wif(REFEREE_PRIVKEY).unwrap();
     secp.sign(&msg, &key.key)
 }
-
-pub struct Trezor {
-    mnemonic: Mnemonic,
-    pub wallet: Wallet<(), MemoryDatabase>,
-}
-
-impl Trezor {
-    pub fn new(mnemonic: Mnemonic) -> Self {
-        let root_key = ExtendedPrivKey::new_master(NETWORK, &mnemonic.to_seed("")).unwrap();
-        let secp = Secp256k1::new();
-        let fingerprint = root_key.fingerprint(&secp);
-        let account_key = derive_account_xprivkey(&mnemonic.to_seed(""), NETWORK);
-        let descriptor_key = format!("[{}/{}]{}", fingerprint, BITCOIN_ACCOUNT_PATH, account_key);
-        let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
-        let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
-        let wallet = Wallet::new_offline(
-            &external_descriptor,
-            Some(&internal_descriptor),
-            NETWORK,
-            MemoryDatabase::default(),
-        ).unwrap();
-
-        Trezor {
-            mnemonic,
-            wallet,
-        }
-    }
-
-    fn xpubkey(&self) -> ExtendedPubKey {
-        derive_account_xpubkey(&self.mnemonic.to_seed(""), NETWORK)
-    }
-}
-
-impl SigningWallet for Trezor {
-
-    fn sign_tx(&self, psbt: PartiallySignedTransaction, _kdp: String, pw: Secret<Vec<u8>>) -> TgResult<PartiallySignedTransaction> {
-        let secp = Secp256k1::new();
-        let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
-        let account_key = derive_account_xprivkey(&self.mnemonic.to_seed(""), NETWORK);
-        let escrow_key = account_key.derive_priv(&secp, &path).unwrap();
-        let mut maybe_signed = psbt.clone();
-//        println!("psbt to sign: {:?}", psbt);
-//        match Signer::sign(&escrow_key.private_key, &mut maybe_signed, Some(0)) {
-        match Signer::sign(&escrow_key.private_key, &mut maybe_signed, Some(0), &secp) {
-            Ok(()) => {
-                Ok(maybe_signed)
-            }
-            Err(e) => {
-                println!("err: {:?}", e);
-                Err(TgError("cannot sign transaction".to_string()))
-            }
-        }
-    }
-
-// TODO : make this work
-    fn sign_message(&self, msg: Message, path: DerivationPath, pw: Secret<Vec<u8>>) -> TgResult<Signature> {
-//        let root_key = ExtendedPrivKey::new_master(NETWORK, &self.mnemonic.to_seed("")).unwrap();
-        let account_key = derive_account_xprivkey(&self.mnemonic.to_seed(""), NETWORK);
-        let secp = Secp256k1::new();
-        let signing_key = account_key.derive_priv(&secp, &path).unwrap();
-        Ok(secp.sign(&msg, &signing_key.private_key.key))
-    }
-}
-
-impl EscrowWallet for Trezor {
-    fn get_escrow_pubkey(&self) -> PublicKey {
-        let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
-        let escrow_pubkey = self.xpubkey().derive_pub(&Secp256k1::new(), &path).unwrap();
-        escrow_pubkey.public_key
-    }
-
-    fn validate_contract(&self, contract: &Contract) -> TgResult<()> {
-        if contract.arbiter_pubkey != self.get_escrow_pubkey() {
-            return Err(TgError("unexpected arbiter pubkey".to_string()));
-        }
-        contract.validate()
-    }
-}
-

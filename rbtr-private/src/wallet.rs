@@ -1,71 +1,85 @@
 use std::str::FromStr;
 use tglib::{
-    bdk::bitcoin::{
-        PublicKey,
-        secp256k1::{
-            Message,
-            Secp256k1,
-            Signature,
-        },
-        util::{
-            bip32::{
-                ExtendedPubKey,
-                DerivationPath,
-                Fingerprint,
+    bdk::{
+        bitcoin::{
+            PublicKey,
+            secp256k1::{
+                Message,
+                Secp256k1,
+                Signature,
             },
-            psbt::PartiallySignedTransaction,
-        }
+            util::{
+                bip32::DerivationPath,
+                psbt::PartiallySignedTransaction,
+            },
+        },
+        signer::Signer,
     },
     bip39::Mnemonic,
+    secrecy::Secret,
     Result as TgResult,
     TgError,
     contract::Contract,
     wallet::{
-        SigningWallet,
+        derive_account_xprivkey,
         EscrowWallet,
+        SavedSeed,
+        SigningWallet,
     },
     mock::{
-        Trezor,
         ARBITER_MNEMONIC,
         ESCROW_KIX,
         ESCROW_SUBACCOUNT,
+        NETWORK,
     }
 };
 
 pub struct Wallet {
-    trezor: Trezor,    
+    saved_seed: SavedSeed,
 }
 
 impl Wallet {
-    pub fn new() -> Self {
+    pub fn new(pw: Secret<String>) -> Self {
        Wallet {
-           trezor: Trezor::new(Mnemonic::parse(ARBITER_MNEMONIC).unwrap())
+           saved_seed: SavedSeed::new(pw, Some(Mnemonic::parse(ARBITER_MNEMONIC).unwrap()))
        } 
     }
 }
 
 impl SigningWallet for Wallet {
-    fn fingerprint(&self) -> Fingerprint {
-        self.trezor.fingerprint()
+    fn sign_tx(&self, psbt: PartiallySignedTransaction, _kdp: String, pw: Secret<String>) -> TgResult<PartiallySignedTransaction> {
+        let secp = Secp256k1::new();
+        let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
+// TODO: decrypt seed with pw
+        let account_key = derive_account_xprivkey(&self.saved_seed.encrypted_seed, NETWORK);
+        let escrow_key = account_key.derive_priv(&secp, &path).unwrap();
+        let mut maybe_signed = psbt.clone();
+//        println!("psbt to sign: {:?}", psbt);
+//        match Signer::sign(&escrow_key.private_key, &mut maybe_signed, Some(0)) {
+        match Signer::sign(&escrow_key.private_key, &mut maybe_signed, Some(0), &secp) {
+            Ok(()) => {
+                Ok(maybe_signed)
+            }
+            Err(e) => {
+                println!("err: {:?}", e);
+                Err(TgError("cannot sign transaction".to_string()))
+            }
+        }
     }
 
-    fn xpubkey(&self) -> ExtendedPubKey {
-        self.trezor.xpubkey()
-    }
-
-    fn sign_tx(&self, pstx: PartiallySignedTransaction, descriptor: String) -> TgResult<PartiallySignedTransaction> {
-        self.trezor.sign_tx(pstx, descriptor)
-    }
-
-    fn sign_message(&self, msg: Message, path: DerivationPath) -> TgResult<Signature> {
-        self.trezor.sign_message(msg, path)
+    fn sign_message(&self, msg: Message, path: DerivationPath, pw: Secret<String>) -> TgResult<Signature> {
+// TODO: decrypt seed with pw
+        let account_key = derive_account_xprivkey(&self.saved_seed.encrypted_seed, NETWORK);
+        let secp = Secp256k1::new();
+        let signing_key = account_key.derive_priv(&secp, &path).unwrap();
+        Ok(secp.sign(&msg, &signing_key.private_key.key))
     }
 }
 
 impl EscrowWallet for Wallet {
     fn get_escrow_pubkey(&self) -> PublicKey {
         let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
-        let escrow_pubkey = self.xpubkey().derive_pub(&Secp256k1::new(), &path).unwrap();
+        let escrow_pubkey = self.saved_seed.xpubkey.derive_pub(&Secp256k1::new(), &path).unwrap();
         escrow_pubkey.public_key
     }
 

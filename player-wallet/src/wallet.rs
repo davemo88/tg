@@ -1,17 +1,4 @@
-use std::{
-    io::Write,
-    str::FromStr,
-};
-use age;
-use argon2::{
-    self,
-    Config,
-};
-use rand::Rng;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use std::str::FromStr;
 use tglib::{
     bdk::{
         bitcoin::{
@@ -29,12 +16,7 @@ use tglib::{
                 Signature,
             },
             util::{
-                bip32::{
-                    ExtendedPrivKey,
-                    ExtendedPubKey,
-                    DerivationPath,
-                    Fingerprint,
-                },
+                bip32::DerivationPath,
                 psbt::PartiallySignedTransaction,
             },
         },
@@ -47,7 +29,6 @@ use tglib::{
         signer::Signer,
         Wallet,
     },
-    bip39::Mnemonic,
     secrecy::Secret,
     Result as TgResult,
     TgError,
@@ -60,9 +41,9 @@ use tglib::{
         create_escrow_address,
         create_payout_script,
         derive_account_xprivkey,
-        derive_account_xpubkey,
         EscrowWallet,
         NameWallet,
+        SavedSeed,
         SigningWallet,
         BITCOIN_ACCOUNT_PATH,
         NAME_SUBACCOUNT,
@@ -80,63 +61,6 @@ use crate::{
     arbiter::ArbiterClient,
     db::DB,
 };
-
-#[derive(Serialize, Deserialize)]
-pub struct SavedSeed {
-    pub fingerprint: Fingerprint,
-// this is the bitcoin account extended pubkey derived from the encrypted seed
-// here for convenience in initializing pubkey-only wallet without having to decrypt seed
-    pub xpubkey: ExtendedPubKey,
-    pub encrypted_seed: Vec<u8>,
-    pub pw_salt: Vec<u8>,
-    pub pw_hash: Vec<u8>,
-}
-
-impl SavedSeed {
-    pub fn new(pw: &str, mnemonic: Option<Mnemonic>) -> Self {
-// TODO: should i try to remove mnemonic / seed from memory asap? if so how
-//  if mnemonic provided, derive seed 
-        let seed = match mnemonic {
-            Some(m) => m.to_seed(""),
-//  else generate random BIP 39 seed
-            None => Mnemonic::from_entropy(&rand::thread_rng().gen::<[u8; 32]>()).unwrap().to_seed(""),
-        };
-//  compute root key fingerprint and bitcoin account xpubkey
-        let root_key = ExtendedPrivKey::new_master(NETWORK, &seed).unwrap();
-        let secp = Secp256k1::new();
-        let fingerprint = root_key.fingerprint(&secp);
-        let xpubkey = derive_account_xpubkey(&seed, NETWORK);
-//  encrypt seed with pw
-        let encrypted_seed = {
-            let encryptor = age::Encryptor::with_user_passphrase(Secret::new(pw.to_owned()));
-            let mut encrypted = vec![];
-            let mut writer = encryptor.wrap_output(&mut encrypted).unwrap();
-            writer.write_all(&seed).unwrap();
-            writer.finish().unwrap();
-
-            encrypted
-        };
-//  generate salt
-        let pw_salt = rand::thread_rng().gen::<[u8; 32]>().to_vec();
-        let config = Config::default();
-//  hash pw + salt
-        let pw_hash = argon2::hash_encoded(pw.as_bytes(), &pw_salt, &config).unwrap().as_bytes().to_vec();
-
-        SavedSeed { 
-            fingerprint,
-            xpubkey,
-            pw_salt,
-            pw_hash,
-            encrypted_seed,
-        }
-    }
-
-//    pub fn verify_pw(&self, pw: &str) -> bool {
-//        let pw_bytes = pw.as_bytes();
-//        false
-//    }
-}
-
 pub struct PlayerWallet {
 //    xpubkey: ExtendedPubKey,
     seed: SavedSeed,
@@ -311,7 +235,7 @@ impl EscrowWallet for PlayerWallet {
 
 impl SigningWallet for PlayerWallet {
 
-    fn sign_tx(&self, psbt: PartiallySignedTransaction, _kdp: String, pw: Secret<Vec<u8>>) -> TgResult<PartiallySignedTransaction> {
+    fn sign_tx(&self, psbt: PartiallySignedTransaction, _kdp: String, pw: Secret<String>) -> TgResult<PartiallySignedTransaction> {
         let secp = Secp256k1::new();
         let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
 // TODO: decrypt seed with pw
@@ -331,7 +255,7 @@ impl SigningWallet for PlayerWallet {
         }
     }
 
-    fn sign_message(&self, msg: Message, path: DerivationPath, pw: Secret<Vec<u8>>) -> TgResult<Signature> {
+    fn sign_message(&self, msg: Message, path: DerivationPath, pw: Secret<String>) -> TgResult<Signature> {
         let account_key = derive_account_xprivkey(&self.seed.encrypted_seed, NETWORK);
         let secp = Secp256k1::new();
         let signing_key = account_key.derive_priv(&secp, &path).unwrap();

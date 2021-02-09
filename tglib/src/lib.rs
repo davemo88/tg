@@ -1,10 +1,13 @@
 use std::fmt;
 
+pub use age;
+pub use argon2;
 pub use bdk;
 pub use bip39;
+pub use byteorder;
 pub use hex;
 pub use nom;
-pub use byteorder;
+pub use rand;
 pub use secrecy;
 //pub use serde;
 

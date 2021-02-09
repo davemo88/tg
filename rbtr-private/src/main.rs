@@ -9,11 +9,12 @@ use redis::{
 };
 use tglib::{
     bdk::bitcoin::{
-        consensus,
+       consensus,
         secp256k1::Signature,
         util::psbt::PartiallySignedTransaction,
     },
     hex,
+    secrecy::Secret,
     contract::Contract,
     payout::Payout,
     wallet::{
@@ -27,11 +28,13 @@ use tglib::{
 mod wallet;
 use wallet::Wallet;
 
+const ARBITER_PW: &'static str = "somebogusarbiterpwweeee4j14hrkqj3htlkj";
+
 async fn maybe_sign_contract(con: &mut Connection, wallet: &Wallet) {
     if let Some(mut contract) = next_contract(con).await {
         println!("retrieved contract:\n{:?}", contract);
         if wallet.validate_contract(&contract).is_ok() {
-            if let Ok(sig) = sign_contract(wallet, &mut contract) {
+            if let Ok(sig) = sign_contract(wallet, &mut contract, Secret::new(ARBITER_PW.to_owned())) {
                 println!("signed contract {}", hex::encode(contract.cxid()));
                 let _r = set_contract_signature(con, contract, sig).await;
             }
@@ -56,7 +59,7 @@ async fn maybe_sign_payout(con: &mut Connection, wallet: &Wallet) {
     if let Some(mut payout) = next_payout(con).await {
         println!("retrieved payout:\n{:?}", payout);
         if wallet.validate_payout(&payout).is_ok() {
-            if let Ok(psbt) = sign_payout(wallet, &mut payout) {
+            if let Ok(psbt) = sign_payout(wallet, &mut payout, Secret::new(ARBITER_PW.to_owned())) {
                 println!("signed transaction for payout for contract {}", hex::encode(payout.contract.cxid()));
                 let _r = set_payout_psbt(con, payout, psbt).await;
             }
@@ -91,7 +94,7 @@ fn redis_client() -> redis::Client {
 async fn main() {
     let redis_client = redis_client();
     let mut con = redis_client.get_async_connection().await.unwrap();
-    let wallet = Wallet::new();
+    let wallet = Wallet::new(Secret::new(ARBITER_PW.to_owned()));
     loop {
         maybe_sign_contract(&mut con, &wallet).await;
         maybe_sign_payout(&mut con, &wallet).await;

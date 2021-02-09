@@ -1,8 +1,21 @@
 use std::{
     convert::TryInto,
+    io::Write,
     str::FromStr,
 };
+use secrecy::ExposeSecret;
+use age;
+use argon2::{
+    self,
+    Config,
+};
+use rand::Rng;
+use serde::{
+    Deserialize,
+    Serialize,
+};
 use secrecy::Secret;
+use bip39::Mnemonic;
 use bdk::bitcoin::{
     Address,
     Network,
@@ -33,9 +46,10 @@ use bdk::bitcoin::{
             ExtendedPubKey,
             ExtendedPrivKey,
             DerivationPath,
+            Fingerprint,
         },
         psbt::PartiallySignedTransaction,
-    }
+    },
 };
 use crate::{
     TgError,
@@ -49,6 +63,7 @@ use crate::{
     mock::{
         referee_pubkey,
         ESCROW_KIX,
+        NETWORK,
     }
 };
 
@@ -62,6 +77,63 @@ pub const NAME_KIX: &'static str = "0";
 //const NAMECOIN_VERSION_BYTE: u8 = 0x34;//52
 // testnet / regtest, same as bitcoin?
 const NAMECOIN_TESTNET_VERSION_BYTE: u8 = 0x6F;//111
+
+#[derive(Serialize, Deserialize)]
+pub struct SavedSeed {
+    pub fingerprint: Fingerprint,
+// this is the bitcoin account extended pubkey derived from the encrypted seed
+// here for convenience in initializing pubkey-only wallet without having to decrypt seed
+    pub xpubkey: ExtendedPubKey,
+    pub encrypted_seed: Vec<u8>,
+    pub pw_salt: Vec<u8>,
+    pub pw_hash: Vec<u8>,
+}
+
+impl SavedSeed {
+    pub fn new(pw: Secret<String>, mnemonic: Option<Mnemonic>) -> Self {
+// TODO: should i try to remove mnemonic / seed from memory asap? if so how
+//  if mnemonic provided, derive seed 
+//  generate salt
+        let pw_salt = rand::thread_rng().gen::<[u8; 32]>().to_vec();
+        let config = Config::default();
+//  hash pw + salt
+        let pw_hash = argon2::hash_encoded(pw.expose_secret().as_bytes(), &pw_salt, &config).unwrap().as_bytes().to_vec();
+        let seed = match mnemonic {
+            Some(m) => m.to_seed(""),
+//  else generate random BIP 39 seed
+            None => Mnemonic::from_entropy(&rand::thread_rng().gen::<[u8; 32]>()).unwrap().to_seed(""),
+        };
+//  compute root key fingerprint and bitcoin account xpubkey
+        let root_key = ExtendedPrivKey::new_master(NETWORK, &seed).unwrap();
+        let secp = Secp256k1::new();
+        let fingerprint = root_key.fingerprint(&secp);
+        let xpubkey = derive_account_xpubkey(&seed, NETWORK);
+//  encrypt seed with pw
+        let encrypted_seed = {
+            let encryptor = age::Encryptor::with_user_passphrase(pw);
+            let mut encrypted = vec![];
+            let mut writer = encryptor.wrap_output(&mut encrypted).unwrap();
+            writer.write_all(&seed).unwrap();
+            writer.finish().unwrap();
+
+            encrypted
+        };
+
+        SavedSeed { 
+            fingerprint,
+            xpubkey,
+            pw_salt,
+            pw_hash,
+            encrypted_seed,
+        }
+    }
+
+//    pub fn verify_pw(&self, pw: &str) -> bool {
+//        let pw_bytes = pw.as_bytes();
+//        false
+//    }
+}
+
 
 pub trait NameWallet {
     fn name_pubkey(&self) -> PublicKey;
@@ -78,8 +150,8 @@ pub trait NameWallet {
 pub trait SigningWallet {
 //    fn fingerprint(&self) -> Fingerprint;
 //    fn xpubkey(&self) -> ExtendedPubKey;
-    fn sign_tx(&self, pstx: PartiallySignedTransaction, descriptor: String, pw: Secret<Vec<u8>>) -> TgResult<PartiallySignedTransaction>;
-    fn sign_message(&self, msg: Message, path: DerivationPath, pw: Secret<Vec<u8>>) -> TgResult<Signature>;
+    fn sign_tx(&self, pstx: PartiallySignedTransaction, descriptor: String, pw: Secret<String>) -> TgResult<PartiallySignedTransaction>;
+    fn sign_message(&self, msg: Message, path: DerivationPath, pw: Secret<String>) -> TgResult<Signature>;
 }
 
 pub trait EscrowWallet {
@@ -127,13 +199,13 @@ pub trait EscrowWallet {
     }
 }
 
-pub fn sign_contract<T>(wallet: &T, contract: &mut Contract, pw: Secret<Vec<u8>>) -> TgResult<Signature> 
+pub fn sign_contract<T>(wallet: &T, contract: &mut Contract, pw: Secret<String>) -> TgResult<Signature> 
 where T: EscrowWallet + SigningWallet {
     Ok(wallet.sign_message(Message::from_slice(&contract.cxid()).unwrap(), 
                 DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(), pw).unwrap())
 }
 
-pub fn sign_payout<T>(wallet: &T, payout: &mut Payout, pw: Secret<Vec<u8>>) -> TgResult<PartiallySignedTransaction> 
+pub fn sign_payout<T>(wallet: &T, payout: &mut Payout, pw: Secret<String>) -> TgResult<PartiallySignedTransaction> 
 where T: EscrowWallet + SigningWallet{
     wallet.sign_tx(payout.psbt.clone(), "".to_string(), pw)
 }

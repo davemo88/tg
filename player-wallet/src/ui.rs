@@ -19,7 +19,6 @@ use tglib::{
         },
     },
     hex,
-    bip39::Mnemonic,
     secrecy::Secret,
     Result as TgResult,
     TgError,
@@ -42,11 +41,9 @@ use tglib::{
         NAME_KIX,
     },
     mock::{
-        Trezor,
         ESCROW_KIX,
         NETWORK,
         PAYOUT_VERSION,
-        PLAYER_1_MNEMONIC,
     },
 };
 use crate::{
@@ -68,12 +65,12 @@ pub trait WalletUI {
 
 // players
 pub trait PlayerUI {
-    fn register(&self, name: PlayerName, pw: Secret<Vec<u8>>) -> TgResult<()>;
+    fn register(&self, name: PlayerName, pw: Secret<String>) -> TgResult<()>;
     fn add(&self, name: PlayerName) -> TgResult<()>;
     fn remove(&self, name: PlayerName) -> TgResult<()>;
     fn list(&self) -> Vec<PlayerRecord>;
     fn mine(&self) -> Vec<PlayerName>;
-    fn post(&self, name: PlayerName, amount: Amount, pw: Secret<Vec<u8>>) -> TgResult<()>;
+    fn post(&self, name: PlayerName, amount: Amount, pw: Secret<String>) -> TgResult<()>;
 }
 
 // contracts and payouts
@@ -82,7 +79,7 @@ pub trait DocumentUI<T> {
     fn import(&self, hex: &str) -> TgResult<()>;
     fn export(&self, cxid: &str) -> Option<String>;
     fn get(&self, cxid: &str) -> Option<T>;
-    fn sign(&self, params: SignDocumentParams, pw: Secret<Vec<u8>>) -> TgResult<()>;
+    fn sign(&self, params: SignDocumentParams, pw: Secret<String>) -> TgResult<()>;
     fn submit(&self, cxid: &str) -> TgResult<()>;
     fn broadcast(&self, cxid: &str) -> TgResult<()>;
     fn list(&self) -> Vec<T>;
@@ -114,14 +111,14 @@ impl WalletUI for PlayerWallet {
 }
 
 impl PlayerUI for PlayerWallet {
-    fn register(&self, name: PlayerName, pw: Secret<Vec<u8>>) -> TgResult<()> {
-        let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
+    fn register(&self, name: PlayerName, pw: Secret<String>) -> TgResult<()> {
         let mut engine = sha256::HashEngine::default();
         engine.input(name.0.as_bytes());
         let hash: &[u8] = &sha256::Hash::from_engine(engine);
-        let sig = signing_wallet.sign_message(
+        let sig = self.sign_message(
             Message::from_slice(hash).unwrap(),
             DerivationPath::from_str(&format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX)).unwrap(),
+            pw,
         ).unwrap();
         match self.name_client.register_name(name.clone(), self.name_pubkey(), sig) {
             Ok(()) => PlayerUI::add(self, name),
@@ -156,7 +153,7 @@ impl PlayerUI for PlayerWallet {
         self.name_client.get_player_names(&self.name_pubkey())
     }
 
-    fn post(&self, name: PlayerName, amount: Amount, pw: Secret<Vec<u8>>) -> TgResult<()> {
+    fn post(&self, name: PlayerName, amount: Amount, pw: Secret<String>) -> TgResult<()> {
         let mut utxos = vec!();
         let mut total: u64 = 0;
         for utxo in self.wallet.list_unspent().unwrap() {
@@ -177,8 +174,7 @@ impl PlayerUI for PlayerWallet {
             utxos,
         };
 
-        let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-        let sig = signing_wallet.sign_message(Message::from_slice(&info.hash()).unwrap(), DerivationPath::from_str(&format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX)).unwrap()).unwrap();
+        let sig = self.sign_message(Message::from_slice(&info.hash()).unwrap(), DerivationPath::from_str(&format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX)).unwrap(), pw).unwrap();
 
         let _r = self.arbiter_client.set_contract_info(info, self.name_pubkey(), sig);
         Ok(())
@@ -271,22 +267,22 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
         self.db.get_contract(&cxid)
     }
 
-    fn sign(&self, params: SignDocumentParams, pw: Secret<Vec<u8>>) -> TgResult<()> {
+    fn sign(&self, params: SignDocumentParams, pw: Secret<String>) -> TgResult<()> {
         let (cxid, sign_funding_tx) = match params {
             SignDocumentParams::SignContractParams { cxid, sign_funding_tx } => (cxid, sign_funding_tx),
             _ => return Err(TgError("invalid params".to_string())),
         };
         if let Some(contract_record) = self.db.get_contract(&cxid) {
 //            let contract = Contract::from_bytes(hex::decode(contract_record.hex.clone()).unwrap()).unwrap();
-            let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-            let sig = signing_wallet.sign_message(
+            let sig = self.sign_message(
                 Message::from_slice(&hex::decode(contract_record.cxid.clone()).unwrap()).unwrap(),
                 DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(),
+                pw.clone(),
             ).unwrap();
             let mut contract = Contract::from_bytes(hex::decode(contract_record.hex.clone()).unwrap()).unwrap();
             contract.sigs.push(sig);
             if sign_funding_tx {
-                contract.funding_tx = signing_wallet.sign_tx(contract.funding_tx.clone(), "".to_string()).unwrap();
+                contract.funding_tx = self.sign_tx(contract.funding_tx.clone(), "".to_string(), pw).unwrap();
             }
             let _r = self.db.add_signature(contract_record.cxid, hex::encode(contract.to_bytes()));
             Ok(())
@@ -377,15 +373,14 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
         self.db.get_payout(&cxid)
     }
 
-    fn sign(&self, params: SignDocumentParams, pw: Secret<Vec<u8>>) -> TgResult<()> {
+    fn sign(&self, params: SignDocumentParams, pw: Secret<String>) -> TgResult<()> {
         let (cxid, script_sig) = match params {
             SignDocumentParams::SignPayoutParams { cxid, script_sig } => (cxid, script_sig),
             _ => return Err(TgError("invalid params".to_string())),
         };
         if let Some(pr) = self.db.get_payout(&cxid) {
             let psbt: PartiallySignedTransaction = consensus::deserialize(&hex::decode(pr.psbt).unwrap()).unwrap();
-            let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-            let psbt = signing_wallet.sign_tx(psbt, "".to_string()).unwrap();
+            let psbt = self.sign_tx(psbt, "".to_string(), pw).unwrap();
             let psbt = hex::encode(consensus::serialize(&psbt));
             self.db.insert_payout(db::PayoutRecord {
                 cxid: pr.cxid, 
