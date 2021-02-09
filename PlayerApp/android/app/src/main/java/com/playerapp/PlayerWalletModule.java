@@ -27,6 +27,12 @@ public class PlayerWalletModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void call_cli(String command, Promise promise) {
+// need to append wallet-path option
+// e.g. --wallet-path data/data/com.playerapp/files/
+// but better to call the android LocalDataDirectory() or whatever
+        Log.d("command:", command);
+        ReactApplicationContext r = getReactApplicationContext();
+        Log.d("files dir:", r.getFilesDir().toString());
         String cli_output = PlayerWalletModule.cli(command);
         Log.d("PlayerWalletModule", cli_output);
         promise.resolve(cli_output);
