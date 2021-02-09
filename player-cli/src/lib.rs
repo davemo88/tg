@@ -1,3 +1,9 @@
+use std::{
+    str::FromStr,
+    fs::File,
+    env::current_dir,
+    path::PathBuf,
+};
 use clap::{App, Arg, ArgMatches, SubCommand, AppSettings};
 use serde_json;
 use shell_words;
@@ -12,16 +18,19 @@ use tglib::{
     bip39::Mnemonic,
     hex,
     player::PlayerName,
-    wallet::SigningWallet,
+//    wallet::SigningWallet,
     mock::{
-        Trezor,
+//        Trezor,
+        DB_NAME,
         NETWORK,
-        PLAYER_1_MNEMONIC,
+//        PLAYER_1_MNEMONIC,
+        SEED_NAME,
     },
 };
 use player_wallet::{
     arbiter::ArbiterClient,
     db::{
+        DB,
         ContractRecord,
         PayoutRecord,
     },
@@ -33,44 +42,11 @@ use player_wallet::{
         WalletUI,
         SignDocumentParams,
     },
-    wallet::PlayerWallet,
+    wallet::{
+        PlayerWallet,
+        SavedSeed,
+    },
 };
-
-pub struct Conf {
-    pub electrum_url: String,
-    pub name_url: String,
-    pub arbiter_url: String,
-}
-
-pub fn cli(line: String, conf: Conf) -> String {
-    let split_line = shell_words::split(&line).unwrap();
-    let matches = player_cli().get_matches_from_safe(split_line);
-    if matches.is_ok() {
-        if let (c, Some(a)) = matches.unwrap().subcommand() {
-            let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
-            let electrum_client = match Client::new(&conf.electrum_url) {
-                Ok(c) => c,
-                Err(e) => return format!("{:?}", e)
-            };
-            let name_client = PlayerNameClient::new(&conf.name_url);
-            let arbiter_client = ArbiterClient::new(&conf.arbiter_url);
-            let wallet = PlayerWallet::new(signing_wallet.fingerprint(), signing_wallet.xpubkey(), NETWORK, electrum_client, name_client, arbiter_client);
-            match c {
-                "balance" => format!("{}", wallet.balance()),
-                "deposit" => format!("{}", wallet.deposit()),
-                "player" => player_subcommand(a.subcommand(), &wallet),
-                "contract" => contract_subcommand(a.subcommand(), &wallet),
-                "payout" => payout_subcommand(a.subcommand(), &wallet),
-                _ => format!("command '{}' is not implemented", c),
-            }
-        } else { 
-            format!("invalid command") 
-        }
-    } else {
-        let err = matches.err().unwrap();
-        format!("{}", err)
-    }
-}
 
 fn player_cli<'a, 'b>() -> App<'a, 'b> {
     App::new("player-cli")
@@ -79,6 +55,17 @@ fn player_cli<'a, 'b>() -> App<'a, 'b> {
         .about("player cli")
         .settings(&[AppSettings::NoBinaryName, AppSettings::SubcommandRequiredElseHelp,
             AppSettings::VersionlessSubcommands])
+        .subcommand(SubCommand::with_name("init").about("initialize new wallet")
+            .arg(Arg::with_name("passphrase")
+                .long("passphrase")
+                .required(true)
+                .takes_value(true)
+                .help("wallet passphrase"))
+            .arg(Arg::with_name("seed-phrase")
+                .long("seed-phrase")
+                .required(false)
+                .takes_value(true)
+                .help("BIP39 seed phrase")))
         .subcommand(SubCommand::with_name("balance").about("display balance (sats)"))
         .subcommand(SubCommand::with_name("deposit").about("display a deposit address"))
         .subcommand(SubCommand::with_name("withdraw").about("withdraw amount to address")
@@ -95,11 +82,91 @@ fn player_cli<'a, 'b>() -> App<'a, 'b> {
         .subcommand(payout_ui())
         .arg(Arg::with_name("json-output")
             .help("output json instead of user-friendly messages")
-            .required(false)
             .global(true)
+            .required(false)
+            .takes_value(false)
             .long("json-output"))
+        .arg(Arg::with_name("seed-path")
+            .help("specify path to wallet seed")
+            .required(false)
+            .takes_value(true)
+            .long("seed-path"))
+        .arg(Arg::with_name("db-path")
+            .help("specify path to wallet db")
+            .required(false)
+            .takes_value(true)
+            .long("db-path"))
 }
 
+pub struct Conf {
+    pub electrum_url: String,
+    pub name_url: String,
+    pub arbiter_url: String,
+}
+
+pub fn cli(line: String, conf: Conf) -> String {
+    let split_line = shell_words::split(&line).unwrap();
+    let matches = player_cli().get_matches_from_safe(split_line);
+    if matches.is_ok() {
+        if let (c, Some(a)) = matches.unwrap().subcommand() {
+
+            let mut seed_path = match a.value_of("seed_path") {
+                Some(p) => PathBuf::from(p),
+                None => current_dir().unwrap(),
+            };
+            seed_path.push(SEED_NAME);
+            let seed = match File::open(&seed_path) {
+                Ok(reader) => match c {
+                    "init" => return format!("cannot init, seed already exists"),
+                    _ => serde_json::from_reader(reader).unwrap(),
+                }
+                Err(_) => match c {
+                    "init" => {
+                        let mnemonic = match a.value_of("seed-phrase") {
+                            Some(phrase) => match Mnemonic::from_str(phrase) {
+                                Ok(m) => Some(m),
+                                Err(e) => return format!("{:?}", e),
+                            }
+                            None => None,
+                        };
+                        SavedSeed::new(a.value_of("passphrase").unwrap(), mnemonic)
+                    }
+                    _ => return format!("no seed. initialize wallet first"),
+                }
+            };
+
+            let mut db_path = match a.value_of("db_path") {
+                Some(p) => PathBuf::from(p),
+                None => current_dir().unwrap(),
+            };
+            db_path.push(DB_NAME);
+            let db = DB::new(&db_path).unwrap();
+            let _r = db.create_tables().unwrap();
+
+            let electrum_client = match Client::new(&conf.electrum_url) {
+                Ok(c) => c,
+                Err(e) => return format!("{:?}", e)
+            };
+            let name_client = PlayerNameClient::new(&conf.name_url);
+            let arbiter_client = ArbiterClient::new(&conf.arbiter_url);
+
+            let wallet = PlayerWallet::new(seed, db, NETWORK, electrum_client, name_client, arbiter_client);
+            match c {
+                "balance" => format!("{}", wallet.balance()),
+                "deposit" => format!("{}", wallet.deposit()),
+                "player" => player_subcommand(a.subcommand(), &wallet),
+                "contract" => contract_subcommand(a.subcommand(), &wallet),
+                "payout" => payout_subcommand(a.subcommand(), &wallet),
+                _ => format!("command '{}' is not implemented", c),
+            }
+        } else { 
+            format!("invalid command") 
+        }
+    } else {
+        let err = matches.err().unwrap();
+        format!("{}", err)
+    }
+}
 
 pub fn player_ui<'a, 'b>() -> App<'a, 'b> {
     App::new("player")

@@ -1,7 +1,20 @@
 use std::{
-    env::current_dir,
-    path::PathBuf,
+    io::{
+//        Read,
+        Write,
+    },
     str::FromStr,
+};
+use age;
+use secrecy;
+use argon2::{
+    self,
+    Config,
+};
+use rand::Rng;
+use serde::{
+    Deserialize,
+    Serialize,
 };
 use tglib::{
     bdk::{
@@ -17,12 +30,13 @@ use tglib::{
             secp256k1::Secp256k1,
             util::{
                 bip32::{
+                    ExtendedPrivKey,
                     ExtendedPubKey,
                     DerivationPath,
                     Fingerprint,
                 },
                 psbt::PartiallySignedTransaction,
-            }
+            },
         },
         blockchain::{
             noop_progress,
@@ -32,6 +46,7 @@ use tglib::{
         electrum_client::Client,
         Wallet,
     },
+    bip39::Mnemonic,
     Result as TgResult,
     TgError,
     arbiter::ArbiterService,
@@ -42,6 +57,7 @@ use tglib::{
     wallet::{
         create_escrow_address,
         create_payout_script,
+        derive_account_xpubkey,
         EscrowWallet,
         NameWallet,
         BITCOIN_ACCOUNT_PATH,
@@ -50,9 +66,9 @@ use tglib::{
     },
     mock::{
         ARBITER_PUBLIC_URL,
-        DB_NAME,
         ESCROW_SUBACCOUNT,
         ESCROW_KIX,
+        NETWORK,
     },
 };
 use crate::{
@@ -61,8 +77,65 @@ use crate::{
     db::DB,
 };
 
+#[derive(Serialize, Deserialize)]
+pub struct SavedSeed {
+    pub fingerprint: Fingerprint,
+// this is the bitcoin account extended pubkey derived from the encrypted seed
+// here for convenience in initializing pubkey-only wallet without having to decrypt seed
+    pub xpubkey: ExtendedPubKey,
+    pub encrypted_seed: Vec<u8>,
+    pub pw_salt: Vec<u8>,
+    pub pw_hash: Vec<u8>,
+}
+
+impl SavedSeed {
+    pub fn new(pw: &str, mnemonic: Option<Mnemonic>) -> Self {
+// TODO: should i try to remove mnemonic / seed from memory asap? if so how
+//  if mnemonic provided, derive seed 
+        let seed = match mnemonic {
+            Some(m) => m.to_seed(""),
+//  else generate random BIP 39 seed
+            None => Mnemonic::from_entropy(&rand::thread_rng().gen::<[u8; 8]>()).unwrap().to_seed(""),
+        };
+//  compute root key fingerprint and bitcoin account xpubkey
+        let root_key = ExtendedPrivKey::new_master(NETWORK, &seed).unwrap();
+        let secp = Secp256k1::new();
+        let fingerprint = root_key.fingerprint(&secp);
+        let xpubkey = derive_account_xpubkey(&seed, NETWORK);
+//  encrypt seed with pw
+        let encrypted_seed = {
+            let encryptor = age::Encryptor::with_user_passphrase(secrecy::Secret::new(pw.to_owned()));
+            let mut encrypted = vec![];
+            let mut writer = encryptor.wrap_output(&mut encrypted).unwrap();
+            writer.write_all(&seed).unwrap();
+            writer.finish().unwrap();
+
+            encrypted
+        };
+//  generate salt
+        let pw_salt = rand::thread_rng().gen::<[u8; 4]>().to_vec();
+        let config = Config::default();
+//  hash pw + salt
+        let pw_hash = argon2::hash_encoded(pw.as_bytes(), &pw_salt, &config).unwrap().as_bytes().to_vec();
+
+        SavedSeed { 
+            fingerprint,
+            xpubkey,
+            pw_salt,
+            pw_hash,
+            encrypted_seed,
+        }
+    }
+
+//    pub fn verify_pw(&self, pw: &str) -> bool {
+//        let pw_bytes = pw.as_bytes();
+//        false
+//    }
+}
+
 pub struct PlayerWallet {
-    xpubkey: ExtendedPubKey,
+//    xpubkey: ExtendedPubKey,
+    seed: SavedSeed,
     network: Network,
 // TODO: allow for offline wallet
     pub wallet: Wallet<ElectrumBlockchain, MemoryDatabase>,
@@ -72,22 +145,25 @@ pub struct PlayerWallet {
 }
 
 impl PlayerWallet {
-    pub fn new(fingerprint: Fingerprint, xpubkey: ExtendedPubKey, network: Network, electrum_client: Client, name_client: PlayerNameClient, arbiter_client: ArbiterClient) ->  Self {
-        let descriptor_key = format!("[{}/{}]{}", fingerprint, BITCOIN_ACCOUNT_PATH, xpubkey);
+    pub fn new(seed: SavedSeed, db: DB, network: Network, electrum_client: Client, name_client: PlayerNameClient, arbiter_client: ArbiterClient) ->  Self {
+        let descriptor_key = format!("[{}/{}]{}", seed.fingerprint, BITCOIN_ACCOUNT_PATH, seed.xpubkey);
         let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
         let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
-        let mut db_path = current_dir().unwrap();
+//        let mut db_path = db_path.unwrap_or(current_dir().unwrap());
+//        let mut db_path = current_dir().unwrap();
 // TODO: need to use the right path depending on platform
-        if db_path == PathBuf::from("/") {
+//        if db_path == PathBuf::from("/") {
 // we're probably on android
-            db_path.push("data/data/com.playerapp/files/");
-        }
-        db_path.push(DB_NAME);
-        let db = DB::new(&db_path).unwrap();
-        let _r = db.create_tables().unwrap();
+// TODO: append --db-path arg in java using android API instead
+//            db_path.push("data/data/com.playerapp/files/");
+//        }
+//        db_path.push(DB_NAME);
+//        let db = DB::new(&db_path).unwrap();
+//        let _r = db.create_tables().unwrap();
 
         PlayerWallet {
-            xpubkey,
+//            xpubkey,
+            seed,
             network,
             wallet: Wallet::new(
                 &external_descriptor,
@@ -202,7 +278,7 @@ impl NameWallet for PlayerWallet {
     fn name_pubkey(&self) -> PublicKey {
         let secp = Secp256k1::new();
         let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX))).unwrap();
-        let pubkey = self.xpubkey.derive_pub(&secp, &path).unwrap();
+        let pubkey = self.seed.xpubkey.derive_pub(&secp, &path).unwrap();
         pubkey.public_key
     }
 }
@@ -211,7 +287,7 @@ impl EscrowWallet for PlayerWallet {
     fn get_escrow_pubkey(&self) -> PublicKey {
         let secp = Secp256k1::new();
         let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
-        let escrow_pubkey = self.xpubkey.derive_pub(&secp, &path).unwrap();
+        let escrow_pubkey = self.seed.xpubkey.derive_pub(&secp, &path).unwrap();
         escrow_pubkey.public_key
     }
 

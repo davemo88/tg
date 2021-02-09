@@ -37,7 +37,6 @@ use bdk::bitcoin::{
         psbt::PartiallySignedTransaction,
     }
 };
-use bip39::Mnemonic;
 use crate::{
     TgError,
     contract::Contract,
@@ -242,16 +241,16 @@ fn create_payout_tx(funding_tx: &Transaction, escrow_address: &Address, payout_a
     })
 }
 
-pub fn derive_account_xprivkey(mnemonic: &Mnemonic, network: Network) -> ExtendedPrivKey {
-        let root_key = ExtendedPrivKey::new_master(network, &mnemonic.to_seed("")).unwrap();
+pub fn derive_account_xprivkey(seed: &[u8], network: Network) -> ExtendedPrivKey {
+        let root_key = ExtendedPrivKey::new_master(network, seed).unwrap();
         let secp = Secp256k1::new();
         let path = DerivationPath::from_str(&String::from(format!("m/{}", BITCOIN_ACCOUNT_PATH))).unwrap();
         root_key.derive_priv(&secp, &path).unwrap()
 }
 
-pub fn derive_account_xpubkey(mnemonic: &Mnemonic, network: Network) -> ExtendedPubKey {
+pub fn derive_account_xpubkey(seed: &[u8], network: Network) -> ExtendedPubKey {
         let secp = Secp256k1::new();
-        ExtendedPubKey::from_private(&secp, &derive_account_xprivkey(mnemonic, network))
+        ExtendedPubKey::from_private(&secp, &derive_account_xprivkey(seed, network))
 }
 
 pub fn get_namecoin_address(pubkey: &PublicKey, network: Network) -> Result<String, String> {

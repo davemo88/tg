@@ -41,6 +41,7 @@ pub use crate::{
 
 
 pub const DB_NAME: &'static str = "dev-app.db";
+pub const SEED_NAME: &'static str = "dev-seed.json";
 pub const NETWORK: Network = Network::Regtest;
 pub const BITCOIN_RPC_URL: &'static str = "http://electrs:18443";
 pub const ELECTRS_SERVER: &'static str = "tcp://electrs:60401";
@@ -88,7 +89,7 @@ impl Trezor {
         let root_key = ExtendedPrivKey::new_master(NETWORK, &mnemonic.to_seed("")).unwrap();
         let secp = Secp256k1::new();
         let fingerprint = root_key.fingerprint(&secp);
-        let account_key = derive_account_xprivkey(&mnemonic, NETWORK);
+        let account_key = derive_account_xprivkey(&mnemonic.to_seed(""), NETWORK);
         let descriptor_key = format!("[{}/{}]{}", fingerprint, BITCOIN_ACCOUNT_PATH, account_key);
         let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
         let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
@@ -109,19 +110,19 @@ impl Trezor {
 impl SigningWallet for Trezor {
 
     fn fingerprint(&self) -> Fingerprint {
-        let xprivkey = derive_account_xprivkey(&self.mnemonic, NETWORK);
+        let xprivkey = derive_account_xprivkey(&self.mnemonic.to_seed(""), NETWORK);
         let secp = Secp256k1::new();
         xprivkey.fingerprint(&secp)
     }
 
     fn xpubkey(&self) -> ExtendedPubKey {
-        derive_account_xpubkey(&self.mnemonic, NETWORK)
+        derive_account_xpubkey(&self.mnemonic.to_seed(""), NETWORK)
     }
 
     fn sign_tx(&self, psbt: PartiallySignedTransaction, _kdp: String) -> TgResult<PartiallySignedTransaction> {
         let secp = Secp256k1::new();
         let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
-        let account_key = derive_account_xprivkey(&self.mnemonic, NETWORK);
+        let account_key = derive_account_xprivkey(&self.mnemonic.to_seed(""), NETWORK);
         let escrow_key = account_key.derive_priv(&secp, &path).unwrap();
         let mut maybe_signed = psbt.clone();
 //        println!("psbt to sign: {:?}", psbt);
@@ -140,7 +141,7 @@ impl SigningWallet for Trezor {
 // TODO : make this work
     fn sign_message(&self, msg: Message, path: DerivationPath) -> TgResult<Signature> {
 //        let root_key = ExtendedPrivKey::new_master(NETWORK, &self.mnemonic.to_seed("")).unwrap();
-        let account_key = derive_account_xprivkey(&self.mnemonic, NETWORK);
+        let account_key = derive_account_xprivkey(&self.mnemonic.to_seed(""), NETWORK);
         let secp = Secp256k1::new();
         let signing_key = account_key.derive_priv(&secp, &path).unwrap();
         Ok(secp.sign(&msg, &signing_key.private_key.key))
