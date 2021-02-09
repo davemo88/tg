@@ -19,6 +19,7 @@ use crate::{
 
 fn op_bytecode(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], TgOpcode> {
     move |input: &[u8]| {
+// TODO: can just use tag?
         let (input, b) = take(1u8)(input)?;
         if b[0] == op.bytecode() {
             Ok((input, op.clone()))
