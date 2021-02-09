@@ -103,25 +103,26 @@ impl SavedSeed {
 //  hash pw + salt
         let pw_hash = argon2::hash_encoded(pw.expose_secret().as_bytes(), &pw_salt, &config).unwrap();
         let seed = match mnemonic {
-            Some(m) => Mnemonic::from_str(m.expose_secret()).unwrap().to_seed(""),
+            Some(m) => Secret::new(Mnemonic::from_str(m.expose_secret()).unwrap().to_seed("").to_vec()),
 //  else generate random BIP 39 seed
-            None => Mnemonic::from_entropy(&rand::thread_rng().gen::<[u8; 32]>()).unwrap().to_seed(""),
+            None => Secret::new(Mnemonic::from_entropy(&rand::thread_rng().gen::<[u8; 32]>()).unwrap().to_seed("").to_vec()),
         };
-//  compute root key fingerprint and bitcoin account xpubkey
-        let root_key = ExtendedPrivKey::new_master(NETWORK, &seed).unwrap();
-        let secp = Secp256k1::new();
-        let fingerprint = root_key.fingerprint(&secp);
-        let xpubkey = derive_account_xpubkey(&seed, NETWORK);
 //  encrypt seed with pw
         let encrypted_seed = {
             let encryptor = age::Encryptor::with_user_passphrase(pw);
             let mut encrypted = vec![];
             let mut writer = encryptor.wrap_output(&mut encrypted).unwrap();
-            writer.write_all(&seed).unwrap();
+            writer.write_all(&seed.expose_secret()).unwrap();
             writer.finish().unwrap();
 
             encrypted
         };
+
+//  compute root key fingerprint and bitcoin account xpubkey
+        let root_key = ExtendedPrivKey::new_master(NETWORK, seed.expose_secret()).unwrap();
+        let secp = Secp256k1::new();
+        let fingerprint = root_key.fingerprint(&secp);
+        let xpubkey = derive_account_xpubkey(seed, NETWORK);
 
         SavedSeed { 
             fingerprint,
@@ -132,7 +133,7 @@ impl SavedSeed {
         }
     }
 
-    pub fn get_seed(&self, pw: Secret<String>) -> TgResult<Vec<u8>> {
+    pub fn get_seed(&self, pw: Secret<String>) -> TgResult<Secret<Vec<u8>>> {
         if argon2::verify_encoded(&self.pw_hash, pw.expose_secret().as_bytes()).unwrap() {
             {
                 let decryptor = match age::Decryptor::new(&self.encrypted_seed[..]).unwrap() {
@@ -143,7 +144,7 @@ impl SavedSeed {
                 let mut reader = decryptor.decrypt(&pw, None).unwrap();
                 let _r = reader.read_to_end(&mut decrypted);
 
-                Ok(decrypted)
+                Ok(Secret::new(decrypted))
             }
         } else {
             Err(TgError("invalid_pw".to_string()))
@@ -330,14 +331,14 @@ fn create_payout_tx(funding_tx: &Transaction, escrow_address: &Address, payout_a
     })
 }
 
-pub fn derive_account_xprivkey(seed: &[u8], network: Network) -> ExtendedPrivKey {
-        let root_key = ExtendedPrivKey::new_master(network, seed).unwrap();
+pub fn derive_account_xprivkey(seed: Secret<Vec<u8>>, network: Network) -> ExtendedPrivKey {
+        let root_key = ExtendedPrivKey::new_master(network, seed.expose_secret()).unwrap();
         let secp = Secp256k1::new();
         let path = DerivationPath::from_str(&String::from(format!("m/{}", BITCOIN_ACCOUNT_PATH))).unwrap();
         root_key.derive_priv(&secp, &path).unwrap()
 }
 
-pub fn derive_account_xpubkey(seed: &[u8], network: Network) -> ExtendedPubKey {
+pub fn derive_account_xpubkey(seed: Secret<Vec<u8>>, network: Network) -> ExtendedPubKey {
         let secp = Secp256k1::new();
         ExtendedPubKey::from_private(&secp, &derive_account_xprivkey(seed, network))
 }

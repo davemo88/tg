@@ -236,10 +236,14 @@ impl EscrowWallet for PlayerWallet {
 impl SigningWallet for PlayerWallet {
 
     fn sign_tx(&self, psbt: PartiallySignedTransaction, _kdp: String, pw: Secret<String>) -> TgResult<PartiallySignedTransaction> {
+        let seed = match self.seed.get_seed(pw) {
+            Ok(seed) => seed,
+            Err(e) => return Err(TgError(format!("{:?}", e))),
+        };
         let secp = Secp256k1::new();
         let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
 // TODO: decrypt seed with pw
-        let account_key = derive_account_xprivkey(&self.seed.get_seed(pw).unwrap(), NETWORK);
+        let account_key = derive_account_xprivkey(seed, NETWORK);
         let escrow_key = account_key.derive_priv(&secp, &path).unwrap();
         let mut maybe_signed = psbt.clone();
 //        println!("psbt to sign: {:?}", psbt);
@@ -256,7 +260,12 @@ impl SigningWallet for PlayerWallet {
     }
 
     fn sign_message(&self, msg: Message, path: DerivationPath, pw: Secret<String>) -> TgResult<Signature> {
-        let account_key = derive_account_xprivkey(&self.seed.get_seed(pw).unwrap(), NETWORK);
+// TODO: should use Secret here
+        let seed = match self.seed.get_seed(pw) {
+            Ok(seed) => seed,
+            Err(e) => return Err(TgError(format!("{:?}", e))),
+        };
+        let account_key = derive_account_xprivkey(seed, NETWORK);
         let secp = Secp256k1::new();
         let signing_key = account_key.derive_priv(&secp, &path).unwrap();
         Ok(secp.sign(&msg, &signing_key.private_key.key))

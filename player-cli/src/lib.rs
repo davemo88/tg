@@ -19,12 +19,9 @@ use tglib::{
     secrecy::Secret,
     player::PlayerName,
     wallet::SavedSeed,
-//    wallet::SigningWallet,
     mock::{
-//        Trezor,
         DB_NAME,
         NETWORK,
-//        PLAYER_1_MNEMONIC,
         SEED_NAME,
     },
 };
