@@ -1,6 +1,9 @@
 use std::{
     convert::TryInto,
-    io::Write,
+    io::{
+        Read,
+        Write,
+    },
     str::FromStr,
 };
 use secrecy::ExposeSecret;
@@ -85,8 +88,9 @@ pub struct SavedSeed {
 // here for convenience in initializing pubkey-only wallet without having to decrypt seed
     pub xpubkey: ExtendedPubKey,
     pub encrypted_seed: Vec<u8>,
-    pub pw_salt: Vec<u8>,
-    pub pw_hash: Vec<u8>,
+// TODO: does argon2 bundle salt with pw_hash?
+//    pub pw_salt: Vec<u8>,
+    pub pw_hash: String,
 }
 
 impl SavedSeed {
@@ -97,7 +101,7 @@ impl SavedSeed {
         let pw_salt = rand::thread_rng().gen::<[u8; 32]>().to_vec();
         let config = Config::default();
 //  hash pw + salt
-        let pw_hash = argon2::hash_encoded(pw.expose_secret().as_bytes(), &pw_salt, &config).unwrap().as_bytes().to_vec();
+        let pw_hash = argon2::hash_encoded(pw.expose_secret().as_bytes(), &pw_salt, &config).unwrap();
         let seed = match mnemonic {
             Some(m) => m.to_seed(""),
 //  else generate random BIP 39 seed
@@ -122,16 +126,29 @@ impl SavedSeed {
         SavedSeed { 
             fingerprint,
             xpubkey,
-            pw_salt,
+//            pw_salt,
             pw_hash,
             encrypted_seed,
         }
     }
 
-//    pub fn verify_pw(&self, pw: &str) -> bool {
-//        let pw_bytes = pw.as_bytes();
-//        false
-//    }
+    pub fn get_seed(&self, pw: Secret<String>) -> TgResult<Vec<u8>> {
+        if argon2::verify_encoded(&self.pw_hash, pw.expose_secret().as_bytes()).unwrap() {
+            {
+                let decryptor = match age::Decryptor::new(&self.encrypted_seed[..]).unwrap() {
+                    age::Decryptor::Passphrase(d) => d,
+                    _ => unreachable!(),
+                };
+                let mut decrypted = vec![];
+                let mut reader = decryptor.decrypt(&pw, None).unwrap();
+                let _r = reader.read_to_end(&mut decrypted);
+
+                Ok(decrypted)
+            }
+        } else {
+            Err(TgError("invalid_pw".to_string()))
+        }
+    }
 }
 
 

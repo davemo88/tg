@@ -51,7 +51,7 @@ impl SigningWallet for Wallet {
         let secp = Secp256k1::new();
         let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
 // TODO: decrypt seed with pw
-        let account_key = derive_account_xprivkey(&self.saved_seed.encrypted_seed, NETWORK);
+        let account_key = derive_account_xprivkey(&self.saved_seed.get_seed(pw).unwrap(), NETWORK);
         let escrow_key = account_key.derive_priv(&secp, &path).unwrap();
         let mut maybe_signed = psbt.clone();
 //        println!("psbt to sign: {:?}", psbt);
@@ -69,7 +69,7 @@ impl SigningWallet for Wallet {
 
     fn sign_message(&self, msg: Message, path: DerivationPath, pw: Secret<String>) -> TgResult<Signature> {
 // TODO: decrypt seed with pw
-        let account_key = derive_account_xprivkey(&self.saved_seed.encrypted_seed, NETWORK);
+        let account_key = derive_account_xprivkey(&self.saved_seed.get_seed(pw).unwrap(), NETWORK);
         let secp = Secp256k1::new();
         let signing_key = account_key.derive_priv(&secp, &path).unwrap();
         Ok(secp.sign(&msg, &signing_key.private_key.key))
