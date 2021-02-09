@@ -15,7 +15,6 @@ use tglib::{
         },
         signer::Signer,
     },
-    bip39::Mnemonic,
     secrecy::Secret,
     Result as TgResult,
     TgError,
@@ -41,7 +40,7 @@ pub struct Wallet {
 impl Wallet {
     pub fn new(pw: Secret<String>) -> Self {
        Wallet {
-           saved_seed: SavedSeed::new(pw, Some(Mnemonic::parse(ARBITER_MNEMONIC).unwrap()))
+           saved_seed: SavedSeed::new(pw, Some(Secret::new(ARBITER_MNEMONIC.to_owned())))
        } 
     }
 }

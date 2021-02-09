@@ -94,8 +94,8 @@ pub struct SavedSeed {
 }
 
 impl SavedSeed {
-    pub fn new(pw: Secret<String>, mnemonic: Option<Mnemonic>) -> Self {
-// TODO: should i try to remove mnemonic / seed from memory asap? if so how
+    pub fn new(pw: Secret<String>, mnemonic: Option<Secret<String>>) -> Self {
+// TODO: can i make Mnemonic a Secret? e.g. by making it a string
 //  if mnemonic provided, derive seed 
 //  generate salt
         let pw_salt = rand::thread_rng().gen::<[u8; 32]>().to_vec();
@@ -103,7 +103,7 @@ impl SavedSeed {
 //  hash pw + salt
         let pw_hash = argon2::hash_encoded(pw.expose_secret().as_bytes(), &pw_salt, &config).unwrap();
         let seed = match mnemonic {
-            Some(m) => m.to_seed(""),
+            Some(m) => Mnemonic::from_str(m.expose_secret()).unwrap().to_seed(""),
 //  else generate random BIP 39 seed
             None => Mnemonic::from_entropy(&rand::thread_rng().gen::<[u8; 32]>()).unwrap().to_seed(""),
         };

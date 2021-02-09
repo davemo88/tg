@@ -3,7 +3,6 @@ use std::{
     fs::File,
     io::Write,
     path::PathBuf,
-    str::FromStr,
 };
 use clap::{App, Arg, ArgMatches, SubCommand, AppSettings};
 use serde_json;
@@ -16,7 +15,6 @@ use tglib::{
             secp256k1::Signature,
         },
     },
-    bip39::Mnemonic,
     hex,
     secrecy::Secret,
     player::PlayerName,
@@ -122,10 +120,7 @@ pub fn cli(line: String, conf: Conf) -> String {
                 Err(_) => match c {
                     "init" => {
                         let mnemonic = match a.value_of("seed-phrase") {
-                            Some(phrase) => match Mnemonic::from_str(phrase) {
-                                Ok(m) => Some(m),
-                                Err(e) => return format!("{:?}", e),
-                            }
+                            Some(phrase) => Some(Secret::new(phrase.to_owned())),
                             None => None,
                         };
                         let new_seed = SavedSeed::new(Secret::new(a.value_of("passphrase").unwrap().to_owned()), mnemonic);
@@ -540,7 +535,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 Err(e) => format!("{}", e),
             }
             "broadcast" => match DocumentUI::<PayoutRecord>::broadcast(wallet, a.value_of("cxid").unwrap()) {
-                Ok(()) => format!("funding tx broadcasted to network"),
+                Ok(()) => format!("payout tx broadcasted to network"),
                 Err(e) => format!("{}", e),
             }
             "delete" => match DocumentUI::<PayoutRecord>::delete(wallet, a.value_of("cxid").unwrap()) {
