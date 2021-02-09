@@ -20,6 +20,7 @@ use tglib::{
     },
     hex,
     bip39::Mnemonic,
+    secrecy::Secret,
     Result as TgResult,
     TgError,
     arbiter::ArbiterService,
@@ -67,12 +68,12 @@ pub trait WalletUI {
 
 // players
 pub trait PlayerUI {
-    fn register(&self, name: PlayerName) -> TgResult<()>;
+    fn register(&self, name: PlayerName, pw: Secret<Vec<u8>>) -> TgResult<()>;
     fn add(&self, name: PlayerName) -> TgResult<()>;
     fn remove(&self, name: PlayerName) -> TgResult<()>;
     fn list(&self) -> Vec<PlayerRecord>;
     fn mine(&self) -> Vec<PlayerName>;
-    fn post(&self, name: PlayerName, amount: Amount) -> TgResult<()>;
+    fn post(&self, name: PlayerName, amount: Amount, pw: Secret<Vec<u8>>) -> TgResult<()>;
 }
 
 // contracts and payouts
@@ -81,7 +82,7 @@ pub trait DocumentUI<T> {
     fn import(&self, hex: &str) -> TgResult<()>;
     fn export(&self, cxid: &str) -> Option<String>;
     fn get(&self, cxid: &str) -> Option<T>;
-    fn sign(&self, params: SignDocumentParams) -> TgResult<()>;
+    fn sign(&self, params: SignDocumentParams, pw: Secret<Vec<u8>>) -> TgResult<()>;
     fn submit(&self, cxid: &str) -> TgResult<()>;
     fn broadcast(&self, cxid: &str) -> TgResult<()>;
     fn list(&self) -> Vec<T>;
@@ -113,7 +114,7 @@ impl WalletUI for PlayerWallet {
 }
 
 impl PlayerUI for PlayerWallet {
-    fn register(&self, name: PlayerName) -> TgResult<()> {
+    fn register(&self, name: PlayerName, pw: Secret<Vec<u8>>) -> TgResult<()> {
         let signing_wallet = Trezor::new(Mnemonic::parse(PLAYER_1_MNEMONIC).unwrap());
         let mut engine = sha256::HashEngine::default();
         engine.input(name.0.as_bytes());
@@ -155,7 +156,7 @@ impl PlayerUI for PlayerWallet {
         self.name_client.get_player_names(&self.name_pubkey())
     }
 
-    fn post(&self, name: PlayerName, amount: Amount) -> TgResult<()> {
+    fn post(&self, name: PlayerName, amount: Amount, pw: Secret<Vec<u8>>) -> TgResult<()> {
         let mut utxos = vec!();
         let mut total: u64 = 0;
         for utxo in self.wallet.list_unspent().unwrap() {
@@ -270,7 +271,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
         self.db.get_contract(&cxid)
     }
 
-    fn sign(&self, params: SignDocumentParams) -> TgResult<()> {
+    fn sign(&self, params: SignDocumentParams, pw: Secret<Vec<u8>>) -> TgResult<()> {
         let (cxid, sign_funding_tx) = match params {
             SignDocumentParams::SignContractParams { cxid, sign_funding_tx } => (cxid, sign_funding_tx),
             _ => return Err(TgError("invalid params".to_string())),
@@ -376,7 +377,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
         self.db.get_payout(&cxid)
     }
 
-    fn sign(&self, params: SignDocumentParams) -> TgResult<()> {
+    fn sign(&self, params: SignDocumentParams, pw: Secret<Vec<u8>>) -> TgResult<()> {
         let (cxid, script_sig) = match params {
             SignDocumentParams::SignPayoutParams { cxid, script_sig } => (cxid, script_sig),
             _ => return Err(TgError("invalid params".to_string())),

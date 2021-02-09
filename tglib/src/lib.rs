@@ -1,12 +1,11 @@
-use std::{
-    fmt,
-};
+use std::fmt;
 
 pub use bdk;
 pub use bip39;
 pub use hex;
 pub use nom;
 pub use byteorder;
+pub use secrecy;
 //pub use serde;
 
 pub mod mock;

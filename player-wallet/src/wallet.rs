@@ -1,12 +1,8 @@
 use std::{
-    io::{
-//        Read,
-        Write,
-    },
+    io::Write,
     str::FromStr,
 };
 use age;
-use secrecy;
 use argon2::{
     self,
     Config,
@@ -27,7 +23,11 @@ use tglib::{
             TxIn,
             TxOut,
             Script,
-            secp256k1::Secp256k1,
+            secp256k1::{
+                Message,
+                Secp256k1,
+                Signature,
+            },
             util::{
                 bip32::{
                     ExtendedPrivKey,
@@ -44,9 +44,11 @@ use tglib::{
         },
         database::MemoryDatabase,
         electrum_client::Client,
+        signer::Signer,
         Wallet,
     },
     bip39::Mnemonic,
+    secrecy::Secret,
     Result as TgResult,
     TgError,
     arbiter::ArbiterService,
@@ -57,9 +59,11 @@ use tglib::{
     wallet::{
         create_escrow_address,
         create_payout_script,
+        derive_account_xprivkey,
         derive_account_xpubkey,
         EscrowWallet,
         NameWallet,
+        SigningWallet,
         BITCOIN_ACCOUNT_PATH,
         NAME_SUBACCOUNT,
         NAME_KIX,
@@ -104,7 +108,7 @@ impl SavedSeed {
         let xpubkey = derive_account_xpubkey(&seed, NETWORK);
 //  encrypt seed with pw
         let encrypted_seed = {
-            let encryptor = age::Encryptor::with_user_passphrase(secrecy::Secret::new(pw.to_owned()));
+            let encryptor = age::Encryptor::with_user_passphrase(Secret::new(pw.to_owned()));
             let mut encrypted = vec![];
             let mut writer = encryptor.wrap_output(&mut encrypted).unwrap();
             writer.write_all(&seed).unwrap();
@@ -302,5 +306,35 @@ impl EscrowWallet for PlayerWallet {
             return Err(TgError("unexpected arbiter pubkey".to_string()));
         }
         contract.validate()
+    }
+}
+
+impl SigningWallet for PlayerWallet {
+
+    fn sign_tx(&self, psbt: PartiallySignedTransaction, _kdp: String, pw: Secret<Vec<u8>>) -> TgResult<PartiallySignedTransaction> {
+        let secp = Secp256k1::new();
+        let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
+// TODO: decrypt seed with pw
+        let account_key = derive_account_xprivkey(&self.seed.encrypted_seed, NETWORK);
+        let escrow_key = account_key.derive_priv(&secp, &path).unwrap();
+        let mut maybe_signed = psbt.clone();
+//        println!("psbt to sign: {:?}", psbt);
+//        match Signer::sign(&escrow_key.private_key, &mut maybe_signed, Some(0)) {
+        match Signer::sign(&escrow_key.private_key, &mut maybe_signed, Some(0), &secp) {
+            Ok(()) => {
+                Ok(maybe_signed)
+            }
+            Err(e) => {
+                println!("err: {:?}", e);
+                Err(TgError("cannot sign transaction".to_string()))
+            }
+        }
+    }
+
+    fn sign_message(&self, msg: Message, path: DerivationPath, pw: Secret<Vec<u8>>) -> TgResult<Signature> {
+        let account_key = derive_account_xprivkey(&self.seed.encrypted_seed, NETWORK);
+        let secp = Secp256k1::new();
+        let signing_key = account_key.derive_priv(&secp, &path).unwrap();
+        Ok(secp.sign(&msg, &signing_key.private_key.key))
     }
 }

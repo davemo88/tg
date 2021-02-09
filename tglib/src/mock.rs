@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use secrecy::Secret;
 use bdk::{
     Wallet,
     bitcoin::{
@@ -9,7 +10,6 @@ use bdk::{
                 DerivationPath,
                 ExtendedPubKey,
                 ExtendedPrivKey,
-                Fingerprint,
             },
             psbt::PartiallySignedTransaction,
         },
@@ -105,21 +105,15 @@ impl Trezor {
             wallet,
         }
     }
-}
-
-impl SigningWallet for Trezor {
-
-    fn fingerprint(&self) -> Fingerprint {
-        let xprivkey = derive_account_xprivkey(&self.mnemonic.to_seed(""), NETWORK);
-        let secp = Secp256k1::new();
-        xprivkey.fingerprint(&secp)
-    }
 
     fn xpubkey(&self) -> ExtendedPubKey {
         derive_account_xpubkey(&self.mnemonic.to_seed(""), NETWORK)
     }
+}
 
-    fn sign_tx(&self, psbt: PartiallySignedTransaction, _kdp: String) -> TgResult<PartiallySignedTransaction> {
+impl SigningWallet for Trezor {
+
+    fn sign_tx(&self, psbt: PartiallySignedTransaction, _kdp: String, pw: Secret<Vec<u8>>) -> TgResult<PartiallySignedTransaction> {
         let secp = Secp256k1::new();
         let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
         let account_key = derive_account_xprivkey(&self.mnemonic.to_seed(""), NETWORK);
@@ -139,7 +133,7 @@ impl SigningWallet for Trezor {
     }
 
 // TODO : make this work
-    fn sign_message(&self, msg: Message, path: DerivationPath) -> TgResult<Signature> {
+    fn sign_message(&self, msg: Message, path: DerivationPath, pw: Secret<Vec<u8>>) -> TgResult<Signature> {
 //        let root_key = ExtendedPrivKey::new_master(NETWORK, &self.mnemonic.to_seed("")).unwrap();
         let account_key = derive_account_xprivkey(&self.mnemonic.to_seed(""), NETWORK);
         let secp = Secp256k1::new();

@@ -2,6 +2,7 @@ use std::{
     convert::TryInto,
     str::FromStr,
 };
+use secrecy::Secret;
 use bdk::bitcoin::{
     Address,
     Network,
@@ -32,7 +33,6 @@ use bdk::bitcoin::{
             ExtendedPubKey,
             ExtendedPrivKey,
             DerivationPath,
-            Fingerprint,
         },
         psbt::PartiallySignedTransaction,
     }
@@ -76,10 +76,10 @@ pub trait NameWallet {
 // and delegate key storage and signing to a better tested wallet 
 // e.g. trezor
 pub trait SigningWallet {
-    fn fingerprint(&self) -> Fingerprint;
-    fn xpubkey(&self) -> ExtendedPubKey;
-    fn sign_tx(&self, pstx: PartiallySignedTransaction, descriptor: String) -> TgResult<PartiallySignedTransaction>;
-    fn sign_message(&self, msg: Message, path: DerivationPath) -> TgResult<Signature>;
+//    fn fingerprint(&self) -> Fingerprint;
+//    fn xpubkey(&self) -> ExtendedPubKey;
+    fn sign_tx(&self, pstx: PartiallySignedTransaction, descriptor: String, pw: Secret<Vec<u8>>) -> TgResult<PartiallySignedTransaction>;
+    fn sign_message(&self, msg: Message, path: DerivationPath, pw: Secret<Vec<u8>>) -> TgResult<Signature>;
 }
 
 pub trait EscrowWallet {
@@ -127,15 +127,15 @@ pub trait EscrowWallet {
     }
 }
 
-pub fn sign_contract<T>(wallet: &T, contract: &mut Contract) -> TgResult<Signature> 
+pub fn sign_contract<T>(wallet: &T, contract: &mut Contract, pw: Secret<Vec<u8>>) -> TgResult<Signature> 
 where T: EscrowWallet + SigningWallet {
     Ok(wallet.sign_message(Message::from_slice(&contract.cxid()).unwrap(), 
-                DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap()).unwrap())
+                DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(), pw).unwrap())
 }
 
-pub fn sign_payout<T>(wallet: &T, payout: &mut Payout) -> TgResult<PartiallySignedTransaction> 
+pub fn sign_payout<T>(wallet: &T, payout: &mut Payout, pw: Secret<Vec<u8>>) -> TgResult<PartiallySignedTransaction> 
 where T: EscrowWallet + SigningWallet{
-    wallet.sign_tx(payout.psbt.clone(), "".to_string())
+    wallet.sign_tx(payout.psbt.clone(), "".to_string(), pw)
 }
 
 
