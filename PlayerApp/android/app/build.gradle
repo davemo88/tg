@@ -217,7 +217,9 @@ task copyDownloadableDepsToLibs(type: Copy) {
     into 'libs'
 }
 
+// TODO: gradle sync fails without these ???
 task wrapper { }
+task prepareKotlinBuildScriptModel { }
 
 apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
 

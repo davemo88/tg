@@ -30,11 +30,15 @@ public class PlayerWalletModule extends ReactContextBaseJavaModule {
 // need to append wallet-path option
 // e.g. --wallet-path data/data/com.playerapp/files/
 // but better to call the android LocalDataDirectory() or whatever
-        Log.d("command:", command);
+// TODO: the passphrase is in plaintext when initializing the app, how to not do that?
+        Log.d("PlayerWalletModule", "command: " + command);
         ReactApplicationContext r = getReactApplicationContext();
-        Log.d("files dir:", r.getFilesDir().toString());
-        String cli_output = PlayerWalletModule.cli(command);
-        Log.d("PlayerWalletModule", cli_output);
+        String filesDir = getReactApplicationContext().getFilesDir().toString();
+        Log.d("PlayerWalletModule", "filesDir: " + filesDir);
+        String command_with_wallet_path = command + " --wallet-path " + filesDir;
+        Log.d("PlayerWalletModule", "command with wallet path: " + command_with_wallet_path);
+        String cli_output = PlayerWalletModule.cli(command_with_wallet_path);
+        Log.d("PlayerWalletModule", "cli output: " + cli_output);
         promise.resolve(cli_output);
     }
 }

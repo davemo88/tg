@@ -35,7 +35,7 @@ export const NewPlayer = ({ navigation }) => {
             onChangeText={text => setPictureUrl(text)}
             value={pictureUrl}
             style={{ borderWidth: 1, flex: 1, margin: 10, padding: 4, }}
-          />     
+          />
         </View>
         <View style={{flexDirection: 'row' }}>
         <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey' }}>
@@ -51,8 +51,9 @@ export const NewPlayer = ({ navigation }) => {
                             navigation.reset({ index:0, routes: [{ name: 'Player Select' }] });
                         },
 // show reason   f  or failure, e.g. name already taken
-                        failure => setRegisteringPlayer(false),
-                    );
+                        failure => console.log(failure),
+                    )
+                    .finally(() => setRegisteringPlayer(false));
             } }
           />
         </View>

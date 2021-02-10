@@ -1,8 +1,8 @@
 import { createStore } from 'redux';
-import { nanoid, createEntityAdapter, createSlice, createReducer, createAction, configureStore, createAsyncThunk } from '@reduxjs/toolkit'
-import { Player, Contract, PayoutRequest, } from './datatypes'
+import { nanoid, createEntityAdapter, createSlice, createReducer, createAction, configureStore, createAsyncThunk } from '@reduxjs/toolkit';
+import { Player, Contract, PayoutRequest, } from './datatypes';
 
-import PlayerWalletModule from './PlayerWallet'
+import PlayerWalletModule from './PlayerWallet';
 
 const playerAdapter = createEntityAdapter<Player>({});
 
@@ -34,6 +34,7 @@ export const loadPlayers = () => {
             return dispatch(playerSlice.actions.playerAddedMany(players));
         } catch (error) {
             console.log(error);
+            return Promise.reject(error);
         }
     }
 }
@@ -106,6 +107,7 @@ export const loadContracts = () => {
             return dispatch(contractSlice.actions.contractAddedMany(contracts));
         } catch (error) {
             console.log(error);
+            return Promise.reject(error);
         }
     }
 }

@@ -8,6 +8,8 @@ export const TITLE_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'cc.png';
 export const TEST_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'test.png'; 
 export const LIVE_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'live.png'; 
 
+export const PASSPHRASE_MIN_LENGTH = 12;
+
 
 // this is appdata
 export const NETWORK: string = 'Test';

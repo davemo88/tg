@@ -7,6 +7,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { store } from './src/redux';
 
 import { LoadingSplash } from './src/components/screens/loading-splash';
+import { InitWallet } from './src/components/screens/init-wallet';
 import { PlayerSelect } from './src/components/screens/player-select';
 import { Home } from './src/components/screens/home';
 import { ContractDetails } from './src/components/screens/contract-details';
@@ -24,6 +25,7 @@ export default function App() {
         <NavigationContainer>
           <Stack.Navigator>
             <Stack.Screen name="Loading Splash" component={LoadingSplash} />
+            <Stack.Screen name="Initialize Wallet" component={InitWallet} />
             <Stack.Screen name="Player Select" component={PlayerSelect} />
             <Stack.Screen name="Home" component={Home} />
             <Stack.Screen name="Contract Details" component={ContractDetails} />

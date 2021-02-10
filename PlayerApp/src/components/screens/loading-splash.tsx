@@ -16,11 +16,20 @@ export const LoadingSplash = ({ navigation }) => {
 //        if (!playersLoading) {
 //            setPlayersLoading(true);
             dispatch(loadAll())
-                .then(() => {
-                    console.log("loading completed");
-                    navigation.reset({ index:0, routes: [{ name: 'Player Select' }] });
-                });
-//        }
+//                .then(() => {
+//                    console.log("loading completed");
+//                    navigation.reset({ index:0, routes: [{ name: 'Player Select' }] });
+                  .then(
+                    success => {
+                        console.log("loading completed");
+                        navigation.reset({ index:0, routes: [{ name: 'Player Select' }] });
+                    }, 
+                    failure => {
+                        console.log("loading failed");
+                        console.log("failure:", failure);
+                        navigation.reset({ index:0, routes: [{ name: 'Initialize Wallet' }] });
+                    }
+              );
     }, []);
 
     return (
