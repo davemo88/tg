@@ -88,22 +88,24 @@ pub struct SavedSeed {
 // here for convenience in initializing pubkey-only wallet without having to decrypt seed
     pub xpubkey: ExtendedPubKey,
     pub encrypted_seed: Vec<u8>,
-// TODO: does argon2 bundle salt with pw_hash?
+// TODO: confirm argon2 bundles salt with pw_hash
 //    pub pw_salt: Vec<u8>,
     pub pw_hash: String,
 }
 
 impl SavedSeed {
-    pub fn new(pw: Secret<String>, mnemonic: Option<Secret<String>>) -> Self {
-// TODO: can i make Mnemonic a Secret? e.g. by making it a string
-//  if mnemonic provided, derive seed 
+    pub fn new(pw: Secret<String>, mnemonic: Option<Secret<String>>) -> TgResult<Self> {
 //  generate salt
         let pw_salt = rand::thread_rng().gen::<[u8; 32]>().to_vec();
         let config = Config::default();
 //  hash pw + salt
         let pw_hash = argon2::hash_encoded(pw.expose_secret().as_bytes(), &pw_salt, &config).unwrap();
+//  if mnemonic provided, derive seed 
         let seed = match mnemonic {
-            Some(m) => Secret::new(Mnemonic::from_str(m.expose_secret()).unwrap().to_seed("").to_vec()),
+            Some(m) => match Mnemonic::from_str(m.expose_secret()) {
+                Ok(m) => Secret::new(m.to_seed("").to_vec()),
+                Err(e) => return Err(TgError(format!("{:?}", e))),
+            }
 //  else generate random BIP 39 seed
             None => Secret::new(Mnemonic::from_entropy(&rand::thread_rng().gen::<[u8; 32]>()).unwrap().to_seed("").to_vec()),
         };
@@ -124,13 +126,13 @@ impl SavedSeed {
         let fingerprint = root_key.fingerprint(&secp);
         let xpubkey = derive_account_xpubkey(seed, NETWORK);
 
-        SavedSeed { 
+        Ok(SavedSeed { 
             fingerprint,
             xpubkey,
 //            pw_salt,
             pw_hash,
             encrypted_seed,
-        }
+        })
     }
 
     pub fn get_seed(&self, pw: Secret<String>) -> TgResult<Secret<Vec<u8>>> {

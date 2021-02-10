@@ -120,7 +120,10 @@ pub fn cli(line: String, conf: Conf) -> String {
                             Some(phrase) => Some(Secret::new(phrase.to_owned())),
                             None => None,
                         };
-                        let new_seed = SavedSeed::new(Secret::new(a.value_of("passphrase").unwrap().to_owned()), mnemonic);
+                        let new_seed = match SavedSeed::new(Secret::new(a.value_of("passphrase").unwrap().to_owned()), mnemonic) {
+                            Ok(seed) => seed,
+                            Err(e) => return format!("{:?}", e),
+                        };
                         match File::create(&seed_path) {
                             Ok(mut writer) => writer.write_all(serde_json::to_string(&new_seed).unwrap().as_bytes()).unwrap(),
                             Err(e) => return format!("{:?}", e),

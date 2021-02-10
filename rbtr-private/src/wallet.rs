@@ -40,7 +40,7 @@ pub struct Wallet {
 impl Wallet {
     pub fn new(pw: Secret<String>) -> Self {
        Wallet {
-           saved_seed: SavedSeed::new(pw, Some(Secret::new(ARBITER_MNEMONIC.to_owned())))
+           saved_seed: SavedSeed::new(pw, Some(Secret::new(ARBITER_MNEMONIC.to_owned()))).unwrap()
        } 
     }
 }
