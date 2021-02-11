@@ -7,6 +7,7 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.ArrayList;
 import android.util.Log;
 
 public class PlayerWalletModule extends ReactContextBaseJavaModule {
@@ -14,6 +15,7 @@ public class PlayerWalletModule extends ReactContextBaseJavaModule {
         System.loadLibrary("test");
     }
 
+// need a new method using byte[] instead of string
     public static native String cli(String command);
 
     PlayerWalletModule(ReactApplicationContext context) {
@@ -43,6 +45,20 @@ public class PlayerWalletModule extends ReactContextBaseJavaModule {
         String cli_output = PlayerWalletModule.cli(command_with_wallet_path);
         Log.d("PlayerWalletModule", "cli output: " + cli_output);
         promise.resolve(cli_output);
+    }
+
+    @ReactMethod
+    public void call_cli_bytes(ReadableArray command) {
+//        byte[] cmd_bytes = new byte[command.size() * 4]
+//        ReactApplicationContext r = getReactApplicationContext();
+        Log.d("PlayerWalletModule", "command:");
+        Log.d("PlayerWalletModule", command);
+        ArrayList<Object> list = command.toArrayList();
+        Lod.d("PlayerWalletModule", "list:");
+        Lod.d("PlayerWalletModule", list);
+        for (int i = 0; i < list.size(); i++) {
+            Lod.d("PlayerWalletModule", list.get(i));
+        }
     }
 }
 

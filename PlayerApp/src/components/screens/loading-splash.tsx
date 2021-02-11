@@ -3,6 +3,8 @@ import React, { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { Text, View, } from 'react-native';
 
+import PlayerWalletModule from '../../PlayerWallet';
+
 import { store, loadPlayers, loadAll } from '../../redux';
 
 export const LoadingSplash = ({ navigation }) => {
@@ -15,6 +17,8 @@ export const LoadingSplash = ({ navigation }) => {
         console.log("using effect");
 //        if (!playersLoading) {
 //            setPlayersLoading(true);
+//            PlayerWalletModule.call_cli_bytes(unescape(encodeURIcomponent("trolol i am the best weeeeee")));
+            console.log(unescape(encodeURIComponent("trolol i am the best weeeeee")));
             dispatch(loadAll())
 //                .then(() => {
 //                    console.log("loading completed");
