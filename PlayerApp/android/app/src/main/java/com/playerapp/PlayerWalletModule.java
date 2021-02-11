@@ -25,12 +25,10 @@ public class PlayerWalletModule extends ReactContextBaseJavaModule {
         return "PlayerWalletModule";
     }
 
+//TODO: this function should actually take a utf-8 byte array
+// because String will get stuck in memory for too long
     @ReactMethod
     public void call_cli(String command, Promise promise) {
-// need to append wallet-path option
-// e.g. --wallet-path data/data/com.playerapp/files/
-// but better to call the android LocalDataDirectory() or whatever
-// TODO: the passphrase is in plaintext when initializing the app, how to not do that?
         Log.d("PlayerWalletModule", "command: " + command);
         ReactApplicationContext r = getReactApplicationContext();
         String filesDir = getReactApplicationContext().getFilesDir().toString();
