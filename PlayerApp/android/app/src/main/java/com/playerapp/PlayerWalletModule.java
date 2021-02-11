@@ -27,6 +27,11 @@ public class PlayerWalletModule extends ReactContextBaseJavaModule {
 
 //TODO: this function should actually take a utf-8 byte array
 // because String will get stuck in memory for too long
+// react native provides ReadableArray, not sure how it works
+// e.g. it may have the same garbage collection problem as String
+// if i can zero the ReadableArray of utf-8 bytes, that's good
+// i guess we can just store them as numbers since js has no bytes
+// see e.g. https://devslash.net/why-you-dont-store-secrets-in-strings-in-java/
     @ReactMethod
     public void call_cli(String command, Promise promise) {
         Log.d("PlayerWalletModule", "command: " + command);

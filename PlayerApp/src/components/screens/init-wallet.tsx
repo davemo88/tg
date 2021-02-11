@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Image, Text, TextInput, View, } from 'react-native';
-import { Secret } from '@transcend-io/secret-value';
+import { Secret } from '../../secret';
 import { NETWORK, TITLE_IMAGE_SOURCE, TEST_IMAGE_SOURCE, LIVE_IMAGE_SOURCE, PASSPHRASE_MIN_LENGTH, } from '../../mock';
 
 import { styles } from '../../styles';
@@ -30,12 +30,12 @@ export const InitWallet = ({ navigation }) => {
                 <TextInput
                     onChangeText={text => setPassphrase(new Secret(text))}
                     secureTextEntry={true}    
-                    value={passphrase.release()}
+                    value={passphrase.expose_secret()}
                     style={{ borderWidth: 1, margin: 10, padding: 4, width: 200 }}
                 />
                 <Button
                     title="Ok"
-                    disabled={(passphrase.release().length < PASSPHRASE_MIN_LENGTH)
+                    disabled={(passphrase.expose_secret().length < PASSPHRASE_MIN_LENGTH)
                               || initializing }
                     onPress={() => {
                         setInitializing(true); 

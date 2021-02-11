@@ -1,7 +1,7 @@
 import { LogBox } from 'react-native';
 import { nanoid } from '@reduxjs/toolkit';
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutRequestSelectors, payoutRequestSlice, selectedPlayerIdSlice, } from './redux';
-import { Secret } from '@transcend-io/secret-value';
+import { Secret } from './secret';
 import { Player, Contract, PayoutRequest, } from './datatypes';
 
 import PlayerWalletModule from './PlayerWallet';
@@ -17,7 +17,7 @@ export const NETWORK: string = 'Test';
 
 export const initWallet = async (passphrase: Secret<string>) => {
     try {
-        let cli_response = await PlayerWalletModule.call_cli(`init ${passphrase.release()}`);
+        let cli_response = await PlayerWalletModule.call_cli(`init ${passphrase.expose_secret()}`);
         if (cli_response !== "wallet initialized") {
             throw(cli_response);
         }
