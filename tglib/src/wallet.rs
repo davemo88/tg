@@ -100,8 +100,8 @@ impl SavedSeed {
         let config = Config::default();
 //  hash pw + salt
         let pw_hash = argon2::hash_encoded(pw.expose_secret().as_bytes(), &pw_salt, &config).unwrap();
-//  if mnemonic provided, derive seed 
         let seed = match mnemonic {
+//  if mnemonic provided, derive seed 
             Some(m) => match Mnemonic::from_str(m.expose_secret()) {
                 Ok(m) => Secret::new(m.to_seed("").to_vec()),
                 Err(e) => return Err(TgError(format!("{:?}", e))),

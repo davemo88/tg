@@ -7,6 +7,7 @@ import { styles } from '../../styles';
 import { initWallet } from '../../wallet';
 
 export const InitWallet = ({ navigation }) => {
+// TODO: is this ok? i have no idea (so probably not)
     const [passphrase, setPassphrase] = React.useState("");
     const [initializing, setInitializing] = React.useState(false);
 

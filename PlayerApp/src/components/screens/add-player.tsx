@@ -38,12 +38,10 @@ export const AddPlayer = ({ navigation }) => {
                       setAddingPlayer(true);
                       dispatch(addPlayer(playerName))
                           .then(
-                              success => {
-                                  setAddingPlayer(false);
-                                  navigation.reset({ index:0, routes: [{ name: 'Home' }, { name: 'New Contract' }] })
-                              },
-                              failure => setAddingPlayer(false),
-                          );
+                              success => navigation.reset({ index:0, routes: [{ name: 'Home' }, { name: 'New Contract' }] }),
+                              failure => console.log(failure),
+                          )
+                          .finally(() => setAddingPlayer(false));
                   } }
               />
             </View>
