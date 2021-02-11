@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button, Image, Text, TextInput, View, } from 'react-native';
+import { Secret } from '@transcend-io/secret-value';
 import { NETWORK, TITLE_IMAGE_SOURCE, TEST_IMAGE_SOURCE, LIVE_IMAGE_SOURCE, PASSPHRASE_MIN_LENGTH, } from '../../mock';
 
 import { styles } from '../../styles';
@@ -10,7 +11,7 @@ export const InitWallet = ({ navigation }) => {
 // TODO: is this ok? i have no idea (so probably not)
 // use this similar to rust:
 // https://www.npmjs.com/package/secret-value
-    const [passphrase, setPassphrase] = React.useState("");
+    const [passphrase, setPassphrase] = React.useState(new Secret(""));
     const [initializing, setInitializing] = React.useState(false);
 
     return (
@@ -27,14 +28,14 @@ export const InitWallet = ({ navigation }) => {
             <View style={{ flex:2, alignItems: 'center' }}>
                 <Text style={{ fontSize: 20, }}>Wallet Passphrase</Text>
                 <TextInput
-                    onChangeText={text => setPassphrase(text)}
+                    onChangeText={text => setPassphrase(new Secret(text))}
                     secureTextEntry={true}    
-                    value={passphrase}
+                    value={passphrase.release()}
                     style={{ borderWidth: 1, margin: 10, padding: 4, width: 200 }}
                 />
                 <Button
                     title="Ok"
-                    disabled={(passphrase.length < PASSPHRASE_MIN_LENGTH)
+                    disabled={(passphrase.release().length < PASSPHRASE_MIN_LENGTH)
                               || initializing }
                     onPress={() => {
                         setInitializing(true); 

@@ -1,6 +1,7 @@
 import { LogBox } from 'react-native';
 import { nanoid } from '@reduxjs/toolkit';
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutRequestSelectors, payoutRequestSlice, selectedPlayerIdSlice, } from './redux';
+import { Secret } from '@transcend-io/secret-value';
 import { Player, Contract, PayoutRequest, } from './datatypes';
 
 import PlayerWalletModule from './PlayerWallet';
@@ -14,9 +15,9 @@ export const LIVE_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'live.png';
 // this is appdata
 export const NETWORK: string = 'Test';
 
-export const initWallet = async (passphrase: string) => {
+export const initWallet = async (passphrase: Secret<string>) => {
     try {
-        let cli_response = await PlayerWalletModule.call_cli(`init ${passphrase}`);
+        let cli_response = await PlayerWalletModule.call_cli(`init ${passphrase.release()}`);
         if (cli_response !== "wallet initialized") {
             throw(cli_response);
         }
