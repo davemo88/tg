@@ -17,7 +17,7 @@ export const NETWORK: string = 'Test';
 
 export const initWallet = async (passphrase: Secret<string>) => {
     try {
-        let cli_response = await PlayerWalletModule.call_cli(`init --passphrase ${passphrase.expose_secret()}`);
+        let cli_response = await PlayerWalletModule.call_cli_with_passphrase("init", passphrase.expose_secret());
         if (cli_response !== "wallet initialized") {
             throw(cli_response);
         }

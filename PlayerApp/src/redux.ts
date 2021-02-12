@@ -45,7 +45,7 @@ export const newPlayer = (name: string, passphrase: Secret<string>) => {
     return async (dispatch) => {
         try {
 // confusing because of native module. what should its signature in typescript be?
-            let cli_response: string = await PlayerWalletModule.call_cli(`player register "${name}" --passphrase ${passphrase.expose_secret()}`); 
+            let cli_response: string = await PlayerWalletModule.call_cli_with_passphrase(`player register "${name}"`, passphrase.expose_secret()); 
             console.log(cli_response);
             if (cli_response === "registered player") {
                 return dispatch(playerSlice.actions.playerAdded({

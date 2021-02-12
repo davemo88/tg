@@ -96,7 +96,10 @@ pub struct Conf {
 }
 
 pub fn cli(line: String, conf: Conf) -> String {
-    let split_line = shell_words::split(&line).unwrap();
+    let split_line = match shell_words::split(&line) {
+        Ok(line) => line,
+        Err(e) => return format!("invalid command: {:?}", e),
+    };
     let matches = player_cli().get_matches_from_safe(split_line);
     if matches.is_ok() {
         if let (c, Some(a)) = matches.unwrap().subcommand() {
