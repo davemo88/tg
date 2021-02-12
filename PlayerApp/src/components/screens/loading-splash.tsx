@@ -15,25 +15,22 @@ export const LoadingSplash = ({ navigation }) => {
 //    console.log("players loading:", playersLoading);
     useEffect(() => {
         console.log("using effect");
-//        if (!playersLoading) {
-//            setPlayersLoading(true);
-//            PlayerWalletModule.call_cli_bytes(unescape(encodeURIcomponent("trolol i am the best weeeeee")));
-            console.log(unescape(encodeURIComponent("trolol i am the best weeeeee")));
-            dispatch(loadAll())
+
+        dispatch(loadAll())
 //                .then(() => {
 //                    console.log("loading completed");
 //                    navigation.reset({ index:0, routes: [{ name: 'Player Select' }] });
-                  .then(
-                    success => {
-                        console.log("loading completed");
-                        navigation.reset({ index:0, routes: [{ name: 'Player Select' }] });
-                    }, 
-                    failure => {
-                        console.log("loading failed");
-                        console.log("failure:", failure);
-                        navigation.reset({ index:0, routes: [{ name: 'Initialize Wallet' }] });
-                    }
-              );
+            .then(
+                success => {
+                    console.log("loading completed");
+                    navigation.reset({ index:0, routes: [{ name: 'Player Select' }] });
+                }, 
+                failure => {
+                    console.log("loading failed");
+                    console.log("failure:", failure);
+                    navigation.reset({ index:0, routes: [{ name: 'Initialize Wallet' }] });
+                }
+            );
     }, []);
 
     return (
