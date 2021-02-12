@@ -4,8 +4,9 @@ import { Secret } from '../../secret';
 import { NETWORK, TITLE_IMAGE_SOURCE, TEST_IMAGE_SOURCE, LIVE_IMAGE_SOURCE, PASSPHRASE_MIN_LENGTH, } from '../../mock';
 
 import { styles } from '../../styles';
-
 import { initWallet } from '../../wallet';
+
+import { PassphraseEntry } from '../passphrase-entry';
 
 export const InitWallet = ({ navigation }) => {
 // TODO: is this ok? i have no idea (so probably not)
@@ -26,13 +27,7 @@ export const InitWallet = ({ navigation }) => {
                 }
             </View>
             <View style={{ flex:2, alignItems: 'center' }}>
-                <Text style={{ fontSize: 20, }}>Wallet Passphrase</Text>
-                <TextInput
-                    onChangeText={text => setPassphrase(new Secret(text))}
-                    secureTextEntry={true}    
-                    value={passphrase.expose_secret()}
-                    style={{ borderWidth: 1, margin: 10, padding: 4, width: 200 }}
-                />
+                <PassphraseEntry passphrase={passphrase} setPassphrase={setPassphrase} />
                 <Button
                     title="Ok"
                     disabled={(passphrase.expose_secret().length < PASSPHRASE_MIN_LENGTH)

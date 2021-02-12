@@ -1,5 +1,6 @@
 import { createStore } from 'redux';
 import { nanoid, createEntityAdapter, createSlice, createReducer, createAction, configureStore, createAsyncThunk } from '@reduxjs/toolkit';
+import { Secret, } from './secret';
 import { Player, Contract, PayoutRequest, } from './datatypes';
 
 import PlayerWalletModule from './PlayerWallet';
@@ -40,11 +41,11 @@ export const loadPlayers = () => {
 }
 
 // might want to actually use createAsyncThunk for this one
-export const newPlayer = (name: string) => {
+export const newPlayer = (name: string, passphrase: Secret<string>) => {
     return async (dispatch) => {
         try {
 // confusing because of native module. what should its signature in typescript be?
-            let cli_response: string = await PlayerWalletModule.call_cli(`player register "${name}"`); 
+            let cli_response: string = await PlayerWalletModule.call_cli(`player register "${name}", --passphrase ${passphrase.expose_secret()}`); 
             console.log(cli_response);
             if (cli_response === "registered player") {
                 return dispatch(playerSlice.actions.playerAdded({
