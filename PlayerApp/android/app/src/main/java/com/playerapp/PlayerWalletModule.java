@@ -37,7 +37,6 @@ public class PlayerWalletModule extends ReactContextBaseJavaModule {
         Log.d("PlayerWalletModule", "command: " + redact_passphrase(command));
         ReactApplicationContext r = getReactApplicationContext();
         String filesDir = getReactApplicationContext().getFilesDir().toString();
-        Log.d("PlayerWalletModule", "filesDir: " + filesDir);
         String command_with_wallet_path = command + " --wallet-path " + filesDir;
         Log.d("PlayerWalletModule", "command with wallet path: " + redact_passphrase(command_with_wallet_path));
         String cli_output = PlayerWalletModule.cli(command_with_wallet_path);
