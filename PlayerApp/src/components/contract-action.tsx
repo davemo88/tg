@@ -2,16 +2,16 @@ import React from 'react';
 import { nanoid } from '@reduxjs/toolkit';
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
-import { styles } from '../styles.ts';
+import { styles } from '../styles';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutRequestSelectors, payoutRequestSlice, selectedPlayerIdSlice, } from '../redux.ts';
-import { Player, Contract, ContractStatus, } from '../datatypes.ts';
-import { getContractStatus } from '../dump.ts';
-import { broadcastFundingTx, broadcastPayoutTx, signPayoutRequest, signContract, arbiterSignContract, declineContract, dismissContract, denyPayoutRequest, } from '../mock.ts';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutRequestSelectors, payoutRequestSlice, selectedPlayerIdSlice, } from '../redux';
+import { Player, Contract, ContractStatus, } from '../datatypes';
+import { getContractStatus } from '../dump';
+import { broadcastFundingTx, broadcastPayoutTx, signPayoutRequest, signContract, arbiterSignContract, declineContract, dismissContract, denyPayoutRequest, } from '../mock';
 
-import { Currency } from './currency.tsx';
-import { PlayerPortrait } from './player-portrait.tsx';
-import { SignatureSwitch } from './signature-switch.tsx';
+import { Currency } from './currency';
+import { PlayerPortrait } from './player-portrait';
+import { PassphraseEntry } from './passphrase-entry';
 
 export const ContractAction = (props) => {
   const [isSigned, setIsSigned] = React.useState(false);
@@ -37,9 +37,11 @@ export const ContractAction = (props) => {
 }
 
 const ActionUnsigned = (props) => {
+  const [passphrase, setPassphrase] = React.useState(new Secret(""));
+
   return (
     <View>
-      <SignatureSwitch isSigned={props.isSigned} setIsSigned={props.setIsSigned} />
+      <PassphraseEntry passphrase={passphrase} setPassphrase={setPassphrase} />
       <Button 
         disabled={!props.isSigned} 
         title="Issue Contract" 
@@ -61,9 +63,11 @@ const ActionIssued = (props) => {
 }
 
 const ActionReceived = (props) => {
+  const [passphrase, setPassphrase] = React.useState(new Secret(""));
+
   return (
     <View>
-      <SignatureSwitch isSigned={props.isSigned} setIsSigned={props.setIsSigned} />
+      <PassphraseEntry passphrase={passphrase} setPassphrase={setPassphrase} />
       <Button 
         disabled={!props.isSigned} 
         title="Accept Contract" 
@@ -138,6 +142,7 @@ const ActionPayoutRequestIssued = (props) => {
 }
 
 const ActionPayoutRequestReceived = (props) => {
+  const [passphrase, setPassphrase] = React.useState(new Secret(""));
   const payoutRequest = payoutRequestSelectors.selectAll(store.getState())
     .filter((pr, i, a) => pr.contractId === props.contract.id ).pop();
   return (
@@ -146,7 +151,7 @@ const ActionPayoutRequestReceived = (props) => {
       <View>
         <Text>Player One Payout: </Text><Currency amount={payoutRequest.playerOneAmount} />
         <Text>Player Two Payout: </Text><Currency amount={payoutRequest.playerTwoAmount} />
-        <SignatureSwitch isSigned={props.isSigned} setIsSigned={props.setIsSigned} />
+        <PassphraseEntry passphrase={passphrase} setPassphrase={setPassphrase} />
         <Button 
           disabled={!props.isSigned} 
           title='Accept Payout Request'

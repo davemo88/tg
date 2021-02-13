@@ -1,17 +1,17 @@
 import React from 'react';
 import { Text, Button, View, } from 'react-native';
 
-import { styles } from '../../styles.ts';
+import { styles } from '../../styles';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, } from '../../redux.ts';
-import { Player, Contract, ContractStatus, getContractStatus } from '../../datatypes.ts'
-import { dismissContract } from '../../mock.ts';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, } from '../../redux';
+import { Player, Contract, ContractStatus } from '../../datatypes'
+import { dismissContract } from '../../mock';
 
-import { ContractSummary } from '../contract-summary.tsx';
-import { ContractAction } from '../contract-action.tsx';
-import { PlayerPortrait } from '../player-portrait.tsx';
-import { Arbiter } from '../arbiter.tsx';
-import { Currency } from '../currency.tsx';
+import { ContractSummary } from '../contract-summary';
+import { ContractAction } from '../contract-action';
+import { PlayerPortrait } from '../player-portrait';
+import { Arbiter } from '../arbiter';
+import { Currency } from '../currency';
 
 export const ContractDetails = ({ route, navigation }) => {
   const { contractId } = route.params;
