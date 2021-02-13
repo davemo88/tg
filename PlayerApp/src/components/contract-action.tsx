@@ -9,6 +9,7 @@ import { Player, Contract, ContractStatus, } from '../datatypes';
 import { getContractStatus } from '../dump';
 import { broadcastFundingTx, broadcastPayoutTx, signPayoutRequest, signContract, arbiterSignContract, declineContract, dismissContract, denyPayoutRequest, } from '../mock';
 
+import { Secret } from '../secret';
 import { Currency } from './currency';
 import { PlayerPortrait } from './player-portrait';
 import { PassphraseEntry } from './passphrase-entry';

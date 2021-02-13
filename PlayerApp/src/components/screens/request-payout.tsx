@@ -3,15 +3,16 @@ import { nanoid } from '@reduxjs/toolkit'
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 import Slider from '@react-native-community/slider';
 
-import { styles } from '../../styles.ts';
+import { styles } from '../../styles';
+import { Secret } from '../../secret';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, payoutRequestSlice, } from '../../redux.ts';
-import { Player, Contract, PayoutRequest, ContractStatus, getContractStatus } from '../../datatypes.ts';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, payoutRequestSlice, } from '../../redux';
+import { Player, Contract, PayoutRequest, ContractStatus } from '../../datatypes';
 
-import { Arbiter } from '../arbiter.tsx';
-import { Currency } from '../currency.tsx';
-import { PlayerPortrait } from '../player-portrait.tsx';
-import { SignatureSwitch } from '../signature-switch.tsx';
+import { Arbiter } from '../arbiter';
+import { Currency } from '../currency';
+import { PlayerPortrait } from '../player-portrait';
+import { PassphraseEntry } from '../passphrase-entry';
 
 export const RequestPayout = ({ route, navigation }) => {
   const { contractId } = route.params;
@@ -24,10 +25,10 @@ export const RequestPayout = ({ route, navigation }) => {
   const [isArbitratedPayout, setIsArbitratedPayout] = React.useState(false);
   const toggleArbitration = () => setIsArbitratedPayout(previousState => !previousState);
   const [arbitrationToken, setArbitrationToken] = React.useState('');
-  const [isSigned, setIsSigned] = React.useState(false);
+  const [passphrase, setPassphrase] = React.useState(null);
 
   const valid = () => {
-    if (isSigned && (!isArbitratedPayout || (arbitrationToken != ''))) {
+    if (passphrase !== null && (!isArbitratedPayout || (arbitrationToken != ''))) {
       return true;
     }
     return false
@@ -87,7 +88,7 @@ export const RequestPayout = ({ route, navigation }) => {
         </View>
       }
       <View style={{ flexDirection: 'row' }}>
-        <SignatureSwitch isSigned={isSigned} setIsSigned={setIsSigned} />
+        <PassphraseEntry passphrase={passphrase} setPassphrase={setPassphrase} />
         <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
           <Button 
             disabled={!valid()}

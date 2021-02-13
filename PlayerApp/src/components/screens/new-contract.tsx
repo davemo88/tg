@@ -9,8 +9,9 @@ import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, 
 import { Player, Contract, ContractStatus } from '../../datatypes';
 import { signContract } from '../../mock';
 
+import { Secret } from '../../secret';
 import { Currency } from '../currency';
-import { SignatureSwitch } from '../signature-switch';
+import { PassphraseEntry } from '../passphrase-entry';
 import { PlayerPortrait } from '../player-portrait';
 import { PlayerSelector } from '../player-selector';
 
@@ -23,11 +24,11 @@ export const NewContract = ({ navigation }) => {
         .filter((player: Player, i, a) => !player.mine);
     const [contractAmount, onChangeContractAmount] = React.useState('0');
     const [playerTwoId, setPlayerTwoId] = React.useState(playerTwos.length > 0 ? playerTwos[0].id : null);
-    const [isSigned, setIsSigned] = React.useState(false);
+    const [passphrase, setPassphrase] = React.useState(null);
     const [creatingContract, setCreatingContract] = React.useState(false);
 
     const valid = () => {
-        if ((parseInt(contractAmount) > 0) && isSigned) {
+        if ((parseInt(contractAmount) > 0) && (passphrase !== null)) {
             return true
         }
         return false
@@ -58,7 +59,7 @@ export const NewContract = ({ navigation }) => {
                 </View>
             </View>
             <View style={{ flexDirection: 'row', margin: 60 }}>
-                <SignatureSwitch isSigned={isSigned} setIsSigned={setIsSigned} />
+                <PassphraseEntry passphrase={passphrase} setPassphrase={setPassphrase} />
                 <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
                     <Button 
                         disabled={(!valid() || creatingContract)}
