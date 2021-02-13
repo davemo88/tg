@@ -13,7 +13,6 @@ public class PlayerWalletModule extends ReactContextBaseJavaModule {
         System.loadLibrary("test");
     }
 
-// need a new method using byte[] instead of string
     public static native String cli(String command);
 
     PlayerWalletModule(ReactApplicationContext context) {
