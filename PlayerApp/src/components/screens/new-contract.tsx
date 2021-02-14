@@ -66,15 +66,12 @@ export const NewContract = ({ navigation }) => {
                         title="Create" 
                         onPress={() => {
                             setCreatingContract(true);
-                            dispatch(newContract(selectedPlayer.id, playerTwoId, parseInt(contractAmount))).then(
-                                success => {
-                                    navigation.reset({ index:0, routes: [{ name: 'Home' }] })
-                                    setCreatingContract(false);
-                                },
-                                failure => {
-                                    setCreatingContract(false);
-                                }
-                            );
+                            dispatch(newContract(selectedPlayer.id, playerTwoId, parseInt(contractAmount)))
+                                .then(
+                                    success => navigation.reset({ index:0, routes: [{ name: 'Home' }] }),
+                                    failure => console.log(failure),
+                                )
+                                .finally(setCreatingContract(false);
                           } }
                     />
                 </View>
