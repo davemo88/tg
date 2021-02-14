@@ -11,7 +11,6 @@ import { signContract } from '../../mock';
 
 import { Secret } from '../../secret';
 import { Currency } from '../currency';
-import { PassphraseEntry } from '../passphrase-entry';
 import { PlayerPortrait } from '../player-portrait';
 import { PlayerSelector } from '../player-selector';
 
@@ -24,11 +23,10 @@ export const NewContract = ({ navigation }) => {
         .filter((player: Player, i, a) => !player.mine);
     const [contractAmount, onChangeContractAmount] = React.useState('0');
     const [playerTwoId, setPlayerTwoId] = React.useState(playerTwos.length > 0 ? playerTwos[0].id : null);
-    const [passphrase, setPassphrase] = React.useState(null);
     const [creatingContract, setCreatingContract] = React.useState(false);
 
     const valid = () => {
-        if ((parseInt(contractAmount) > 0) && (passphrase !== null)) {
+        if (parseInt(contractAmount) > 0) {
             return true
         }
         return false
@@ -59,7 +57,6 @@ export const NewContract = ({ navigation }) => {
                 </View>
             </View>
             <View style={{ flexDirection: 'row', margin: 60 }}>
-                <PassphraseEntry passphrase={passphrase} setPassphrase={setPassphrase} />
                 <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
                     <Button 
                         disabled={(!valid() || creatingContract)}
