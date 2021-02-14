@@ -27,10 +27,7 @@ mod tests {
         },
         arbiter::ArbiterService,
         contract::Contract,
-        player::{
-            PlayerName,
-//            PlayerNameService,
-        },
+        player::PlayerName,
         wallet::{
             SigningWallet,
             BITCOIN_ACCOUNT_PATH,

@@ -1,5 +1,6 @@
 use std::convert::From;
 use bdk::bitcoin::{
+    hash_types::Txid,
     Address,
     PublicKey,
     bech32::{
@@ -49,4 +50,6 @@ pub trait ArbiterService {
     fn get_contract_info(&self, name: PlayerName) -> Option<PlayerContractInfo>;
     fn submit_contract(&self, contract: &Contract) -> Result<Signature>;
     fn submit_payout(&self, payout: &Payout) -> Result<PartiallySignedTransaction>;
+// only for testnet
+    fn fund_address(&self, address: Address) -> Result<Txid>;
 }

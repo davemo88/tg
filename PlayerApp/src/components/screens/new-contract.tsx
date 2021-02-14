@@ -68,7 +68,7 @@ export const NewContract = ({ navigation }) => {
                                     success => navigation.reset({ index:0, routes: [{ name: 'Home' }] }),
                                     failure => console.log(failure),
                                 )
-                                .finally(setCreatingContract(false);
+                                .finally(setCreatingContract(false));
                           } }
                     />
                 </View>

@@ -63,6 +63,7 @@ fn player_cli<'a, 'b>() -> App<'a, 'b> {
                 .help("BIP39 seed phrase")))
         .subcommand(SubCommand::with_name("balance").about("display balance (sats)"))
         .subcommand(SubCommand::with_name("deposit").about("display a deposit address"))
+        .subcommand(SubCommand::with_name("fund").about("fund the wallet"))
         .subcommand(SubCommand::with_name("withdraw").about("withdraw amount to address")
             .arg(Arg::with_name("amount")
                 .index(1)
@@ -152,6 +153,7 @@ pub fn cli(line: String, conf: Conf) -> String {
             match c {
                 "balance" => format!("{}", wallet.balance()),
                 "deposit" => format!("{}", wallet.deposit()),
+                "fund" => format!("{}", wallet.fund().unwrap()),
                 "player" => player_subcommand(a.subcommand(), &wallet),
                 "contract" => contract_subcommand(a.subcommand(), &wallet),
                 "payout" => payout_subcommand(a.subcommand(), &wallet),

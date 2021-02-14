@@ -4,6 +4,7 @@ use tglib::{
         Address,
         Amount,
         consensus,
+        hash_types::Txid,
         hashes::{
             sha256,
             Hash,
@@ -61,6 +62,7 @@ pub trait WalletUI {
     fn deposit(&self) -> Address;
     fn balance(&self) -> Amount;
 //    fn withdraw(&self, address: Address, amount: Amount) -> Transaction;
+    fn fund(&self) -> TgResult<Txid>;
 }
 
 // players
@@ -108,6 +110,13 @@ impl WalletUI for PlayerWallet {
 //    fn withdraw(&self, address: Address, amount: Amount) -> Transaction {
 //        self.wallet.create_tx(...)
 //    }
+
+    fn fund(&self) -> TgResult<Txid> {
+        match self.arbiter_client.fund_address(self.new_address()) {
+            Ok(txid) => Ok(txid),
+            Err(e) => Err(TgError(format!("{:?}", e)))
+        }
+    }
 }
 
 impl PlayerUI for PlayerWallet {
@@ -179,6 +188,7 @@ impl PlayerUI for PlayerWallet {
         let _r = self.arbiter_client.set_contract_info(info, self.name_pubkey(), sig);
         Ok(())
     }
+
 }
 
 impl DocumentUI<ContractRecord> for PlayerWallet {
@@ -330,7 +340,6 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
             Err(e) => Err(TgError(e.to_string())),
         }
     }
-
 }
 
 impl DocumentUI<PayoutRecord> for PlayerWallet {

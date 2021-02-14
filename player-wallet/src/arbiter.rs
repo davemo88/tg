@@ -3,9 +3,11 @@ use reqwest;
 use tglib::{
     bdk::{
         bitcoin::{
+            hashes::sha256d,
             Address,
             PublicKey,
             consensus,
+            hash_types::Txid,
             secp256k1::Signature,
             util::psbt::PartiallySignedTransaction,
         },
@@ -95,6 +97,15 @@ impl ArbiterService for ArbiterClient {
                 Err(_) => Err(TgError("invalid payout".to_string())),
             }
             Err(_) => Err(TgError("couldn't submit payout".to_string())),
+        }
+    }
+
+    fn fund_address(&self, address: Address) -> Result<Txid> {
+        match self.get("fund-address", Some(&address.to_string())) {
+            Ok(response) => {
+                Ok(Txid::from_hash(sha256d::Hash::from_str(&response.text().unwrap()).unwrap()))
+            },
+            Err(_) => Err(TgError("couldn't fund address".to_string())),
         }
     }
 }

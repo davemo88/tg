@@ -14,12 +14,19 @@ use warp::{
     Reply,
     Rejection,
 };
+use bitcoincore_rpc::{
+    Auth, 
+    Client as RpcClient, 
+    RpcApi,
+};
 use tglib::{
     bdk::{
         bitcoin::{
             Address,
+            Amount,
             PublicKey,
             consensus,
+            hashes::hex::ToHex,
             util::{
                 bip32::{
                     ExtendedPubKey,
@@ -53,6 +60,7 @@ use tglib::{
     mock::{                  
         ARBITER_FINGERPRINT,
         ARBITER_XPUBKEY,
+        BITCOIN_RPC_URL,
         ELECTRS_SERVER,
         NETWORK,             
         REDIS_SERVER,
@@ -181,6 +189,15 @@ async fn submit_payout_handler(payout_hex: String, redis_client: redis::Client) 
     }
 }
 
+async fn fund_address_handler(address: String) -> WebResult<impl Reply> { 
+    let address = Address::from_str(&address).unwrap();
+    let bitcoin_rpc_client = RpcClient::new(BITCOIN_RPC_URL.to_string(), Auth::UserPass("admin".to_string(), "passw".to_string())).unwrap();
+    let coinbase_addr = bitcoin_rpc_client.get_new_address(None, None).unwrap();
+    let txid = bitcoin_rpc_client.send_to_address(&address, Amount::ONE_BTC, None, None, None, None, None, None).unwrap();
+    let _blockhashes = bitcoin_rpc_client.generate_to_address(150, &coinbase_addr).unwrap();
+    Ok(txid.to_hex())
+}
+
 fn redis_client() -> redis::Client {
     let mut client = redis::Client::open(REDIS_SERVER);
     while client.is_err() {
@@ -231,12 +248,17 @@ async fn main() {
         .and(redis_client.clone())
         .and_then(submit_payout_handler);
 
+    let fund_address = warp::path("fund-address")
+        .and(warp::path::param::<String>())
+        .and_then(fund_address_handler);
+
     let routes = get_escrow_pubkey
         .or(get_fee_address)
         .or(set_contract_info)
         .or(get_contract_info)
         .or(submit_contract)
-        .or(submit_payout);
+        .or(submit_payout)
+        .or(fund_address);
 
     warp::serve(routes).run(([0, 0, 0, 0], 5000)).await;
 }
