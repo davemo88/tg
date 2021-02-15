@@ -60,7 +60,6 @@ use tglib::{
     mock::{                  
         ARBITER_FINGERPRINT,
         ARBITER_XPUBKEY,
-        BITCOIN_RPC_URL,
         ELECTRS_SERVER,
         NETWORK,             
         REDIS_SERVER,
@@ -70,6 +69,7 @@ use tglib::{
 mod wallet;
 use wallet::Wallet;
 
+const BITCOIN_RPC_URL: &'static str = "http://electrs:18443";
 type WebResult<T> = std::result::Result<T, Rejection>;
 
 fn wallet() -> Wallet<ElectrumBlockchain, MemoryDatabase> {
