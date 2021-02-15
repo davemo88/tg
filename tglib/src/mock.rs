@@ -25,7 +25,6 @@ pub use crate::{
 pub const DB_NAME: &'static str = "dev-app.db";
 pub const SEED_NAME: &'static str = "dev-seed.json";
 pub const NETWORK: Network = Network::Regtest;
-pub const BITCOIN_RPC_URL: &'static str = "http://electrs:18443";
 pub const ELECTRS_SERVER: &'static str = "tcp://electrs:60401";
 pub const REDIS_SERVER: &'static str = "redis://redis/";
 
