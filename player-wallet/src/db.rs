@@ -1,49 +1,17 @@
-use std::convert::From;
 use rusqlite::{params, Connection, Result};
 use serde::{
     Serialize,
     Deserialize,
 };
 use tglib::{
-    bdk::bitcoin::consensus,
-    hex,
+    contract::ContractRecord,
     player::PlayerName,
-    payout::Payout,
+    payout::PayoutRecord,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayerRecord {
     pub name:       PlayerName,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContractRecord {
-    pub cxid:           String,
-    pub p1_name:        PlayerName,
-    pub p2_name:        PlayerName,
-    pub hex:            String,
-    pub desc:           String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PayoutRecord {
-    pub cxid:           String,
-    pub psbt:           String,
-    pub sig:            String,
-}
-
-impl From<Payout> for PayoutRecord {
-    fn from(p: Payout) -> PayoutRecord {
-        let sig = match p.script_sig {
-           Some(sig) => hex::encode(sig.serialize_compact().to_vec()),
-           None => "".to_string(),
-        };
-        PayoutRecord {
-            cxid: hex::encode(p.contract.cxid()),
-            psbt: hex::encode(consensus::serialize(&p.psbt)),
-            sig,
-        }
-    }
 }
 
 pub struct DB {

@@ -241,6 +241,15 @@ pub fn signature(input: &[u8]) -> IResult<&[u8], Signature> {
     Ok((input, sig))
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContractRecord {
+    pub cxid:           String,
+    pub p1_name:        PlayerName,
+    pub p2_name:        PlayerName,
+    pub hex:            String,
+    pub desc:           String,
+}
+
 #[derive(Debug, PartialEq)]
 pub enum ContractState {
     Unsigned,

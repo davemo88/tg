@@ -35,8 +35,10 @@ use tglib::{
     arbiter::ArbiterService,
     contract::{
         Contract,
+        ContractRecord,
         PlayerContractInfo,
     },
+    player::PlayerName,
     wallet::{
         create_escrow_address,
         create_payout_script,
@@ -60,6 +62,7 @@ use crate::{
     player::PlayerNameClient,
     arbiter::ArbiterClient,
     db::DB,
+    ui::PlayerUI,
 };
 pub struct PlayerWallet {
 //    xpubkey: ExtendedPubKey,
@@ -198,6 +201,17 @@ impl PlayerWallet {
             lock_time: 0,
             input,
             output,
+        }
+    }
+
+    pub fn get_other_player_name(&self, contract_record: &ContractRecord) -> TgResult<PlayerName> {
+        let my_players = self.mine();
+        if my_players.contains(&contract_record.p1_name) {
+            Ok(contract_record.p2_name.clone())
+        } else if my_players.contains(&contract_record.p2_name) {
+            Ok(contract_record.p1_name.clone())
+        } else {
+            Err(TgError("not party to this contract".to_string()))
         }
     }
 }

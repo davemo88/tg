@@ -17,6 +17,8 @@ use tglib::{
     },
     hex,
     secrecy::Secret,
+    contract::ContractRecord,
+    payout::PayoutRecord,
     player::PlayerName,
     wallet::SavedSeed,
     mock::{
@@ -27,11 +29,7 @@ use tglib::{
 };
 use player_wallet::{
     arbiter::ArbiterClient,
-    db::{
-        DB,
-        ContractRecord,
-        PayoutRecord,
-    },
+    db::DB,
     player::PlayerNameClient,
     ui::{
         DocumentUI,

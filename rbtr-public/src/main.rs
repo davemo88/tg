@@ -133,7 +133,7 @@ async fn submit_payout(con: &mut Connection, payout: &Payout) -> Result<Partiall
     Err(TgError("invalid payout".to_string()))
 }
 
-async fn set_contract_info_handler(contract_info: String, pubkey: String, sig: String, redis_client: redis::Client) -> WebResult<impl Reply>{
+async fn set_contract_info_handler(contract_info: String, pubkey: String, sig: String, redis_client: redis::Client) -> WebResult<impl Reply> {
     let contract_info: PlayerContractInfo = serde_json::from_str(&String::from_utf8(hex::decode(&contract_info).unwrap()).unwrap()).unwrap();
     let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
 // make sure pubkey controls the name
@@ -159,13 +159,53 @@ async fn set_contract_info_handler(contract_info: String, pubkey: String, sig: S
     }
 }
 
-async fn get_contract_info_handler(player_name: String, redis_client: redis::Client) -> WebResult<impl Reply>{
+async fn get_contract_info_handler(player_name: String, redis_client: redis::Client) -> WebResult<impl Reply> {
     let mut con = redis_client.get_async_connection().await.unwrap();
     let r: RedisResult<String> = con.get(&String::from_utf8(hex::decode(player_name).unwrap()).unwrap()).await;
     match r {
         Ok(info) => Ok(info),
         Err(_) => Err(warp::reject()),
     }
+}
+
+async fn send_contract_handler(contract_hex: String, player_name: String, redis_client: redis::Client) -> WebResult<impl Reply> {
+    let mut con = redis_client.get_async_connection().await.unwrap();
+    let r: RedisResult<String> = con.rpush(&format!("{}/contracts", player_name), contract_hex).await;
+    match r {
+        Ok(_string) => Ok("sent contract".to_string()),
+        Err(_) => Err(warp::reject()),
+    }
+}
+
+async fn receive_contract_handler(player_name: String, redis_client: redis::Client) -> WebResult<impl Reply> {
+// TODO: protect this endpoint with name auth
+    let mut con = redis_client.get_async_connection().await.unwrap();
+    let r: RedisResult<String> = con.lpop(&format!("{}/contracts", player_name)).await;
+    match r {
+        Ok(contract_hex) => Ok(contract_hex),
+        Err(_) => Ok(String::default()),
+    }
+
+}
+
+async fn send_payout_handler(payout_hex: String, player_name: String, redis_client: redis::Client) -> WebResult<impl Reply> {
+    let mut con = redis_client.get_async_connection().await.unwrap();
+    let r: RedisResult<String> = con.rpush(&format!("{}/payouts", player_name), payout_hex).await;
+    match r {
+        Ok(_string) => Ok("sent payout".to_string()),
+        Err(_) => Err(warp::reject()),
+    }
+}
+
+async fn receive_payout_handler(player_name: String, redis_client: redis::Client) -> WebResult<impl Reply> {
+// TODO: protect this endpoint with name auth
+    let mut con = redis_client.get_async_connection().await.unwrap();
+    let r: RedisResult<String> = con.lpop(&format!("{}/payouts", player_name)).await;
+    match r {
+        Ok(payout_hex) => Ok(payout_hex),
+        Err(_) => Ok(String::default()),
+    }
+
 }
 
 async fn submit_contract_handler(contract_hex: String, redis_client: redis::Client) -> WebResult<impl Reply> {
@@ -237,6 +277,28 @@ async fn main() {
         .and(redis_client.clone())
         .and_then(get_contract_info_handler);
 
+    let send_contract = warp::path("send-contract")
+        .and(warp::path::param::<String>())
+        .and(warp::path::param::<String>())
+        .and(redis_client.clone())
+        .and_then(send_contract_handler);
+
+    let receive_contract = warp::path("receive-contract")
+        .and(warp::path::param::<String>())
+        .and(redis_client.clone())
+        .and_then(receive_contract_handler);
+
+    let send_payout = warp::path("send-payout")
+        .and(warp::path::param::<String>())
+        .and(warp::path::param::<String>())
+        .and(redis_client.clone())
+        .and_then(send_payout_handler);
+
+    let receive_payout = warp::path("receive-payout")
+        .and(warp::path::param::<String>())
+        .and(redis_client.clone())
+        .and_then(receive_payout_handler);
+
 // TODO: can add validation filters for the string params in the following paths?
     let submit_contract = warp::path("submit-contract")
         .and(warp::path::param::<String>())
@@ -256,6 +318,10 @@ async fn main() {
         .or(get_fee_address)
         .or(set_contract_info)
         .or(get_contract_info)
+        .or(send_contract)
+        .or(receive_contract)
+        .or(send_payout)
+        .or(receive_payout)
         .or(submit_contract)
         .or(submit_payout)
         .or(fund_address);

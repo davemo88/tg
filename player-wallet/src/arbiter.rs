@@ -1,16 +1,14 @@
 use std::str::FromStr;
 use reqwest;
 use tglib::{
-    bdk::{
-        bitcoin::{
-            hashes::sha256d,
-            Address,
-            PublicKey,
-            consensus,
-            hash_types::Txid,
-            secp256k1::Signature,
-            util::psbt::PartiallySignedTransaction,
-        },
+    bdk::bitcoin::{
+        hashes::sha256d,
+        Address,
+        PublicKey,
+        consensus,
+        hash_types::Txid,
+        secp256k1::Signature,
+        util::psbt::PartiallySignedTransaction,
     },
     hex,
     Result,
@@ -18,9 +16,13 @@ use tglib::{
     arbiter::ArbiterService,
     contract::{
         Contract,
+        ContractRecord,
         PlayerContractInfo,
     },
-    payout::Payout,
+    payout::{
+        Payout,
+        PayoutRecord,
+    },
     player::PlayerName,
 };
 
@@ -77,6 +79,40 @@ impl ArbiterService for ArbiterClient {
                 }
             },
             Err(_) => None,
+        }
+    }
+
+    fn send_contract(&self, contract: &ContractRecord, player_name: PlayerName) -> Result<()> {
+        match self.get("send-contract", Some(&format!("{}/{}", hex::encode(serde_json::to_string(contract).unwrap().as_bytes()), hex::encode(player_name.0.as_bytes())))) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(TgError(format!("couldn't send contract: {:?}", e))), 
+        }
+    }
+
+    fn receive_contract(&self, player_name: PlayerName) -> Result<Option<ContractRecord>> {
+        match self.get("receive-contract", Some(&format!("{}", hex::encode(player_name.0.as_bytes())))) {
+            Ok(response) => match serde_json::from_str::<ContractRecord>(&response.text().unwrap()) {
+                Ok(contract_record) => Ok(Some(contract_record)),
+                Err(_) => Ok(None),
+            }
+            Err(e) => Err(TgError(format!("couldn't receive contract: {:?}", e))), 
+        }
+    }
+
+    fn send_payout(&self, payout: &PayoutRecord, player_name: PlayerName) -> Result<()> {
+        match self.get("send-payout", Some(&format!("{}/{}", hex::encode(serde_json::to_string(payout).unwrap().as_bytes()), hex::encode(player_name.0.as_bytes())))) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(TgError(format!("couldn't send payout: {:?}", e))), 
+        }
+    }
+
+    fn receive_payout(&self, player_name: PlayerName) -> Result<Option<PayoutRecord>> {
+        match self.get("receive-payout", Some(&format!("{}", hex::encode(player_name.0.as_bytes())))) {
+            Ok(response) => match serde_json::from_str::<PayoutRecord>(&response.text().unwrap()) {
+                Ok(payout_record) => Ok(Some(payout_record)),
+                Err(_) => Ok(None),
+            }
+            Err(e) => Err(TgError(format!("couldn't receive payout: {:?}", e))), 
         }
     }
 
