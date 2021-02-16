@@ -135,32 +135,6 @@ async fn submit_payout(con: &mut Connection, payout: &Payout) -> Result<Partiall
     Err(TgError("invalid payout".to_string()))
 }
 
-//async fn set_contract_info_handler(contract_info: String, pubkey: String, sig: String, redis_client: redis::Client) -> WebResult<impl Reply> {
-//    let contract_info: PlayerContractInfo = serde_json::from_str(&String::from_utf8(hex::decode(&contract_info).unwrap()).unwrap()).unwrap();
-//    let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
-//// make sure pubkey controls the name
-//    match reqwest::get(&format!("{}/{}/{}", NAME_SERVICE_URL, "get-name-address", hex::encode(contract_info.name.0.as_bytes()))).await {
-//        Ok(response) => match response.text().await {
-//            Ok(name_address) => if get_namecoin_address(&pubkey, NETWORK).unwrap()!= name_address { return Err(warp::reject()) },
-//            Err(_) => return Err(warp::reject())
-//        },
-//        Err(_) => return Err(warp::reject())
-//    }
-// 
-//    let sig = Signature::from_compact(&hex::decode(sig).unwrap()).unwrap();
-//    let secp = Secp256k1::new();
-//    if secp.verify(&Message::from_slice(&contract_info.hash()).unwrap(), &sig, &pubkey.key).is_err() {
-//        return Err(warp::reject())
-//    }
-//
-//    let mut con = redis_client.get_async_connection().await.unwrap();
-//    let r: RedisResult<String> = con.set(contract_info.name.clone().0, &serde_json::to_string(&contract_info).unwrap()).await;
-//    match r {
-//        Ok(_string) => Ok(format!("set contract info for {}", contract_info.name.0)),
-//        Err(_) => Err(warp::reject()),
-//    }
-//}
-
 async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redis::Client) -> WebResult<impl Reply> {
 // make sure pubkey controls the name
     match reqwest::get(&format!("{}/{}/{}", NAME_SERVICE_URL, "get-name-address", hex::encode(body.contract_info.name.0.as_bytes()))).await {
