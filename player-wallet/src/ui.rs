@@ -286,7 +286,6 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
             _ => return Err(TgError("invalid params".to_string())),
         };
         if let Some(contract_record) = self.db.get_contract(&cxid) {
-//            let contract = Contract::from_bytes(hex::decode(contract_record.hex.clone()).unwrap()).unwrap();
             let sig = self.sign_message(
                 Message::from_slice(&hex::decode(contract_record.cxid.clone()).unwrap()).unwrap(),
                 DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(),
@@ -309,7 +308,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
     fn send(&self, cxid: &str) -> TgResult<()> {
         match DocumentUI::<ContractRecord>::get(self, cxid) {
             Some(contract_record) => self.arbiter_client.send_contract(
-                    &contract_record,
+                    contract_record.clone(),
                     self.get_other_player_name(&contract_record).unwrap(),
                 ),
             None => Err(TgError("unknown contract".to_string())),
@@ -435,7 +434,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
             Some(payout_record) => {
                 let contract_record = DocumentUI::<ContractRecord>::get(self, cxid).unwrap();
                 self.arbiter_client.send_payout(
-                    &payout_record,
+                    payout_record,
                     self.get_other_player_name(&contract_record).unwrap(),
                 )
             },

@@ -38,7 +38,7 @@ use crate::{
     }
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct Payout {
     pub version:         u8,
     pub contract:        Contract,

@@ -48,10 +48,12 @@ use tglib::{
     hex,
     Result,
     TgError,
-    contract::{
-        Contract,
-        PlayerContractInfo,
+    arbiter::{
+        SendContractBody,
+        SendPayoutBody,
+        SetContractInfoBody,
     },
+    contract::Contract,
     payout::Payout,
     wallet::{
         get_namecoin_address,
@@ -133,28 +135,51 @@ async fn submit_payout(con: &mut Connection, payout: &Payout) -> Result<Partiall
     Err(TgError("invalid payout".to_string()))
 }
 
-async fn set_contract_info_handler(contract_info: String, pubkey: String, sig: String, redis_client: redis::Client) -> WebResult<impl Reply> {
-    let contract_info: PlayerContractInfo = serde_json::from_str(&String::from_utf8(hex::decode(&contract_info).unwrap()).unwrap()).unwrap();
-    let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
+//async fn set_contract_info_handler(contract_info: String, pubkey: String, sig: String, redis_client: redis::Client) -> WebResult<impl Reply> {
+//    let contract_info: PlayerContractInfo = serde_json::from_str(&String::from_utf8(hex::decode(&contract_info).unwrap()).unwrap()).unwrap();
+//    let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
+//// make sure pubkey controls the name
+//    match reqwest::get(&format!("{}/{}/{}", NAME_SERVICE_URL, "get-name-address", hex::encode(contract_info.name.0.as_bytes()))).await {
+//        Ok(response) => match response.text().await {
+//            Ok(name_address) => if get_namecoin_address(&pubkey, NETWORK).unwrap()!= name_address { return Err(warp::reject()) },
+//            Err(_) => return Err(warp::reject())
+//        },
+//        Err(_) => return Err(warp::reject())
+//    }
+// 
+//    let sig = Signature::from_compact(&hex::decode(sig).unwrap()).unwrap();
+//    let secp = Secp256k1::new();
+//    if secp.verify(&Message::from_slice(&contract_info.hash()).unwrap(), &sig, &pubkey.key).is_err() {
+//        return Err(warp::reject())
+//    }
+//
+//    let mut con = redis_client.get_async_connection().await.unwrap();
+//    let r: RedisResult<String> = con.set(contract_info.name.clone().0, &serde_json::to_string(&contract_info).unwrap()).await;
+//    match r {
+//        Ok(_string) => Ok(format!("set contract info for {}", contract_info.name.0)),
+//        Err(_) => Err(warp::reject()),
+//    }
+//}
+
+async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redis::Client) -> WebResult<impl Reply> {
 // make sure pubkey controls the name
-    match reqwest::get(&format!("{}/{}/{}", NAME_SERVICE_URL, "get-name-address", hex::encode(contract_info.name.0.as_bytes()))).await {
+    match reqwest::get(&format!("{}/{}/{}", NAME_SERVICE_URL, "get-name-address", hex::encode(body.contract_info.name.0.as_bytes()))).await {
         Ok(response) => match response.text().await {
-            Ok(name_address) => if get_namecoin_address(&pubkey, NETWORK).unwrap()!= name_address { return Err(warp::reject()) },
+            Ok(name_address) => if get_namecoin_address(&body.pubkey, NETWORK).unwrap()!= name_address { return Err(warp::reject()) },
             Err(_) => return Err(warp::reject())
         },
         Err(_) => return Err(warp::reject())
     }
  
-    let sig = Signature::from_compact(&hex::decode(sig).unwrap()).unwrap();
     let secp = Secp256k1::new();
-    if secp.verify(&Message::from_slice(&contract_info.hash()).unwrap(), &sig, &pubkey.key).is_err() {
+    if secp.verify(&Message::from_slice(&body.contract_info.hash()).unwrap(), &body.sig, &body.pubkey.key).is_err() {
         return Err(warp::reject())
     }
 
     let mut con = redis_client.get_async_connection().await.unwrap();
-    let r: RedisResult<String> = con.set(contract_info.name.clone().0, &serde_json::to_string(&contract_info).unwrap()).await;
+    let r: RedisResult<String> = con.set(body.contract_info.name.clone().0, &serde_json::to_string(&body.contract_info).unwrap()).await;
     match r {
-        Ok(_string) => Ok(format!("set contract info for {}", contract_info.name.0)),
+        Ok(_string) => Ok(format!("set contract info for {}", body.contract_info.name.0)),
         Err(_) => Err(warp::reject()),
     }
 }
@@ -168,9 +193,9 @@ async fn get_contract_info_handler(player_name: String, redis_client: redis::Cli
     }
 }
 
-async fn send_contract_handler(contract_hex: String, player_name: String, redis_client: redis::Client) -> WebResult<impl Reply> {
+async fn send_contract_handler(body: SendContractBody, redis_client: redis::Client) -> WebResult<impl Reply> {
     let mut con = redis_client.get_async_connection().await.unwrap();
-    let r: RedisResult<String> = con.rpush(&format!("{}/contracts", player_name), contract_hex).await;
+    let r: RedisResult<String> = con.rpush(&format!("{}/contracts", body.player_name), serde_json::to_string(&body.contract).unwrap()).await;
     match r {
         Ok(_string) => Ok("sent contract".to_string()),
         Err(_) => Err(warp::reject()),
@@ -188,9 +213,9 @@ async fn receive_contract_handler(player_name: String, redis_client: redis::Clie
 
 }
 
-async fn send_payout_handler(payout_hex: String, player_name: String, redis_client: redis::Client) -> WebResult<impl Reply> {
+async fn send_payout_handler(body: SendPayoutBody, redis_client: redis::Client) -> WebResult<impl Reply> {
     let mut con = redis_client.get_async_connection().await.unwrap();
-    let r: RedisResult<String> = con.rpush(&format!("{}/payouts", player_name), payout_hex).await;
+    let r: RedisResult<String> = con.rpush(&format!("{}/payouts", body.player_name), serde_json::to_string(&body.payout).unwrap()).await;
     match r {
         Ok(_string) => Ok("sent payout".to_string()),
         Err(_) => Err(warp::reject()),
@@ -208,9 +233,8 @@ async fn receive_payout_handler(player_name: String, redis_client: redis::Client
 
 }
 
-async fn submit_contract_handler(contract_hex: String, redis_client: redis::Client) -> WebResult<impl Reply> {
+async fn submit_contract_handler(contract: Contract, redis_client: redis::Client) -> WebResult<impl Reply> {
     let mut con = redis_client.get_async_connection().await.unwrap();
-    let contract = Contract::from_bytes(hex::decode(contract_hex.clone()).unwrap()).unwrap();
     if let Ok(sig) = submit_contract(&mut con, &contract).await {
         Ok(hex::encode(sig.serialize_compact()))
     } else {
@@ -219,9 +243,8 @@ async fn submit_contract_handler(contract_hex: String, redis_client: redis::Clie
 }
 
 // TODO: somehow break out of serialize(decode( hell
-async fn submit_payout_handler(payout_hex: String, redis_client: redis::Client) -> WebResult<impl Reply> {
+async fn submit_payout_handler(payout: Payout, redis_client: redis::Client) -> WebResult<impl Reply> {
     let mut con = redis_client.get_async_connection().await.unwrap();
-    let payout = Payout::from_bytes(hex::decode(payout_hex.clone()).unwrap()).unwrap();
     if let Ok(tx) = submit_payout(&mut con, &payout).await {
         Ok(hex::encode(consensus::serialize(&tx)))
     } else {
@@ -266,9 +289,8 @@ async fn main() {
         .map(|f: Address| f.to_string()); 
 
     let set_contract_info = warp::path("set-contract-info")
-        .and(warp::path::param::<String>())
-        .and(warp::path::param::<String>())
-        .and(warp::path::param::<String>())
+        .and(warp::post())
+        .and(warp::body::json())
         .and(redis_client.clone())
         .and_then(set_contract_info_handler);
 
@@ -278,8 +300,8 @@ async fn main() {
         .and_then(get_contract_info_handler);
 
     let send_contract = warp::path("send-contract")
-        .and(warp::path::param::<String>())
-        .and(warp::path::param::<String>())
+        .and(warp::post())
+        .and(warp::body::json())
         .and(redis_client.clone())
         .and_then(send_contract_handler);
 
@@ -289,8 +311,8 @@ async fn main() {
         .and_then(receive_contract_handler);
 
     let send_payout = warp::path("send-payout")
-        .and(warp::path::param::<String>())
-        .and(warp::path::param::<String>())
+        .and(warp::post())
+        .and(warp::body::json())
         .and(redis_client.clone())
         .and_then(send_payout_handler);
 
@@ -299,17 +321,19 @@ async fn main() {
         .and(redis_client.clone())
         .and_then(receive_payout_handler);
 
-// TODO: can add validation filters for the string params in the following paths?
     let submit_contract = warp::path("submit-contract")
-        .and(warp::path::param::<String>())
+        .and(warp::post())
+        .and(warp::body::json())
         .and(redis_client.clone())
         .and_then(submit_contract_handler);
 
     let submit_payout = warp::path("submit-payout")
-        .and(warp::path::param::<String>())
+        .and(warp::post())
+        .and(warp::body::json())
         .and(redis_client.clone())
         .and_then(submit_payout_handler);
 
+// TODO: can add validation filters for path params?
     let fund_address = warp::path("fund-address")
         .and(warp::path::param::<String>())
         .and_then(fund_address_handler);
