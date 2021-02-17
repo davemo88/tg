@@ -146,7 +146,8 @@ async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redi
     }
  
     let secp = Secp256k1::new();
-    if secp.verify(&Message::from_slice(&body.contract_info.hash()).unwrap(), &body.sig, &body.pubkey.key).is_err() {
+    let sig = Signature::from_compact(&hex::decode(&body.sig_hex).unwrap()).unwrap();
+    if secp.verify(&Message::from_slice(&body.contract_info.hash()).unwrap(), &sig, &body.pubkey.key).is_err() {
         return Err(warp::reject())
     }
 

@@ -73,7 +73,7 @@ impl ArbiterService for ArbiterClient {
         let body = SetContractInfoBody {
             contract_info,
             pubkey,
-            sig,
+            sig_hex: hex::encode(sig.serialize_compact()),
         };
         match self.post("set-contract-info", serde_json::to_string(&body).unwrap()) {
             Ok(_success_message) => Ok(()),

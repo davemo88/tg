@@ -42,7 +42,7 @@ pub trait ArbiterService {
 pub struct SetContractInfoBody {
     pub contract_info: PlayerContractInfo,
     pub pubkey: PublicKey,
-    pub sig: Signature,
+    pub sig_hex: String,
 }
 
 #[derive(Serialize, Deserialize)]
