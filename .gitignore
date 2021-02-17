@@ -3,7 +3,6 @@
 *.db
 dev-seed.json
 dev-wallet/
-newwallet/
 */target/
 */Cargo.lock
 testnet/
