@@ -170,7 +170,7 @@ pub fn player_ui<'a, 'b>() -> App<'a, 'b> {
     App::new("player")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or("unknown"))
         .author(option_env!("CARGO_PKG_AUTHORS").unwrap_or(""))
-        .about("player commands")
+        .about("player subcommand")
         .settings(&[AppSettings::NoBinaryName, AppSettings::SubcommandRequiredElseHelp,
             AppSettings::VersionlessSubcommands])
         .subcommands(vec![
@@ -252,7 +252,7 @@ pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
     App::new("contract")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or("unknown"))
         .author(option_env!("CARGO_PKG_AUTHORS").unwrap_or(""))
-        .about("contract commands")
+        .about("contract subcommand")
         .settings(&[AppSettings::NoBinaryName, AppSettings::SubcommandRequiredElseHelp,
             AppSettings::VersionlessSubcommands])
         .subcommands(vec![
@@ -409,7 +409,7 @@ pub fn payout_ui<'a, 'b>() -> App<'a, 'b> {
     App::new("payout")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or("unknown"))
         .author(option_env!("CARGO_PKG_AUTHORS").unwrap_or(""))
-        .about("payout commands")
+        .about("payout subcommand")
         .settings(&[AppSettings::NoBinaryName, AppSettings::SubcommandRequiredElseHelp,
             AppSettings::VersionlessSubcommands])
         .subcommands(vec![

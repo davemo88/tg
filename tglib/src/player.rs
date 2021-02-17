@@ -38,6 +38,13 @@ pub trait PlayerNameService {
     fn get_name_address(&self, name: PlayerName) -> Result<String, &'static str>;
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RegisterNameBody {
+    pub player_name: PlayerName,
+    pub pubkey: PublicKey,
+    pub sig_hex: String,
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct PlayerId(pub String); 
 

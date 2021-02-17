@@ -25,6 +25,7 @@ use tglib::{
         },
     },
     hex,
+    player::RegisterNameBody,
     wallet::get_namecoin_address,
     mock::NETWORK,
 };
@@ -44,23 +45,23 @@ pub const PLAYER_NAME_PREFIX: &'static str = "player/";
 
 type WebResult<T> = std::result::Result<T, Rejection>;
 
-async fn register_name_handler(name: String, pubkey: String, sig: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
-    let name = String::from_utf8(hex::decode(name).unwrap()).unwrap();
-    let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
-    let sig = Signature::from_compact(&hex::decode(sig).unwrap()).unwrap();
+//async fn register_name_handler(name: String, pubkey: String, sig: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
+async fn register_name_handler(body: RegisterNameBody, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
+//    let name = String::from_utf8(hex::decode(name).unwrap()).unwrap();
+//    let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
+    let sig = Signature::from_compact(&hex::decode(body.sig_hex).unwrap()).unwrap();
     let mut engine = sha256::HashEngine::default();
-    engine.input(name.as_bytes());
+    engine.input(body.player_name.0.as_bytes());
     let hash: &[u8] = &sha256::Hash::from_engine(engine);
 
     let secp = Secp256k1::new();
-    if secp.verify(&Message::from_slice(hash).unwrap(), &sig, &pubkey.key).is_err() {
+    if secp.verify(&Message::from_slice(hash).unwrap(), &sig, &body.pubkey.key).is_err() {
         return Err(warp::reject())
     }
-    let _r = nmc_rpc.import_pubkey(&pubkey);
+    let _r = nmc_rpc.import_pubkey(&body.pubkey);
 // create namecoin address from supplied pubkey
-    let name_address = get_namecoin_address(&pubkey, NETWORK).unwrap();
-//    println!("name_address: {}", name_address);
-    let name = format!("{}{}",PLAYER_NAME_PREFIX, name);
+    let name_address = get_namecoin_address(&body.pubkey, NETWORK).unwrap();
+    let name = format!("{}{}",PLAYER_NAME_PREFIX, body.player_name.0);
     let new_address = nmc_rpc.get_new_address().await.unwrap();
     match nmc_rpc.name_new(&name, &new_address).await {
         Ok((name_new_txid, rand)) => {
@@ -125,19 +126,21 @@ async fn load_wallet(nmc_rpc_client: &NamecoinRpcClient) {
                 Some(err) => {
                     match err.code {
 // wallet already loaded
-                        -4 => {
+                        -4|-35 => {
                             wallet_loaded = true;
                         }
 // no wallet loaded, try to create it
                         -18 => nmc_rpc_client.create_wallet("testwallet").await.unwrap(),
-                        _ => ()
+                        _ => println!("error loading wallet: {:?}", err),
                     }
                 }
                 None => wallet_loaded = true,
             }
 
         }
-        sleep(Duration::from_secs(1));
+        if !wallet_loaded {
+            sleep(Duration::from_secs(1));
+        }
     }
 }
 
@@ -153,9 +156,8 @@ async fn main() {
     let nmc_rpc = warp::any().map(move || nmc_rpc_client.clone());
 
     let register_name = warp::path("register-name")
-        .and(warp::path::param::<String>())
-        .and(warp::path::param::<String>())
-        .and(warp::path::param::<String>())
+        .and(warp::post())
+        .and(warp::body::json())
         .and(nmc_rpc.clone())
         .and_then(register_name_handler);
 
