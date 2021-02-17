@@ -18,7 +18,10 @@ use tglib::{
     hex,
     secrecy::Secret,
     arbiter::ArbiterService,
-    contract::ContractRecord,
+    contract::{
+        Contract,
+        ContractRecord,
+    },
     payout::PayoutRecord,
     player::PlayerName,
     wallet::SavedSeed,
@@ -383,7 +386,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
             }
             "details" => match DocumentUI::<ContractRecord>::get(wallet, a.value_of("cxid").unwrap()) {
                 Some(cr) => {
-                    format!("{:?}", cr)
+                    format!("{:?}\n{:?}", cr, Contract::from_bytes(hex::decode(&cr.hex).unwrap()).unwrap())
                 }
                 None => format!("no such contract"),
             }
