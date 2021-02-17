@@ -107,13 +107,14 @@ async fn get_name_address_handler(name_hex: String, nmc_rpc: NamecoinRpcClient) 
         allow_expired: None,
     };
 // TODO maybe just put namecoind in hex encoding mode
-    let name = String::from_utf8(hex::decode(name_hex).unwrap()).unwrap();
+    let name = format!("{}{}",PLAYER_NAME_PREFIX, String::from_utf8(hex::decode(name_hex).unwrap()).unwrap());
+//    let new_address = nmc_rpc.get_new_address().await.unwrap();
     let name_status = match nmc_rpc.name_show(&name, Some(options)).await {
         Ok(r) => match r {
             Some(name_status) => name_status,
             None => return Err(warp::reject())
         }
-        Err(_) => return Err(warp::reject())
+        Err(e) => { println!("{:?}", e); return Err(warp::reject()) },
     };
     Ok(name_status.address)
 }

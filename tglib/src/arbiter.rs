@@ -38,20 +38,20 @@ pub trait ArbiterService {
     fn fund_address(&self, address: Address) -> Result<Txid>;
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SetContractInfoBody {
     pub contract_info: PlayerContractInfo,
     pub pubkey: PublicKey,
     pub sig_hex: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SendContractBody {
     pub contract: ContractRecord,
     pub player_name: PlayerName,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SendPayoutBody {
     pub payout: PayoutRecord,
     pub player_name: PlayerName,

@@ -147,7 +147,7 @@ impl NamecoinRpcClient {
             serde_json::to_string(&options).unwrap(),
         );
 
-        let body = self.build_request_body("name_scan", &params);
+        let body = self.build_request_body("name_show", &params);
         match self.post(body).await {
             Ok(r) => {
                 Ok(r.json::<NameShowResponse>().await.unwrap().result)

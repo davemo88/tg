@@ -17,6 +17,7 @@ use tglib::{
     },
     hex,
     secrecy::Secret,
+    arbiter::ArbiterService,
     contract::ContractRecord,
     payout::PayoutRecord,
     player::PlayerName,
@@ -217,6 +218,11 @@ pub fn player_ui<'a, 'b>() -> App<'a, 'b> {
                     .required(true)
                     .takes_value(true)
                     .help("wallet passphrase")),
+            SubCommand::with_name("posted").about("retrieve posted info for player")
+                .arg(Arg::with_name("name")
+                    .index(1)
+                    .help("player name")
+                    .required(true)),
         ])
 }
 
@@ -248,6 +254,10 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
             "post" => match wallet.post(PlayerName(a.value_of("name").unwrap().to_string()), Amount::from_sat(a.value_of("amount").unwrap().parse::<u64>().unwrap()), Secret::new(a.value_of("passphrase").unwrap().to_owned())) {
                 Ok(_) => format!("posted contract info"),
                 Err(e) => format!("{}", e),
+            }
+            "posted" => match wallet.arbiter_client.get_contract_info(PlayerName(a.value_of("name").unwrap().to_string())) {
+                Some(info) => format!("{} has posted {} worth of utxos", info.name.0, info.utxos.iter().map(|utxo| utxo.txout.value).sum::<u64>()),
+                None => format!("no info posted"),
             }
             _ => format!("command '{}' is not implemented", c),
         }

@@ -75,8 +75,9 @@ impl ArbiterService for ArbiterClient {
             pubkey,
             sig_hex: hex::encode(sig.serialize_compact()),
         };
+        println!("body: {:?}", body);
         match self.post("set-contract-info", serde_json::to_string(&body).unwrap()) {
-            Ok(_success_message) => Ok(()),
+            Ok(_success_message) => { println!("set contract info: {}", _success_message.text().unwrap()); Ok(()) },
             Err(e) => Err(TgError(e.to_string()))
         }
     }

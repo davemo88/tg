@@ -261,7 +261,7 @@ pub enum ContractState {
     Invalid,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PlayerContractInfo {
     pub name: PlayerName,
     pub escrow_pubkey: PublicKey,

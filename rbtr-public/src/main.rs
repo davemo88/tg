@@ -65,13 +65,13 @@ use tglib::{
         ELECTRS_SERVER,
         NETWORK,             
         REDIS_SERVER,
-        NAME_SERVICE_URL,
     },
 };
 mod wallet;
 use wallet::Wallet;
 
 const BITCOIN_RPC_URL: &'static str = "http://electrs:18443";
+const NAME_SERVICE_URL: &'static str = "http://nmc-id:18420";
 type WebResult<T> = std::result::Result<T, Rejection>;
 
 fn wallet() -> Wallet<ElectrumBlockchain, MemoryDatabase> {
@@ -139,10 +139,10 @@ async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redi
 // make sure pubkey controls the name
     match reqwest::get(&format!("{}/{}/{}", NAME_SERVICE_URL, "get-name-address", hex::encode(body.contract_info.name.0.as_bytes()))).await {
         Ok(response) => match response.text().await {
-            Ok(name_address) => if get_namecoin_address(&body.pubkey, NETWORK).unwrap()!= name_address { return Err(warp::reject()) },
-            Err(_) => return Err(warp::reject())
+            Ok(name_address) => if get_namecoin_address(&body.pubkey, NETWORK).unwrap()!= name_address { println!("mismatched name address: {:?} vs {:?}", get_namecoin_address(&body.pubkey, NETWORK).unwrap(), name_address); return Err(warp::reject()) },
+            Err(e) => { println!("{:?}", e); return Err(warp::reject()) },
         },
-        Err(_) => return Err(warp::reject())
+        Err(e) => { println!("{:?}", e); return Err(warp::reject()) },
     }
  
     let secp = Secp256k1::new();
