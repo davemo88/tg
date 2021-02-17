@@ -2,6 +2,7 @@
 *.swp
 *.db
 dev-seed.json
+dev-wallet/
 */target/
 */Cargo.lock
 testnet/

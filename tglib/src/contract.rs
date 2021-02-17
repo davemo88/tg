@@ -277,7 +277,7 @@ impl PlayerContractInfo {
         engine.input(&self.escrow_pubkey.to_bytes());
         engine.input(&self.change_address.to_string().as_bytes());
         for utxo in self.utxos.clone() {
-            engine.input(&hex::decode(utxo.outpoint.txid).unwrap());
+            engine.input(utxo.outpoint.txid.as_inner());
             engine.input(&Vec::from(utxo.outpoint.vout.to_be_bytes()));
         }
 

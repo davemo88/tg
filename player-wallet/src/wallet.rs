@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use sled;
 use tglib::{
     bdk::{
         bitcoin::{
@@ -24,7 +25,7 @@ use tglib::{
             noop_progress,
             ElectrumBlockchain,
         },
-        database::MemoryDatabase,
+        database::AnyDatabase,
         electrum_client::Client,
         signer::Signer,
         Wallet,
@@ -64,43 +65,31 @@ use crate::{
     db::DB,
     ui::PlayerUI,
 };
+
 pub struct PlayerWallet {
 //    xpubkey: ExtendedPubKey,
     seed: SavedSeed,
     network: Network,
 // TODO: allow for offline wallet
-    pub wallet: Wallet<ElectrumBlockchain, MemoryDatabase>,
+    pub wallet: Wallet<ElectrumBlockchain, AnyDatabase>,
     pub db: DB,
     pub name_client: PlayerNameClient,
     pub arbiter_client: ArbiterClient,
 }
 
 impl PlayerWallet {
-    pub fn new(seed: SavedSeed, db: DB, network: Network, electrum_client: Client, name_client: PlayerNameClient, arbiter_client: ArbiterClient) ->  Self {
+    pub fn new(seed: SavedSeed, wallet_db: sled::Tree, db: DB, network: Network, electrum_client: Client, name_client: PlayerNameClient, arbiter_client: ArbiterClient) ->  Self {
         let descriptor_key = format!("[{}/{}]{}", seed.fingerprint, BITCOIN_ACCOUNT_PATH, seed.xpubkey);
         let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
         let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
-//        let mut db_path = db_path.unwrap_or(current_dir().unwrap());
-//        let mut db_path = current_dir().unwrap();
-// TODO: need to use the right path depending on platform
-//        if db_path == PathBuf::from("/") {
-// we're probably on android
-// TODO: append --db-path arg in java using android API instead
-//            db_path.push("data/data/com.playerapp/files/");
-//        }
-//        db_path.push(DB_NAME);
-//        let db = DB::new(&db_path).unwrap();
-//        let _r = db.create_tables().unwrap();
-
         PlayerWallet {
-//            xpubkey,
             seed,
             network,
             wallet: Wallet::new(
                 &external_descriptor,
                 Some(&internal_descriptor),
                 network,
-                MemoryDatabase::default(),
+                AnyDatabase::Sled(wallet_db),
                 ElectrumBlockchain::from(electrum_client)
             ).unwrap(),
             db,

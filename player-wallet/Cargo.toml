@@ -16,6 +16,6 @@ shell-words= "1.0"
 rusqlite = { version = "0.20", features = ["bundled"] }
 reqwest = { version = "0.10", features = ["blocking", "json"] }
 tokio = { version = "0.2", features = ["full"] }
-
+sled = "0.34.6"
 [dev-dependencies]
 bitcoincore-rpc = "0.12.0"

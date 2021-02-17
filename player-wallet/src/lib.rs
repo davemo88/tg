@@ -1,3 +1,5 @@
+pub use sled;
+
 pub mod arbiter;
 pub mod db;
 pub mod player;

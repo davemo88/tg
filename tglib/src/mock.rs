@@ -23,6 +23,8 @@ pub use crate::{
 };
 
 pub const DB_NAME: &'static str = "dev-app.db";
+pub const WALLET_DB_NAME: &'static str = "dev-wallet";
+pub const WALLET_TREE_NAME: &'static str = "wallet";
 pub const SEED_NAME: &'static str = "dev-seed.json";
 pub const NETWORK: Network = Network::Regtest;
 pub const ELECTRS_SERVER: &'static str = "tcp://electrs:60401";

@@ -25,9 +25,12 @@ use tglib::{
         DB_NAME,
         NETWORK,
         SEED_NAME,
+        WALLET_DB_NAME,
+        WALLET_TREE_NAME,
     },
 };
 use player_wallet::{
+    sled,
     arbiter::ArbiterClient,
     db::DB,
     player::PlayerNameClient,
@@ -135,6 +138,10 @@ pub fn cli(line: String, conf: Conf) -> String {
                 }
             };
 
+            let mut wallet_db_path = wallet_path.clone();  
+            wallet_db_path.push(WALLET_DB_NAME);
+            let wallet_db = sled::open(wallet_db_path).unwrap().open_tree(WALLET_TREE_NAME).unwrap();
+
             let mut db_path = wallet_path.clone();
             db_path.push(DB_NAME);
             let db = DB::new(&db_path).unwrap();
@@ -147,7 +154,7 @@ pub fn cli(line: String, conf: Conf) -> String {
             let name_client = PlayerNameClient::new(&conf.name_url);
             let arbiter_client = ArbiterClient::new(&conf.arbiter_url);
 
-            let wallet = PlayerWallet::new(seed, db, NETWORK, electrum_client, name_client, arbiter_client);
+            let wallet = PlayerWallet::new(seed, wallet_db, db, NETWORK, electrum_client, name_client, arbiter_client);
             match c {
                 "balance" => format!("{}", wallet.balance()),
                 "deposit" => format!("{}", wallet.deposit()),
