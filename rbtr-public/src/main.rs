@@ -182,10 +182,9 @@ async fn receive_contract_handler(player_name: String, redis_client: redis::Clie
     let mut con = redis_client.get_async_connection().await.unwrap();
     let r: RedisResult<String> = con.lpop(&format!("{}/contracts", player_name)).await;
     match r {
-        Ok(contract_hex) => Ok(contract_hex),
-        Err(_) => Ok(String::default()),
+        Ok(contract_json) => Ok(contract_json),
+        Err(_) => Err(warp::reject()),
     }
-
 }
 
 async fn send_payout_handler(body: SendPayoutBody, redis_client: redis::Client) -> WebResult<impl Reply> {
@@ -202,10 +201,9 @@ async fn receive_payout_handler(player_name: String, redis_client: redis::Client
     let mut con = redis_client.get_async_connection().await.unwrap();
     let r: RedisResult<String> = con.lpop(&format!("{}/payouts", player_name)).await;
     match r {
-        Ok(payout_hex) => Ok(payout_hex),
-        Err(_) => Ok(String::default()),
+        Ok(payout_json) => Ok(payout_json),
+        Err(_) => Err(warp::reject()),
     }
-
 }
 
 async fn submit_contract_handler(contract: Contract, redis_client: redis::Client) -> WebResult<impl Reply> {
