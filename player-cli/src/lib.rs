@@ -415,7 +415,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
             "list" => if a.is_present("json-output") {
                     serde_json::to_string(&DocumentUI::<ContractRecord>::list(wallet)).unwrap()
                 } else {
-                    DocumentUI::<ContractRecord>::list(wallet).iter().fold(String::default(),|acc, c| acc + &format!("{:?}", c))
+                    DocumentUI::<ContractRecord>::list(wallet).iter().map(|cr| format!("{:?}", cr)).collect::<Vec<String>>().join("\n")
                 }
             _ => {
                 format!("command '{}' is not implemented", c)
@@ -560,7 +560,11 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 Ok(()) => format!("payout deleted"),
                 Err(e) => format!("{}", e),
             }
-            "list" => DocumentUI::<PayoutRecord>::list(wallet).iter().fold(String::default(), |acc, p| acc + &format!("{:?}", p)),
+            "list" => if a.is_present("json-output") {
+                    serde_json::to_string(&DocumentUI::<PayoutRecord>::list(wallet)).unwrap()
+                } else {
+                    DocumentUI::<PayoutRecord>::list(wallet).iter().map(|pr| format!("{:?}", pr)).collect::<Vec<String>>().join("\n")
+                }
             _ => format!("command '{}' is not implemented", c)
         }            
     }
