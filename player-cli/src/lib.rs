@@ -247,12 +247,12 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
             "list" => if a.is_present("json-output") {
                     serde_json::to_string(&PlayerUI::list(wallet)).unwrap()
                 } else {
-                    PlayerUI::list(wallet).iter().fold(String::default(), |acc, p| acc + &format!("{}\n", p.name.0) )
+                    PlayerUI::list(wallet).iter().map(|pr| pr.name.clone().0 ).collect::<Vec<String>>().join("\n")//.fold(String::default(), |acc, p| acc + &format!("{}", p.name.0) )
                 }
             "mine" => if a.is_present("json-output") {
                     serde_json::to_string(&wallet.mine()).unwrap()
                 } else {
-                    wallet.mine().iter().fold(String::default(), |acc, p| acc + &format!("{}", p.0) )
+                    wallet.mine().iter().map(|p| p.clone().0).collect::<Vec<String>>().join("\n")//.fold(String::default(), |acc, p| acc + &format!("{}", p.0) )
                 },
             "post" => match wallet.post(PlayerName(a.value_of("name").unwrap().to_string()), Amount::from_sat(a.value_of("amount").unwrap().parse::<u64>().unwrap()), Secret::new(a.value_of("passphrase").unwrap().to_owned())) {
                 Ok(_) => format!("posted contract info"),
