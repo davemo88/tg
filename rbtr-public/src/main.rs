@@ -46,15 +46,18 @@ use tglib::{
         electrum_client::Client,
     },
     hex,
+    rand::{self, Rng},
     Result,
     TgError,
     arbiter::{
+        AuthTokenSig,
         SendContractBody,
         SendPayoutBody,
         SetContractInfoBody,
     },
     contract::Contract,
     payout::Payout,
+    player::PlayerName,
     wallet::{
         get_namecoin_address,
         EscrowWallet,
@@ -72,6 +75,7 @@ use wallet::Wallet;
 
 const BITCOIN_RPC_URL: &'static str = "http://electrs:18443";
 const NAME_SERVICE_URL: &'static str = "http://nmc-id:18420";
+const AUTH_TOKEN_LIFETIME: usize = 30;
 type WebResult<T> = std::result::Result<T, Rejection>;
 
 fn wallet() -> Wallet<ElectrumBlockchain, MemoryDatabase> {
@@ -103,6 +107,31 @@ async fn push_payout(con: &mut Connection, hex: &str) -> RedisResult<String> {
     Ok(String::from(hex))
 }
 
+async fn controls_name(pubkey: &PublicKey, player_name: &PlayerName) -> Result<bool> {
+    match reqwest::get(&format!("{}/{}/{}", NAME_SERVICE_URL, "get-name-address", hex::encode(player_name.0.as_bytes()))).await {
+        Ok(response) => match response.text().await {
+            Ok(name_address) => Ok(get_namecoin_address(pubkey, NETWORK).unwrap() == name_address), 
+            Err(e) => Err(TgError(format!("{:?}", e))),
+        },
+        Err(e) => Err(TgError(format!("{:?}", e))),
+    }
+}
+
+async fn check_auth_token_sig(player_name: String, auth: AuthTokenSig, con: &mut Connection) -> Result<bool> {
+    match controls_name(&auth.pubkey, &PlayerName(player_name.clone())).await {
+        Ok(true) => (),
+        _ => return Ok(false),
+    }
+    let sig = Signature::from_compact(&hex::decode(&auth.sig_hex).unwrap()).unwrap();
+    let r: RedisResult<String> = con.get(format!("{}/token", player_name)).await;
+    let token = match r {
+        Ok(token) => token,
+        Err(_) => return Ok(false),
+    };
+    let secp = Secp256k1::new();
+    Ok(secp.verify(&Message::from_slice(&hex::decode(token).unwrap()).unwrap(), &sig, &auth.pubkey.key).is_ok())
+}
+
 async fn submit_contract(con: &mut Connection, contract: &Contract) -> Result<Signature> {
     if wallet().validate_contract(&contract).is_ok() {
         let cxid = push_contract(con, &hex::encode(contract.to_bytes())).await.unwrap();
@@ -120,7 +149,6 @@ async fn submit_contract(con: &mut Connection, contract: &Contract) -> Result<Si
 
 async fn submit_payout(con: &mut Connection, payout: &Payout) -> Result<PartiallySignedTransaction> {
     if wallet().validate_payout(&payout).is_ok() {
-        println!("rbtr-public validated payout");
         let _r = push_payout(con, &hex::encode(payout.to_bytes())).await.unwrap();
         let cxid = hex::encode(payout.contract.cxid());
         for _ in 1..15 as u32 {
@@ -136,13 +164,9 @@ async fn submit_payout(con: &mut Connection, payout: &Payout) -> Result<Partiall
 }
 
 async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redis::Client) -> WebResult<impl Reply> {
-// make sure pubkey controls the name
-    match reqwest::get(&format!("{}/{}/{}", NAME_SERVICE_URL, "get-name-address", hex::encode(body.contract_info.name.0.as_bytes()))).await {
-        Ok(response) => match response.text().await {
-            Ok(name_address) => if get_namecoin_address(&body.pubkey, NETWORK).unwrap()!= name_address { println!("mismatched name address: {:?} vs {:?}", get_namecoin_address(&body.pubkey, NETWORK).unwrap(), name_address); return Err(warp::reject()) },
-            Err(e) => { println!("{:?}", e); return Err(warp::reject()) },
-        },
-        Err(e) => { println!("{:?}", e); return Err(warp::reject()) },
+    match controls_name(&body.pubkey, &body.contract_info.name).await {
+        Ok(true) => (),
+        _ => return Err(warp::reject()),
     }
  
     let secp = Secp256k1::new();
@@ -177,9 +201,12 @@ async fn send_contract_handler(body: SendContractBody, redis_client: redis::Clie
     }
 }
 
-async fn receive_contract_handler(player_name: String, redis_client: redis::Client) -> WebResult<impl Reply> {
-// TODO: protect this endpoint with name auth
+async fn receive_contract_handler(player_name: String, auth: AuthTokenSig, redis_client: redis::Client) -> WebResult<impl Reply> {
     let mut con = redis_client.get_async_connection().await.unwrap();
+    match check_auth_token_sig(player_name.clone(), auth, &mut con).await {
+        Ok(true) => (),
+        _ => return Err(warp::reject()),
+    }
     let r: RedisResult<String> = con.lpop(&format!("{}/contracts", player_name)).await;
     match r {
         Ok(contract_json) => Ok(contract_json),
@@ -196,9 +223,13 @@ async fn send_payout_handler(body: SendPayoutBody, redis_client: redis::Client) 
     }
 }
 
-async fn receive_payout_handler(player_name: String, redis_client: redis::Client) -> WebResult<impl Reply> {
-// TODO: protect this endpoint with name auth
+async fn receive_payout_handler(player_name: String, auth: AuthTokenSig, redis_client: redis::Client) -> WebResult<impl Reply> {
     let mut con = redis_client.get_async_connection().await.unwrap();
+    match check_auth_token_sig(player_name.clone(), auth, &mut con).await {
+        Ok(true) => (),
+        _ => return Err(warp::reject()),
+    }
+
     let r: RedisResult<String> = con.lpop(&format!("{}/payouts", player_name)).await;
     match r {
         Ok(payout_json) => Ok(payout_json),
@@ -232,6 +263,16 @@ async fn fund_address_handler(address: String) -> WebResult<impl Reply> {
     let txid = bitcoin_rpc_client.send_to_address(&address, Amount::ONE_BTC, None, None, None, None, None, None).unwrap();
     let _blockhashes = bitcoin_rpc_client.generate_to_address(150, &coinbase_addr).unwrap();
     Ok(txid.to_hex())
+}
+
+async fn auth_token_handler(player_name: String, redis_client: redis::Client) -> WebResult<impl Reply> {
+    let token = hex::encode(rand::thread_rng().gen::<[u8; 32]>().to_vec());
+    let mut con = redis_client.get_async_connection().await.unwrap();
+    let r: RedisResult<String> = con.set_ex(format!("{}/token", player_name), token.clone(), AUTH_TOKEN_LIFETIME).await;
+    match r {
+        Ok(_) => Ok(token),
+        Err(_) => Err(warp::reject()),
+    }
 }
 
 fn redis_client() -> redis::Client {
@@ -279,7 +320,9 @@ async fn main() {
         .and_then(send_contract_handler);
 
     let receive_contract = warp::path("receive-contract")
+        .and(warp::post())
         .and(warp::path::param::<String>())
+        .and(warp::body::json())
         .and(redis_client.clone())
         .and_then(receive_contract_handler);
 
@@ -290,7 +333,9 @@ async fn main() {
         .and_then(send_payout_handler);
 
     let receive_payout = warp::path("receive-payout")
+        .and(warp::post())
         .and(warp::path::param::<String>())
+        .and(warp::body::json())
         .and(redis_client.clone())
         .and_then(receive_payout_handler);
 
@@ -311,6 +356,11 @@ async fn main() {
         .and(warp::path::param::<String>())
         .and_then(fund_address_handler);
 
+    let auth_token = warp::path("auth-token")
+        .and(warp::path::param::<String>())
+        .and(redis_client.clone())
+        .and_then(auth_token_handler);
+
     let routes = get_escrow_pubkey
         .or(get_fee_address)
         .or(set_contract_info)
@@ -321,7 +371,8 @@ async fn main() {
         .or(receive_payout)
         .or(submit_contract)
         .or(submit_payout)
-        .or(fund_address);
+        .or(fund_address)
+        .or(auth_token);
 
     warp::serve(routes).run(([0, 0, 0, 0], 5000)).await;
 }

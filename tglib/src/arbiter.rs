@@ -56,3 +56,9 @@ pub struct SendPayoutBody {
     pub payout: PayoutRecord,
     pub player_name: PlayerName,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AuthTokenSig {
+    pub pubkey: PublicKey,
+    pub sig_hex: String,
+}
