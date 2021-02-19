@@ -97,6 +97,7 @@ fn get_fee_address() -> Result<Address> {
     Ok(Address::p2wpkh(&a.public_key, w.network).unwrap())
 }
 
+// TODO: more functions like these for the other redis ops
 async fn push_contract(con: &mut Connection, hex: &str) -> RedisResult<String> {
     con.rpush("contracts", hex).await?;
     Ok(String::from(hex))
@@ -122,13 +123,13 @@ async fn check_auth_token_sig(player_name: String, auth: AuthTokenSig, con: &mut
         Ok(true) => (),
         _ => return Ok(false),
     }
+    let secp = Secp256k1::new();
     let sig = Signature::from_compact(&hex::decode(&auth.sig_hex).unwrap()).unwrap();
     let r: RedisResult<String> = con.get(format!("{}/token", player_name)).await;
     let token = match r {
         Ok(token) => token,
         Err(_) => return Ok(false),
     };
-    let secp = Secp256k1::new();
     Ok(secp.verify(&Message::from_slice(&hex::decode(token).unwrap()).unwrap(), &sig, &auth.pubkey.key).is_ok())
 }
 
