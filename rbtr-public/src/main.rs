@@ -269,6 +269,7 @@ async fn fund_address_handler(address: String) -> WebResult<impl Reply> {
 async fn auth_token_handler(player_name: String, redis_client: redis::Client) -> WebResult<impl Reply> {
     let token = hex::encode(rand::thread_rng().gen::<[u8; 32]>().to_vec());
     let mut con = redis_client.get_async_connection().await.unwrap();
+// TODO: should we delete the token after it gets used or let them use it until it expires?
     let r: RedisResult<String> = con.set_ex(format!("{}/token", player_name), token.clone(), AUTH_TOKEN_LIFETIME).await;
     match r {
         Ok(_) => Ok(token),
