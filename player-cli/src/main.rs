@@ -34,6 +34,7 @@ fn main() -> Result<(), Error> {
                     name_url: "http://localhost:18420".into(),
                     arbiter_url: "http://localhost:5000".into(),
                 };
+                rl.add_history_entry(line.clone());
                 println!("{}", libcli::cli(line, conf));
             }
             Err(ReadlineError::Interrupted) => {

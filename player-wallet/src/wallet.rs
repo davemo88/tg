@@ -1,4 +1,8 @@
-use std::str::FromStr;
+use std::{
+    str::FromStr,
+    path::PathBuf,
+    fs::File,
+};
 use sled;
 use tglib::{
     bdk::{
@@ -26,7 +30,7 @@ use tglib::{
             ElectrumBlockchain,
         },
         database::AnyDatabase,
-        electrum_client::Client,
+        electrum_client::Client as ElectrumClient,
         signer::Signer,
         Wallet,
     },
@@ -54,9 +58,12 @@ use tglib::{
     },
     mock::{
         ARBITER_PUBLIC_URL,
+        DB_NAME,
         ESCROW_SUBACCOUNT,
         ESCROW_KIX,
-        NETWORK,
+        SEED_NAME,
+        WALLET_DB_NAME,
+        WALLET_TREE_NAME,
     },
 };
 use crate::{
@@ -67,44 +74,113 @@ use crate::{
 };
 
 pub struct PlayerWallet {
-//    xpubkey: ExtendedPubKey,
-    seed: SavedSeed,
+//    seed: SavedSeed,
+    wallet_dir: PathBuf,
     network: Network,
-// TODO: allow for offline wallet
-    pub wallet: Wallet<ElectrumBlockchain, AnyDatabase>,
-    pub db: DB,
-    pub name_client: PlayerNameClient,
-    pub arbiter_client: ArbiterClient,
+//    pub db: DB,
+    pub electrum_url: String,
+    pub name_url: String,
+    pub arbiter_url: String,
 }
 
 impl PlayerWallet {
-    pub fn new(seed: SavedSeed, wallet_db: sled::Tree, db: DB, network: Network, electrum_client: Client, name_client: PlayerNameClient, arbiter_client: ArbiterClient) ->  Self {
-        let descriptor_key = format!("[{}/{}]{}", seed.fingerprint, BITCOIN_ACCOUNT_PATH, seed.xpubkey);
-        let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
-        let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
+//    pub fn new(seed: SavedSeed, wallet_db: sled::Tree, db: DB, network: Network, electrum_client: ElectrumClient, name_client: PlayerNameClient, arbiter_client: ArbiterClient) ->  Self {
+    pub fn new(wallet_dir: PathBuf, network: Network, electrum_url: String, name_url: String, arbiter_url: String) ->  Self {
+//        let descriptor_key = format!("[{}/{}]{}", seed.fingerprint, BITCOIN_ACCOUNT_PATH, seed.xpubkey);
+//        let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
+//        let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
         PlayerWallet {
-            seed,
+//            seed,
+//            network,
+//            wallet: Wallet::new(
+//                &external_descriptor,
+//                Some(&internal_descriptor),
+//                network,
+//                AnyDatabase::Sled(wallet_db),
+//                ElectrumBlockchain::from(electrum_client)
+//            ).unwrap(),
+            wallet_dir,
             network,
-            wallet: Wallet::new(
-                &external_descriptor,
-                Some(&internal_descriptor),
-                network,
-                AnyDatabase::Sled(wallet_db),
-                ElectrumBlockchain::from(electrum_client)
-            ).unwrap(),
-            db,
-            name_client,
-            arbiter_client,
+            electrum_url,
+            name_url,
+            arbiter_url,
         }
     }
 
+    fn saved_seed(&self) -> TgResult<SavedSeed> {
+        let mut seed_path = self.wallet_dir.clone();
+        seed_path.push(SEED_NAME);
+        match File::open(&seed_path) {
+            Ok(reader) => Ok(serde_json::from_reader(reader).unwrap()),
+            Err(e) => Err(TgError(format!("{:?}", e))),
+        }
+    }
+
+    pub fn wallet(&self) -> Wallet<ElectrumBlockchain, AnyDatabase> {
+        let saved_seed = self.saved_seed().unwrap();
+        let descriptor_key = format!("[{}/{}]{}", saved_seed.fingerprint, BITCOIN_ACCOUNT_PATH, saved_seed.xpubkey);
+
+        Wallet::new(
+            &self.external_descriptor(&descriptor_key),
+            Some(&self.internal_descriptor(&descriptor_key)),
+            self.network,
+            AnyDatabase::Sled(self.wallet_db()),
+            ElectrumBlockchain::from(ElectrumClient::new(&self.electrum_url).unwrap())
+        ).unwrap()
+    }
+
+    fn signing_wallet(&self, pw: Secret<String>) -> Wallet<ElectrumBlockchain, AnyDatabase> {
+        let saved_seed = self.saved_seed().unwrap();
+        let seed = saved_seed.get_seed(pw).unwrap();
+        let account_key = derive_account_xprivkey(seed, self.network);
+        let descriptor_key = format!("[{}/{}]{}", saved_seed.fingerprint, BITCOIN_ACCOUNT_PATH, account_key);
+
+        Wallet::new(
+            &self.external_descriptor(&descriptor_key),
+            Some(&self.internal_descriptor(&descriptor_key)),
+            self.network,
+            AnyDatabase::Sled(self.wallet_db()),
+            ElectrumBlockchain::from(ElectrumClient::new(&self.electrum_url).unwrap())
+        ).unwrap()
+    }
+
+    fn wallet_db(&self) -> sled::Tree {
+        let mut wallet_db_path = self.wallet_dir.clone();  
+        wallet_db_path.push(WALLET_DB_NAME);
+        sled::open(wallet_db_path).unwrap().open_tree(WALLET_TREE_NAME).unwrap()
+    }
+
+    fn external_descriptor(&self, descriptor_key: &str) -> String {
+        format!("wpkh({}/0/*)", descriptor_key)
+    }
+
+    fn internal_descriptor(&self, descriptor_key: &str) -> String {
+        format!("wpkh({}/1/*)", descriptor_key)
+    }
+
+    pub fn name_client(&self) -> PlayerNameClient {
+        PlayerNameClient::new(&self.name_url)
+    }
+
+    pub fn arbiter_client(&self) -> ArbiterClient {
+        ArbiterClient::new(&self.arbiter_url)
+    }
+
+    pub fn db(&self) -> DB {
+        let mut db_path = self.wallet_dir.clone();
+        db_path.push(DB_NAME);
+        let db = DB::new(&db_path).unwrap();
+        let _r = db.create_tables().unwrap();
+        db
+    }
+
     pub fn balance(&self) -> Amount {
-        self.wallet.sync(noop_progress(), None).unwrap();
-        Amount::from_sat(self.wallet.get_balance().unwrap())
+        self.wallet().sync(noop_progress(), None).unwrap();
+        Amount::from_sat(self.wallet().get_balance().unwrap())
     }
 
     pub fn new_address(&self) -> Address {
-        self.wallet.get_new_address().unwrap()
+        self.wallet().get_new_address().unwrap()
     }
 
     pub fn create_contract(&self, p2_contract_info: PlayerContractInfo, amount: Amount, arbiter_pubkey: PublicKey ) -> Contract {
@@ -145,8 +221,8 @@ impl PlayerWallet {
         }
         assert!(total > sats_per_player);
         let p2_change = total - sats_per_player;
-        assert!(self.wallet.sync(noop_progress(), None).is_ok());
-        for utxo in self.wallet.list_unspent().unwrap() {
+        assert!(self.wallet().sync(noop_progress(), None).is_ok());
+        for utxo in self.wallet().list_unspent().unwrap() {
             if total > 2 * sats_per_player + p2_change {
                 break
             }
@@ -209,7 +285,7 @@ impl NameWallet for PlayerWallet {
     fn name_pubkey(&self) -> PublicKey {
         let secp = Secp256k1::new();
         let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX))).unwrap();
-        let pubkey = self.seed.xpubkey.derive_pub(&secp, &path).unwrap();
+        let pubkey = self.saved_seed().unwrap().xpubkey.derive_pub(&secp, &path).unwrap();
         pubkey.public_key
     }
 }
@@ -218,7 +294,7 @@ impl EscrowWallet for PlayerWallet {
     fn get_escrow_pubkey(&self) -> PublicKey {
         let secp = Secp256k1::new();
         let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
-        let escrow_pubkey = self.seed.xpubkey.derive_pub(&secp, &path).unwrap();
+        let escrow_pubkey = self.saved_seed().unwrap().xpubkey.derive_pub(&secp, &path).unwrap();
         escrow_pubkey.public_key
     }
 
@@ -238,37 +314,42 @@ impl EscrowWallet for PlayerWallet {
 
 impl SigningWallet for PlayerWallet {
 
-    fn sign_tx(&self, psbt: PartiallySignedTransaction, _kdp: String, pw: Secret<String>) -> TgResult<PartiallySignedTransaction> {
-        let seed = match self.seed.get_seed(pw) {
+    fn sign_tx(&self, psbt: PartiallySignedTransaction, path: Option<DerivationPath>, pw: Secret<String>) -> TgResult<PartiallySignedTransaction> {
+        let seed = match self.saved_seed().unwrap().get_seed(pw.clone()) {
             Ok(seed) => seed,
             Err(e) => return Err(TgError(format!("{:?}", e))),
         };
-        let secp = Secp256k1::new();
-        let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
-// TODO: decrypt seed with pw
-        let account_key = derive_account_xprivkey(seed, NETWORK);
-        let escrow_key = account_key.derive_priv(&secp, &path).unwrap();
-        let mut maybe_signed = psbt.clone();
-//        println!("psbt to sign: {:?}", psbt);
-//        match Signer::sign(&escrow_key.private_key, &mut maybe_signed, Some(0)) {
-        match Signer::sign(&escrow_key.private_key, &mut maybe_signed, Some(0), &secp) {
-            Ok(()) => {
-                Ok(maybe_signed)
+        let account_key = derive_account_xprivkey(seed, self.network);
+        match path {
+            Some(path) => {
+                let secp = Secp256k1::new();
+                let signing_key = account_key.derive_priv(&secp, &path).unwrap();
+                let mut maybe_signed = psbt.clone();
+//                println!("psbt to sign: {:?}", psbt);
+                match Signer::sign(&signing_key.private_key, &mut maybe_signed, None, &secp) {
+                    Ok(()) => {
+                        Ok(maybe_signed)
+                    }
+                    Err(e) => {
+                        println!("err: {:?}", e);
+                        Err(TgError("cannot sign transaction".to_string()))
+                    }
+                }
             }
-            Err(e) => {
-                println!("err: {:?}", e);
-                Err(TgError("cannot sign transaction".to_string()))
-            }
+            None => {
+                let signing_wallet = self.signing_wallet(pw);
+                let (psbt, _b) = signing_wallet.sign(psbt.clone(),None).unwrap();
+                Ok(psbt)
+            },
         }
     }
 
     fn sign_message(&self, msg: Message, path: DerivationPath, pw: Secret<String>) -> TgResult<Signature> {
-// TODO: should use Secret here
-        let seed = match self.seed.get_seed(pw) {
+        let seed = match self.saved_seed().unwrap().get_seed(pw) {
             Ok(seed) => seed,
             Err(e) => return Err(TgError(format!("{:?}", e))),
         };
-        let account_key = derive_account_xprivkey(seed, NETWORK);
+        let account_key = derive_account_xprivkey(seed, self.network);
         let secp = Secp256k1::new();
         let signing_key = account_key.derive_priv(&secp, &path).unwrap();
         Ok(secp.sign(&msg, &signing_key.private_key.key))

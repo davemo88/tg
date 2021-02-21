@@ -9,7 +9,6 @@ use serde_json;
 use shell_words;
 use tglib::{
     bdk::{
-        electrum_client::Client,
         bitcoin::{
             Amount,
             secp256k1::Signature,
@@ -26,18 +25,11 @@ use tglib::{
     player::PlayerName,
     wallet::SavedSeed,
     mock::{
-        DB_NAME,
         NETWORK,
         SEED_NAME,
-        WALLET_DB_NAME,
-        WALLET_TREE_NAME,
     },
 };
 use player_wallet::{
-    sled,
-    arbiter::ArbiterClient,
-    db::DB,
-    player::PlayerNameClient,
     ui::{
         DocumentUI,
         NewDocumentParams,
@@ -87,12 +79,12 @@ fn player_cli<'a, 'b>() -> App<'a, 'b> {
             .required(false)
             .takes_value(false)
             .long("json-output"))
-        .arg(Arg::with_name("wallet-path")
+        .arg(Arg::with_name("wallet-dir")
             .help("specify path to wallet")
             .required(false)
             .global(true)
             .takes_value(true)
-            .long("wallet-path"))
+            .long("wallet-dir"))
 }
 
 pub struct Conf {
@@ -110,14 +102,14 @@ pub fn cli(line: String, conf: Conf) -> String {
     if matches.is_ok() {
         if let (c, Some(a)) = matches.unwrap().subcommand() {
 
-            let wallet_path = match a.value_of("wallet-path") {
+            let wallet_dir = match a.value_of("wallet-dir") {
                 Some(p) => PathBuf::from(p),
                 None => current_dir().unwrap(),
             };
 
-            let mut seed_path = wallet_path.clone();
+            let mut seed_path = wallet_dir.clone();
             seed_path.push(SEED_NAME);
-            let seed = match File::open(&seed_path) {
+            match File::open(&seed_path) {
                 Ok(reader) => match c {
                     "init" => return format!("cannot init, seed already exists"),
                     _ => serde_json::from_reader(reader).unwrap(),
@@ -142,23 +134,7 @@ pub fn cli(line: String, conf: Conf) -> String {
                 }
             };
 
-            let mut wallet_db_path = wallet_path.clone();  
-            wallet_db_path.push(WALLET_DB_NAME);
-            let wallet_db = sled::open(wallet_db_path).unwrap().open_tree(WALLET_TREE_NAME).unwrap();
-
-            let mut db_path = wallet_path.clone();
-            db_path.push(DB_NAME);
-            let db = DB::new(&db_path).unwrap();
-            let _r = db.create_tables().unwrap();
-
-            let electrum_client = match Client::new(&conf.electrum_url) {
-                Ok(c) => c,
-                Err(e) => return format!("{:?}", e)
-            };
-            let name_client = PlayerNameClient::new(&conf.name_url);
-            let arbiter_client = ArbiterClient::new(&conf.arbiter_url);
-
-            let wallet = PlayerWallet::new(seed, wallet_db, db, NETWORK, electrum_client, name_client, arbiter_client);
+            let wallet = PlayerWallet::new(wallet_dir, NETWORK, conf.electrum_url, conf.name_url, conf.arbiter_url);
             match c {
                 "balance" => format!("{}", wallet.balance()),
                 "deposit" => format!("{}", wallet.deposit()),
@@ -258,7 +234,7 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 Ok(_) => format!("posted contract info"),
                 Err(e) => format!("{}", e),
             }
-            "posted" => match wallet.arbiter_client.get_contract_info(PlayerName(a.value_of("name").unwrap().to_string())) {
+            "posted" => match wallet.arbiter_client().get_contract_info(PlayerName(a.value_of("name").unwrap().to_string())) {
                 Some(info) => format!("{} has posted {} worth of utxos", info.name.0, info.utxos.iter().map(|utxo| utxo.txout.value).sum::<u64>()),
                 None => format!("no info posted"),
             }
@@ -397,7 +373,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                         sign_funding_tx: a.value_of("sign-funding-tx").is_some(),
                     },
                     Secret::new(a.value_of("passphrase").unwrap().to_owned())) {
-                Ok(()) => format!("contract created"),
+                Ok(()) => format!("contract signed"),
                 Err(e) => format!("{}", e),
             }
             "submit" => match DocumentUI::<ContractRecord>::submit(wallet, a.value_of("cxid").unwrap()) {

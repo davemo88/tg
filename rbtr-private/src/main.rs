@@ -19,7 +19,7 @@ use tglib::{
     payout::Payout,
     wallet::{
         sign_contract,
-        sign_payout,
+        sign_payout_psbt,
         EscrowWallet,
     },
     mock::REDIS_SERVER,
@@ -56,10 +56,10 @@ async fn set_contract_signature(con: &mut Connection, contract: Contract, sig: S
 }
 
 async fn maybe_sign_payout(con: &mut Connection, wallet: &Wallet) {
-    if let Some(mut payout) = next_payout(con).await {
+    if let Some(payout) = next_payout(con).await {
         println!("retrieved payout:\n{:?}", payout);
         if wallet.validate_payout(&payout).is_ok() {
-            if let Ok(psbt) = sign_payout(wallet, &mut payout, Secret::new(ARBITER_PW.to_owned())) {
+            if let Ok(psbt) = sign_payout_psbt(wallet, payout.psbt.clone(), Secret::new(ARBITER_PW.to_owned())) {
                 println!("signed transaction for payout for contract {}", hex::encode(payout.contract.cxid()));
                 let _r = set_payout_psbt(con, payout, psbt).await;
             }
