@@ -109,7 +109,7 @@ pub fn cli(line: String, conf: Conf) -> String {
 
             let mut seed_path = wallet_dir.clone();
             seed_path.push(SEED_NAME);
-            match File::open(&seed_path) {
+            let _saved_seed: SavedSeed = match File::open(&seed_path) {
                 Ok(reader) => match c {
                     "init" => return format!("cannot init, seed already exists"),
                     _ => serde_json::from_reader(reader).unwrap(),
@@ -125,7 +125,10 @@ pub fn cli(line: String, conf: Conf) -> String {
                             Err(e) => return format!("{:?}", e),
                         };
                         match File::create(&seed_path) {
-                            Ok(mut writer) => writer.write_all(serde_json::to_string(&new_seed).unwrap().as_bytes()).unwrap(),
+                            Ok(mut writer) => {
+                                writer.write_all(serde_json::to_string(&new_seed).unwrap().as_bytes()).unwrap();
+                            },
+//                            Ok(mut writer) => writer.write_all(serde_json::to_string(&new_seed).unwrap().as_bytes()).unwrap(),
                             Err(e) => return format!("{:?}", e),
                         };
                         return format!("wallet initialized")
@@ -370,7 +373,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                     wallet,
                     SignDocumentParams::SignContractParams {
                         cxid: a.value_of("cxid").unwrap().to_string(),
-                        sign_funding_tx: a.value_of("sign-funding-tx").is_some(),
+                        sign_funding_tx: a.is_present("sign-funding-tx"),
                     },
                     Secret::new(a.value_of("passphrase").unwrap().to_owned())) {
                 Ok(()) => format!("contract signed"),

@@ -40,6 +40,7 @@ use tglib::{
     wallet::{
         create_payout,
         sign_contract,
+        sign_payout_psbt,
         EscrowWallet,
         NameWallet,
         SigningWallet,
@@ -292,7 +293,6 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
             }
             let _r = self.db().add_signature(contract_record.cxid, hex::encode(contract.to_bytes()));
             Ok(())
-
         } else {
             Err(TgError("unknown contract".to_string()))
         }
@@ -406,7 +406,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
         };
         if let Some(pr) = self.db().get_payout(&cxid) {
             let psbt: PartiallySignedTransaction = consensus::deserialize(&hex::decode(pr.psbt).unwrap()).unwrap();
-            let psbt = self.sign_tx(psbt, None, pw).unwrap();
+            let psbt = sign_payout_psbt(self, psbt, pw).unwrap();
             let psbt = hex::encode(consensus::serialize(&psbt));
             self.db().insert_payout(PayoutRecord {
                 cxid: pr.cxid, 

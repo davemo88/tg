@@ -74,31 +74,16 @@ use crate::{
 };
 
 pub struct PlayerWallet {
-//    seed: SavedSeed,
     wallet_dir: PathBuf,
     network: Network,
-//    pub db: DB,
     pub electrum_url: String,
     pub name_url: String,
     pub arbiter_url: String,
 }
 
 impl PlayerWallet {
-//    pub fn new(seed: SavedSeed, wallet_db: sled::Tree, db: DB, network: Network, electrum_client: ElectrumClient, name_client: PlayerNameClient, arbiter_client: ArbiterClient) ->  Self {
     pub fn new(wallet_dir: PathBuf, network: Network, electrum_url: String, name_url: String, arbiter_url: String) ->  Self {
-//        let descriptor_key = format!("[{}/{}]{}", seed.fingerprint, BITCOIN_ACCOUNT_PATH, seed.xpubkey);
-//        let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
-//        let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
         PlayerWallet {
-//            seed,
-//            network,
-//            wallet: Wallet::new(
-//                &external_descriptor,
-//                Some(&internal_descriptor),
-//                network,
-//                AnyDatabase::Sled(wallet_db),
-//                ElectrumBlockchain::from(electrum_client)
-//            ).unwrap(),
             wallet_dir,
             network,
             electrum_url,
@@ -111,7 +96,16 @@ impl PlayerWallet {
         let mut seed_path = self.wallet_dir.clone();
         seed_path.push(SEED_NAME);
         match File::open(&seed_path) {
-            Ok(reader) => Ok(serde_json::from_reader(reader).unwrap()),
+            Ok(reader) => {
+                let mut seed: SavedSeed = serde_json::from_reader(reader).unwrap();
+// serde json bug ? where regtest keys load as testnet
+// maybe because they have the same string form
+                if seed.xpubkey.network == Network::Testnet 
+                && self.network == Network::Regtest {
+                    seed.xpubkey.network = Network::Regtest;
+                }
+                Ok(seed)
+            },
             Err(e) => Err(TgError(format!("{:?}", e))),
         }
     }
@@ -175,8 +169,9 @@ impl PlayerWallet {
     }
 
     pub fn balance(&self) -> Amount {
-        self.wallet().sync(noop_progress(), None).unwrap();
-        Amount::from_sat(self.wallet().get_balance().unwrap())
+        let wallet = self.wallet();
+        wallet.sync(noop_progress(), None).unwrap();
+        Amount::from_sat(wallet.get_balance().unwrap())
     }
 
     pub fn new_address(&self) -> Address {
@@ -188,18 +183,18 @@ impl PlayerWallet {
         let p1_pubkey = self.get_escrow_pubkey();
         let escrow_address = create_escrow_address(&p1_pubkey, &p2_contract_info.escrow_pubkey, &arbiter_pubkey, self.network).unwrap();
         let funding_tx = self.create_funding_tx(&p2_contract_info, amount, &escrow_address);
-        let payout_script = create_payout_script(&p1_pubkey, &p2_contract_info.escrow_pubkey, &arbiter_pubkey, &funding_tx, self.network);
+        let payout_script = create_payout_script(&p1_pubkey, &p2_contract_info.escrow_pubkey, &arbiter_pubkey, &funding_tx.clone().extract_tx(), self.network);
 
         Contract::new(
             p1_pubkey,
             p2_contract_info.escrow_pubkey,
             arbiter_pubkey,
-            PartiallySignedTransaction::from_unsigned_tx(funding_tx).unwrap(),
+            funding_tx,
             payout_script,
         )
     }
 
-    fn create_funding_tx(&self, p2_contract_info: &PlayerContractInfo, amount: Amount, escrow_address: &Address) -> Transaction {
+    fn create_funding_tx(&self, p2_contract_info: &PlayerContractInfo, amount: Amount, escrow_address: &Address) -> PartiallySignedTransaction {
         let mut input = Vec::new();
         let arbiter_fee = amount.as_sat()/100;
         let sats_per_player = (amount.as_sat() + arbiter_fee)/2;
@@ -221,8 +216,9 @@ impl PlayerWallet {
         }
         assert!(total > sats_per_player);
         let p2_change = total - sats_per_player;
-        assert!(self.wallet().sync(noop_progress(), None).is_ok());
-        for utxo in self.wallet().list_unspent().unwrap() {
+        let wallet = self.wallet();
+        assert!(wallet.sync(noop_progress(), None).is_ok());
+        for utxo in wallet.list_unspent().unwrap() {
             if total > 2 * sats_per_player + p2_change {
                 break
             }
@@ -261,12 +257,15 @@ impl PlayerWallet {
             },
         );
 
-        Transaction {
+        let psbt = PartiallySignedTransaction::from_unsigned_tx(Transaction {
             version: 1,
             lock_time: 0,
             input,
             output,
-        }
+        }).unwrap();
+
+
+        psbt
     }
 
     pub fn get_other_player_name(&self, contract_record: &ContractRecord) -> TgResult<PlayerName> {
@@ -319,9 +318,9 @@ impl SigningWallet for PlayerWallet {
             Ok(seed) => seed,
             Err(e) => return Err(TgError(format!("{:?}", e))),
         };
-        let account_key = derive_account_xprivkey(seed, self.network);
         match path {
             Some(path) => {
+                let account_key = derive_account_xprivkey(seed, self.network);
                 let secp = Secp256k1::new();
                 let signing_key = account_key.derive_priv(&secp, &path).unwrap();
                 let mut maybe_signed = psbt.clone();
@@ -338,8 +337,12 @@ impl SigningWallet for PlayerWallet {
             }
             None => {
                 let signing_wallet = self.signing_wallet(pw);
-                let (psbt, _b) = signing_wallet.sign(psbt.clone(),None).unwrap();
-                Ok(psbt)
+                signing_wallet.sync(noop_progress(), None).unwrap();
+                println!("wallet utxos: {:?}", signing_wallet.list_unspent());
+                let (signed_psbt, _finished) = signing_wallet.sign(psbt.clone(), None).unwrap();
+
+//                assert_ne!(signed_psbt, psbt);
+                Ok(signed_psbt)
             },
         }
     }
