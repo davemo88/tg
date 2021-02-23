@@ -88,14 +88,14 @@ async fn get_player_names_handler(pubkey: String, nmc_rpc: NamecoinRpcClient) ->
         value_encoding: STRING_ENCODING.to_string(),
         min_conf: None,
         max_conf: 99999,
-        prefix: format!("{}", PLAYER_NAME_PREFIX),
+        prefix: PLAYER_NAME_PREFIX.to_string(),
         regexp: "".to_string(),
     };
 
     let players = nmc_rpc.name_scan(None, None, Some(options)).await.unwrap();
     let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
     let namecoin_address = get_namecoin_address(&pubkey, NETWORK).unwrap();
-    let controlled_players: Vec<NameStatus> = players.iter().filter(|p| p.address == namecoin_address).cloned().collect();
+    let controlled_players: Vec<NameStatus> = players.iter().filter(|p| !p.expired && p.address == namecoin_address).cloned().collect();
     Ok(serde_json::to_string::<Vec<String>>(&controlled_players.iter().map(|p| p.name.replace(PLAYER_NAME_PREFIX,"")).collect()).unwrap())
 }
 
