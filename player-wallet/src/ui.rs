@@ -102,11 +102,11 @@ pub enum SignDocumentParams {
 
 impl WalletUI for PlayerWallet {
     fn deposit(&self) -> Address {
-        self.new_address()
+        self.wallet().get_new_address().unwrap()
     }
 
     fn balance(&self) -> Amount {
-        self.balance()
+        Amount::from_sat(self.wallet().get_balance().unwrap())
     }
 
 //    fn withdraw(&self, address: Address, amount: Amount) -> Transaction {
@@ -114,7 +114,7 @@ impl WalletUI for PlayerWallet {
 //    }
 
     fn fund(&self) -> TgResult<Txid> {
-        match self.arbiter_client().fund_address(self.new_address()) {
+        match self.arbiter_client().fund_address(self.wallet().get_new_address().unwrap()) {
             Ok(txid) => Ok(txid),
             Err(e) => Err(TgError(format!("{:?}", e)))
         }
@@ -167,7 +167,8 @@ impl PlayerUI for PlayerWallet {
     fn post(&self, name: PlayerName, amount: Amount, pw: Secret<String>) -> TgResult<()> {
         let mut utxos = vec!();
         let mut total: u64 = 0;
-        for utxo in self.wallet().list_unspent().unwrap() {
+        let wallet = self.wallet();
+        for utxo in wallet.list_unspent().unwrap() {
             if total >= amount.as_sat() {
                 break
             } else {
@@ -181,7 +182,7 @@ impl PlayerUI for PlayerWallet {
         let info = PlayerContractInfo {
             name,
             escrow_pubkey: self.get_escrow_pubkey(),
-            change_address: self.new_address(),
+            change_address: wallet.get_new_address().unwrap(),
             utxos,
         };
 

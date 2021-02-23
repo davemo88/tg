@@ -109,13 +109,15 @@ impl PlayerWallet {
         let saved_seed = self.saved_seed().unwrap();
         let descriptor_key = format!("[{}/{}]{}", saved_seed.fingerprint, BITCOIN_ACCOUNT_PATH, saved_seed.xpubkey);
 
-        Wallet::new(
+        let w = Wallet::new(
             &self.external_descriptor(&descriptor_key),
             Some(&self.internal_descriptor(&descriptor_key)),
             self.network,
             self.wallet_db(),
             ElectrumBlockchain::from(ElectrumClient::new(&self.electrum_url).unwrap())
-        ).unwrap()
+        ).unwrap();
+        w.sync(noop_progress(), None).unwrap();
+        w
     }
 
     fn signing_wallet(&self, pw: Secret<String>) -> Wallet<ElectrumBlockchain, sled::Tree> {
@@ -161,16 +163,6 @@ impl PlayerWallet {
         let db = DB::new(&db_path).unwrap();
         let _r = db.create_tables().unwrap();
         db
-    }
-
-    pub fn balance(&self) -> Amount {
-        let wallet = self.wallet();
-        wallet.sync(noop_progress(), None).unwrap();
-        Amount::from_sat(wallet.get_balance().unwrap())
-    }
-
-    pub fn new_address(&self) -> Address {
-        self.wallet().get_new_address().unwrap()
     }
 
     pub fn create_contract(&self, p2_contract_info: PlayerContractInfo, amount: Amount, arbiter_pubkey: PublicKey ) -> Contract {
@@ -228,7 +220,7 @@ impl PlayerWallet {
             .add_recipient(escrow_address.script_pubkey(), amount.as_sat())
             .add_recipient(fee_address.script_pubkey(), arbiter_fee)
             .add_recipient(p2_contract_info.change_address.script_pubkey(), p2_change)
-            .add_recipient(self.new_address().script_pubkey(), p1_change)
+            .add_recipient(wallet.get_new_address().unwrap().script_pubkey(), p1_change)
             .add_utxos(&utxos).unwrap()
             .manually_selected_only();
 
