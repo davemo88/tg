@@ -360,7 +360,7 @@ pub fn get_namecoin_address(pubkey: &PublicKey, network: Network) -> Result<Stri
             panic!("nice try, sucker");
 //            hash.insert(0,NAMECOIN_VERSION_BYTE);
         },
-        Network::Regtest | Network::Testnet => {
+        Network::Regtest | Network::Testnet | Network::Signet => {
             hash.insert(0,NAMECOIN_TESTNET_VERSION_BYTE);
         }
     }

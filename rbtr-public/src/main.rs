@@ -18,12 +18,15 @@ use bitcoincore_rpc::{
     Auth, 
     Client as RpcClient, 
     RpcApi,
+    bitcoin::{
+        Address as RpcAddress,
+        Amount,
+    },
 };
 use tglib::{
     bdk::{
         bitcoin::{
             Address,
-            Amount,
             PublicKey,
             consensus,
             hashes::hex::ToHex,
@@ -258,7 +261,7 @@ async fn submit_payout_handler(payout: Payout, redis_client: redis::Client) -> W
 }
 
 async fn fund_address_handler(address: String) -> WebResult<impl Reply> { 
-    let address = Address::from_str(&address).unwrap();
+    let address = RpcAddress::from_str(&address).unwrap();
     let bitcoin_rpc_client = RpcClient::new(BITCOIN_RPC_URL.to_string(), Auth::UserPass("admin".to_string(), "passw".to_string())).unwrap();
     let coinbase_addr = bitcoin_rpc_client.get_new_address(None, None).unwrap();
     let txid = bitcoin_rpc_client.send_to_address(&address, Amount::ONE_BTC, None, None, None, None, None, None).unwrap();

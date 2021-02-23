@@ -11,10 +11,6 @@ use tglib::{
             Amount,
             Network,
             PublicKey,
-            Transaction,
-            TxIn,
-            TxOut,
-            Script,
             secp256k1::{
                 Message,
                 Secp256k1,
@@ -29,7 +25,6 @@ use tglib::{
             noop_progress,
             ElectrumBlockchain,
         },
-        database::AnyDatabase,
         electrum_client::Client as ElectrumClient,
         signer::Signer,
         Wallet,
@@ -110,7 +105,7 @@ impl PlayerWallet {
         }
     }
 
-    pub fn wallet(&self) -> Wallet<ElectrumBlockchain, AnyDatabase> {
+    pub fn wallet(&self) -> Wallet<ElectrumBlockchain, sled::Tree> {
         let saved_seed = self.saved_seed().unwrap();
         let descriptor_key = format!("[{}/{}]{}", saved_seed.fingerprint, BITCOIN_ACCOUNT_PATH, saved_seed.xpubkey);
 
@@ -118,12 +113,12 @@ impl PlayerWallet {
             &self.external_descriptor(&descriptor_key),
             Some(&self.internal_descriptor(&descriptor_key)),
             self.network,
-            AnyDatabase::Sled(self.wallet_db()),
+            self.wallet_db(),
             ElectrumBlockchain::from(ElectrumClient::new(&self.electrum_url).unwrap())
         ).unwrap()
     }
 
-    fn signing_wallet(&self, pw: Secret<String>) -> Wallet<ElectrumBlockchain, AnyDatabase> {
+    fn signing_wallet(&self, pw: Secret<String>) -> Wallet<ElectrumBlockchain, sled::Tree> {
         let saved_seed = self.saved_seed().unwrap();
         let seed = saved_seed.get_seed(pw).unwrap();
         let account_key = derive_account_xprivkey(seed, self.network);
@@ -133,7 +128,7 @@ impl PlayerWallet {
             &self.external_descriptor(&descriptor_key),
             Some(&self.internal_descriptor(&descriptor_key)),
             self.network,
-            AnyDatabase::Sled(self.wallet_db()),
+            self.wallet_db(),
             ElectrumBlockchain::from(ElectrumClient::new(&self.electrum_url).unwrap())
         ).unwrap()
     }
@@ -195,7 +190,7 @@ impl PlayerWallet {
     }
 
     fn create_funding_tx(&self, p2_contract_info: &PlayerContractInfo, amount: Amount, escrow_address: &Address) -> PartiallySignedTransaction {
-        let mut input = Vec::new();
+        let mut utxos = Vec::new();
         let arbiter_fee = amount.as_sat()/100;
         let sats_per_player = (amount.as_sat() + arbiter_fee)/2;
         let mut total: u64 = 0;
@@ -206,12 +201,7 @@ impl PlayerWallet {
                 break
             } else {
                 total += utxo.txout.value;
-                input.push(TxIn{
-                    previous_output: utxo.outpoint, 
-                    script_sig: Script::new(),
-                    sequence: 0,
-                    witness: Vec::new(),
-                });
+                utxos.push(utxo.outpoint);
             }
         }
         assert!(total > sats_per_player);
@@ -224,12 +214,7 @@ impl PlayerWallet {
             }
             else {
                 total += utxo.txout.value;
-                input.push(TxIn{
-                    previous_output: utxo.outpoint, 
-                    script_sig: Script::new(),
-                    sequence: 0,
-                    witness: Vec::new(),
-                });
+                utxos.push(utxo.outpoint);
             }
         }
         assert!(total > 2 * sats_per_player + p2_change);
@@ -238,32 +223,16 @@ impl PlayerWallet {
         let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
         let fee_address = arbiter_client.get_fee_address().unwrap();
 
-        let output = vec!(
-            TxOut { 
-                value: amount.as_sat(),
-                script_pubkey: escrow_address.script_pubkey(),
-            },
-            TxOut { 
-                value: arbiter_fee,
-                script_pubkey: fee_address.script_pubkey(),
-            },
-            TxOut { 
-                value: p2_change, 
-                script_pubkey: p2_contract_info.change_address.script_pubkey(),
-            },
-            TxOut { 
-                value: p1_change, 
-                script_pubkey: self.new_address().script_pubkey(),
-            },
-        );
+        let mut builder = wallet.build_tx();
+        builder
+            .add_recipient(escrow_address.script_pubkey(), amount.as_sat())
+            .add_recipient(fee_address.script_pubkey(), arbiter_fee)
+            .add_recipient(p2_contract_info.change_address.script_pubkey(), p2_change)
+            .add_recipient(self.new_address().script_pubkey(), p1_change)
+            .add_utxos(&utxos).unwrap()
+            .manually_selected_only();
 
-        let psbt = PartiallySignedTransaction::from_unsigned_tx(Transaction {
-            version: 1,
-            lock_time: 0,
-            input,
-            output,
-        }).unwrap();
-
+        let (psbt, _info) = builder.finish().unwrap();
 
         psbt
     }
