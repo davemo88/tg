@@ -16,9 +16,16 @@ use tglib::{
                 Secp256k1,
                 Signature,
             },
+            Script,
+            Transaction,
+            TxIn,
+            TxOut,
             util::{
                 bip32::DerivationPath,
-                psbt::PartiallySignedTransaction,
+                psbt::{
+                    Input,
+                    PartiallySignedTransaction,
+                },
             },
         },
         blockchain::{
@@ -182,7 +189,8 @@ impl PlayerWallet {
     }
 
     fn create_funding_tx(&self, p2_contract_info: &PlayerContractInfo, amount: Amount, escrow_address: &Address) -> PartiallySignedTransaction {
-        let mut utxos = Vec::new();
+        let mut input = Vec::new();
+        let mut psbt_inputs = Vec::new();
         let arbiter_fee = amount.as_sat()/100;
         let sats_per_player = (amount.as_sat() + arbiter_fee)/2;
         let mut total: u64 = 0;
@@ -193,7 +201,17 @@ impl PlayerWallet {
                 break
             } else {
                 total += utxo.txout.value;
-                utxos.push(utxo.outpoint);
+                input.push(TxIn{
+                    previous_output: utxo.outpoint,
+                    script_sig: Script::new(),
+                    sequence: 0,
+                    witness: Vec::new(),
+                });
+                let mut input = Input::default();
+                input.witness_utxo = Some(utxo.txout.clone());
+// need to look up from wallet db
+//                input.witness_script = utxo.
+                psbt_inputs.push(Input::default());
             }
         }
         assert!(total > sats_per_player);
@@ -206,7 +224,12 @@ impl PlayerWallet {
             }
             else {
                 total += utxo.txout.value;
-                utxos.push(utxo.outpoint);
+                input.push(TxIn{
+                    previous_output: utxo.outpoint,
+                    script_sig: Script::new(),
+                    sequence: 0,
+                    witness: Vec::new(),
+                });
             }
         }
         assert!(total > 2 * sats_per_player + p2_change);
@@ -215,16 +238,33 @@ impl PlayerWallet {
         let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
         let fee_address = arbiter_client.get_fee_address().unwrap();
 
-        let mut builder = wallet.build_tx();
-        builder
-            .add_recipient(escrow_address.script_pubkey(), amount.as_sat())
-            .add_recipient(fee_address.script_pubkey(), arbiter_fee)
-            .add_recipient(p2_contract_info.change_address.script_pubkey(), p2_change)
-            .add_recipient(wallet.get_new_address().unwrap().script_pubkey(), p1_change)
-            .add_utxos(&utxos).unwrap()
-            .manually_selected_only();
+        let output = vec!(
+            TxOut {
+                value: amount.as_sat(),
+                script_pubkey: escrow_address.script_pubkey(),
+            },
+            TxOut {
+                value: arbiter_fee,
+                script_pubkey: fee_address.script_pubkey(),
+            },
+            TxOut {
+                value: p2_change,
+                script_pubkey: p2_contract_info.change_address.script_pubkey(),
+            },
+            TxOut {
+                value: p1_change,
+                script_pubkey: wallet.get_new_address().unwrap().script_pubkey(),
+            },
+        );
 
-        let (psbt, _info) = builder.finish().unwrap();
+        let mut psbt = PartiallySignedTransaction::from_unsigned_tx(Transaction {
+            version: 1,
+            lock_time: 0,
+            input,
+            output,
+        }).unwrap();
+
+        psbt.inputs = psbt_inputs;
 
         psbt
     }
