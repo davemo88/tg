@@ -167,6 +167,7 @@ async fn submit_payout(con: &mut Connection, payout: &Payout) -> Result<Partiall
     Err(TgError("invalid payout".to_string()))
 }
 
+//TODO: this function needs to reply more clearly when it fails
 async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redis::Client) -> WebResult<impl Reply> {
     match controls_name(&body.pubkey, &body.contract_info.name).await {
         Ok(true) => (),
