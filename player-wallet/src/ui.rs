@@ -173,7 +173,8 @@ impl PlayerUI for PlayerWallet {
                 break
             } else {
                 total += utxo.txout.value;
-                utxos.push(utxo.clone());
+                let psbt_input = wallet.get_psbt_input(utxo.clone(), None, false).unwrap();
+                utxos.push((utxo.outpoint, utxo.txout.value, psbt_input));
             }
         }
         if total < amount.as_sat()  {

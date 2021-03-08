@@ -5,6 +5,7 @@ use bdk::{
         Address,
         Amount,
         PublicKey,
+        blockdata::transaction::OutPoint,
         consensus::{
             self,
             encode::Decodable,
@@ -20,9 +21,11 @@ use bdk::{
             Secp256k1,
             Signature,
         },
-        util::psbt::PartiallySignedTransaction,
+        util::psbt::{
+            Input,
+            PartiallySignedTransaction,
+        }
     },
-    UTXO,
 };
 use nom::{
     self,
@@ -266,8 +269,7 @@ pub struct PlayerContractInfo {
     pub name: PlayerName,
     pub escrow_pubkey: PublicKey,
     pub change_address: Address,
-// TODO: could just be outpoints and clients look up the TxOuts
-    pub utxos: Vec<UTXO>,
+    pub utxos: Vec<(OutPoint, u64, Input)>,
 }
 
 impl PlayerContractInfo {
@@ -276,9 +278,9 @@ impl PlayerContractInfo {
         engine.input(self.name.0.as_bytes());
         engine.input(&self.escrow_pubkey.to_bytes());
         engine.input(&self.change_address.to_string().as_bytes());
-        for utxo in self.utxos.clone() {
-            engine.input(utxo.outpoint.txid.as_inner());
-            engine.input(&Vec::from(utxo.outpoint.vout.to_be_bytes()));
+        for (outpoint, _, _) in self.utxos.clone() {
+            engine.input(outpoint.txid.as_inner());
+            engine.input(&Vec::from(outpoint.vout.to_be_bytes()));
         }
 
         let hash: &[u8] = &ShaHash::from_engine(engine);
