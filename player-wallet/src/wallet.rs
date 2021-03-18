@@ -22,10 +22,7 @@ use tglib::{
             TxOut,
             util::{
                 bip32::DerivationPath,
-                psbt::{
-                    Input,
-                    PartiallySignedTransaction,
-                },
+                psbt::PartiallySignedTransaction,
             },
         },
         blockchain::{
@@ -33,7 +30,7 @@ use tglib::{
             ElectrumBlockchain,
         },
         electrum_client::Client as ElectrumClient,
-        signer::Signer,
+        signer::TransactionSigner,
         Wallet,
     },
     secrecy::Secret,
@@ -115,6 +112,7 @@ impl PlayerWallet {
     pub fn wallet(&self) -> Wallet<ElectrumBlockchain, sled::Tree> {
         let saved_seed = self.saved_seed().unwrap();
         let descriptor_key = format!("[{}/{}]{}", saved_seed.fingerprint, BITCOIN_ACCOUNT_PATH, saved_seed.xpubkey);
+//        let descriptor_key = format!("{}", saved_seed.xpubkey);
 
         let w = Wallet::new(
             &self.external_descriptor(&descriptor_key),
@@ -132,6 +130,7 @@ impl PlayerWallet {
         let seed = saved_seed.get_seed(pw).unwrap();
         let account_key = derive_account_xprivkey(seed, self.network);
         let descriptor_key = format!("[{}/{}]{}", saved_seed.fingerprint, BITCOIN_ACCOUNT_PATH, account_key);
+//        let descriptor_key = format!("{}", account_key);
 
         Wallet::new(
             &self.external_descriptor(&descriptor_key),
@@ -196,22 +195,18 @@ impl PlayerWallet {
         let mut total: u64 = 0;
 
         assert_ne!(p2_contract_info.utxos.len(), 0);
-        for utxo in &p2_contract_info.utxos {
+        for (outpoint, value, psbt_input) in &p2_contract_info.utxos {
             if total > sats_per_player {
                 break
             } else {
-                total += utxo.txout.value;
+                total += value;
                 input.push(TxIn{
-                    previous_output: utxo.outpoint,
+                    previous_output: *outpoint,
                     script_sig: Script::new(),
                     sequence: 0,
                     witness: Vec::new(),
                 });
-                let mut input = Input::default();
-                input.witness_utxo = Some(utxo.txout.clone());
-// need to look up from wallet db
-//                input.witness_script = utxo.
-                psbt_inputs.push(Input::default());
+                psbt_inputs.push(psbt_input.clone());
             }
         }
         assert!(total > sats_per_player);
@@ -230,6 +225,7 @@ impl PlayerWallet {
                     sequence: 0,
                     witness: Vec::new(),
                 });
+                psbt_inputs.push(wallet.get_psbt_input(utxo, None, false).unwrap());
             }
         }
         assert!(total > 2 * sats_per_player + p2_change);
@@ -325,8 +321,7 @@ impl SigningWallet for PlayerWallet {
                 let secp = Secp256k1::new();
                 let signing_key = account_key.derive_priv(&secp, &path).unwrap();
                 let mut maybe_signed = psbt.clone();
-//                println!("psbt to sign: {:?}", psbt);
-                match Signer::sign(&signing_key.private_key, &mut maybe_signed, None, &secp) {
+                match &signing_key.private_key.sign_tx(&mut maybe_signed, &secp) {
                     Ok(()) => {
                         Ok(maybe_signed)
                     }
@@ -339,7 +334,6 @@ impl SigningWallet for PlayerWallet {
             None => {
                 let signing_wallet = self.signing_wallet(pw);
                 signing_wallet.sync(noop_progress(), None).unwrap();
-                println!("wallet utxos: {:?}", signing_wallet.list_unspent());
                 let (signed_psbt, _finished) = signing_wallet.sign(psbt.clone(), None).unwrap();
 
 //                assert_ne!(signed_psbt, psbt);

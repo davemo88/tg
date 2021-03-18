@@ -88,8 +88,6 @@ pub struct SavedSeed {
 // here for convenience in initializing pubkey-only wallet without having to decrypt seed
     pub xpubkey: ExtendedPubKey,
     pub encrypted_seed: Vec<u8>,
-// TODO: confirm argon2 bundles salt with pw_hash
-//    pub pw_salt: Vec<u8>,
     pub pw_hash: String,
 }
 
@@ -98,7 +96,7 @@ impl SavedSeed {
 //  generate salt
         let pw_salt = rand::thread_rng().gen::<[u8; 32]>().to_vec();
         let config = Config::default();
-//  hash pw + salt
+//  hash pw
         let pw_hash = argon2::hash_encoded(pw.expose_secret().as_bytes(), &pw_salt, &config).unwrap();
         let seed = match mnemonic {
 //  if mnemonic provided, derive seed 
@@ -129,7 +127,6 @@ impl SavedSeed {
         Ok(SavedSeed { 
             fingerprint,
             xpubkey,
-//            pw_salt,
             pw_hash,
             encrypted_seed,
         })

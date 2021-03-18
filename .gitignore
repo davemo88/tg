@@ -3,6 +3,7 @@
 *.db
 dev-seed.json
 dev-wallet/
+history.txt
 */target/
 */Cargo.lock
 testnet/

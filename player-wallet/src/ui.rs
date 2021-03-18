@@ -289,7 +289,9 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
         if let Some(contract_record) = self.db().get_contract(&cxid) {
             let mut contract = Contract::from_bytes(hex::decode(contract_record.hex.clone()).unwrap()).unwrap();
             let sig = sign_contract(self, &contract, pw.clone()).unwrap();
-            contract.sigs.push(sig);
+            if !contract.sigs.contains(&sig) {
+                contract.sigs.push(sig);
+            }
             if sign_funding_tx {
                 contract.funding_tx = self.sign_tx(contract.funding_tx.clone(), None, pw).unwrap();
             }
