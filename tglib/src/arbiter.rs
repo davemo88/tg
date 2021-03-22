@@ -29,9 +29,10 @@ pub trait ArbiterService {
     fn set_contract_info(&self, info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<()>;
     fn get_contract_info(&self, player_name: PlayerName) -> Option<PlayerContractInfo>;
     fn send_contract(&self, contract: ContractRecord, player_name: PlayerName) -> Result<()>;
-    fn receive_contract(&self, player_name: PlayerName) -> Result<Option<ContractRecord>>;
     fn send_payout(&self, payout: PayoutRecord, player_name: PlayerName) -> Result<()>;
-    fn receive_payout(&self, player_name: PlayerName) -> Result<Option<PayoutRecord>>;
+    fn get_auth_token(&self, player_name: &PlayerName) -> Result<Vec<u8>>;
+    fn receive_contract(&self, auth: AuthTokenSig) -> Result<Option<ContractRecord>>;
+    fn receive_payout(&self, auth: AuthTokenSig) -> Result<Option<PayoutRecord>>;
     fn submit_contract(&self, contract: &Contract) -> Result<Signature>;
     fn submit_payout(&self, payout: &Payout) -> Result<PartiallySignedTransaction>;
 // testnet
@@ -57,8 +58,9 @@ pub struct SendPayoutBody {
     pub player_name: PlayerName,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuthTokenSig {
+    pub player_name: PlayerName,
     pub pubkey: PublicKey,
     pub sig_hex: String,
 }

@@ -15,6 +15,7 @@ use tglib::{
     TgError,
     arbiter::{
         ArbiterService,
+        AuthTokenSig,
         SendContractBody,
         SendPayoutBody,
         SetContractInfoBody,
@@ -39,6 +40,7 @@ impl ArbiterClient {
         ArbiterClient(String::from(host))
     }
 
+// lol this should be a macro
     fn get(&self, command: &str, params: Option<&str>) -> reqwest::Result<reqwest::blocking::Response> {
         let mut url = format!("{}/{}", self.0, command);
         if let Some(params) = params {
@@ -104,16 +106,6 @@ impl ArbiterService for ArbiterClient {
         }
     }
 
-    fn receive_contract(&self, player_name: PlayerName) -> Result<Option<ContractRecord>> {
-        match self.get("receive-contract", Some(&format!("{}", hex::encode(player_name.0.as_bytes())))) {
-            Ok(response) => match serde_json::from_str::<ContractRecord>(&response.text().unwrap()) {
-                Ok(contract_record) => Ok(Some(contract_record)),
-                Err(_) => Ok(None),
-            }
-            Err(e) => Err(TgError(format!("couldn't receive contract: {:?}", e))), 
-        }
-    }
-
     fn send_payout(&self, payout: PayoutRecord, player_name: PlayerName) -> Result<()> {
         let body = SendPayoutBody {
             payout,
@@ -125,8 +117,25 @@ impl ArbiterService for ArbiterClient {
         }
     }
 
-    fn receive_payout(&self, player_name: PlayerName) -> Result<Option<PayoutRecord>> {
-        match self.get("receive-payout", Some(&format!("{}", hex::encode(player_name.0.as_bytes())))) {
+    fn get_auth_token(&self, player_name: &PlayerName) -> Result<Vec<u8>> {
+        match self.get("auth-token", Some(&player_name.0)) {
+            Ok(response) => Ok(hex::decode(response.text().unwrap()).unwrap().to_vec()),
+            Err(e) => Err(TgError(format!("couldn't get auth token: {:?}", e))), 
+        }
+    }
+
+    fn receive_contract(&self, auth: AuthTokenSig) -> Result<Option<ContractRecord>> {
+        match self.post("receive-contract", serde_json::to_string(&auth).unwrap()) {
+            Ok(response) => match serde_json::from_str::<ContractRecord>(&response.text().unwrap()) {
+                Ok(contract_record) => Ok(Some(contract_record)),
+                Err(_) => Ok(None),
+            }
+            Err(e) => Err(TgError(format!("couldn't receive contract: {:?}", e))), 
+        }
+    }
+
+    fn receive_payout(&self, auth: AuthTokenSig) -> Result<Option<PayoutRecord>> {
+        match self.post("receive-payout", serde_json::to_string(&auth).unwrap()) {
             Ok(response) => match serde_json::from_str::<PayoutRecord>(&response.text().unwrap()) {
                 Ok(payout_record) => Ok(Some(payout_record)),
                 Err(_) => Ok(None),

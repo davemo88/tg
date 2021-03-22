@@ -8,11 +8,9 @@ use clap::{App, Arg, ArgMatches, SubCommand, AppSettings};
 use serde_json;
 use shell_words;
 use tglib::{
-    bdk::{
-        bitcoin::{
-            Amount,
-            secp256k1::Signature,
-        },
+    bdk::bitcoin::{
+        Amount,
+        secp256k1::Signature,
     },
     hex,
     secrecy::Secret,
@@ -312,6 +310,23 @@ pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
                     .long("sign-funding-tx")
                     .required(false)
                     .help("sign the funding tx as well as the contract")),
+            SubCommand::with_name("send").about("send contract to other player")
+                .arg(Arg::with_name("cxid")
+                    .index(1)
+                    .help("contract id")
+                    .required(true)
+                    .takes_value(true)),
+            SubCommand::with_name("receive").about("receive a contract for one of your players")
+                .arg(Arg::with_name("player-name")
+                    .index(1)
+                    .help("player to receive payout for")
+                    .required(true)
+                    .takes_value(true))
+                .arg(Arg::with_name("passphrase")
+                    .long("passphrase")
+                    .required(true)
+                    .takes_value(true)
+                    .help("wallet passphrase")),
             SubCommand::with_name("submit").about("submit contract to arbiter")
                 .arg(Arg::with_name("cxid")
                     .index(1)
@@ -377,6 +392,17 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                     },
                     Secret::new(a.value_of("passphrase").unwrap().to_owned())) {
                 Ok(()) => format!("contract signed"),
+                Err(e) => format!("{}", e),
+            }
+            "send" => match DocumentUI::<ContractRecord>::send(wallet, a.value_of("cxid").unwrap()) {
+                Ok(()) => format!("contract sent"),
+                Err(e) => format!("{}", e),
+            }
+            "receive" => match DocumentUI::<ContractRecord>::receive(
+                wallet, 
+                PlayerName(a.value_of("player-name").unwrap().to_string()),
+                Secret::new(a.value_of("passphrase").unwrap().to_owned())) {
+                Ok(()) => format!("contract received"),
                 Err(e) => format!("{}", e),
             }
             "submit" => match DocumentUI::<ContractRecord>::submit(wallet, a.value_of("cxid").unwrap()) {
@@ -463,6 +489,24 @@ pub fn payout_ui<'a, 'b>() -> App<'a, 'b> {
                     .required(true)
                     .takes_value(true)
                     .help("wallet passphrase")),
+            SubCommand::with_name("send").about("send payout to other player")
+                .arg(Arg::with_name("cxid")
+                    .index(1)
+                    .value_name("CXID")
+                    .help("contract id for the payout")
+                    .required(true)
+                    .takes_value(true)),
+            SubCommand::with_name("receive").about("receive a payout for one of your players")
+                .arg(Arg::with_name("player-name")
+                    .index(1)
+                    .help("player to receive payout for")
+                    .required(true)
+                    .takes_value(true))
+                .arg(Arg::with_name("passphrase")
+                    .long("passphrase")
+                    .required(true)
+                    .takes_value(true)
+                    .help("wallet passphrase")),
             SubCommand::with_name("submit").about("submit payout to arbiter")
                 .arg(Arg::with_name("cxid")
                     .index(1)
@@ -525,6 +569,17 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                     },
                     Secret::new(a.value_of("passphrase").unwrap().to_owned())) {
                 Ok(()) => format!("payout created"),
+                Err(e) => format!("{}", e),
+            }
+            "send" => match DocumentUI::<PayoutRecord>::send(wallet, a.value_of("cxid").unwrap()) {
+                Ok(()) => format!("payout sent"),
+                Err(e) => format!("{}", e),
+            }
+            "reeeive" => match DocumentUI::<PayoutRecord>::receive(
+                wallet, 
+                PlayerName(a.value_of("player-name").unwrap().to_string()),
+                Secret::new(a.value_of("passphrase").unwrap().to_owned())) {
+                Ok(()) => format!("payout received"),
                 Err(e) => format!("{}", e),
             }
             "submit" => match DocumentUI::<PayoutRecord>::submit(wallet, a.value_of("cxid").unwrap()) {

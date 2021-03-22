@@ -121,8 +121,9 @@ async fn controls_name(pubkey: &PublicKey, player_name: &PlayerName) -> Result<b
     }
 }
 
-async fn check_auth_token_sig(player_name: String, auth: AuthTokenSig, con: &mut Connection) -> Result<bool> {
-    match controls_name(&auth.pubkey, &PlayerName(player_name.clone())).await {
+async fn check_auth_token_sig(player_name: PlayerName, auth: AuthTokenSig, con: &mut Connection) -> Result<bool> {
+
+    match controls_name(&auth.pubkey, &player_name).await {
         Ok(true) => (),
         _ => return Ok(false),
     }
@@ -206,13 +207,13 @@ async fn send_contract_handler(body: SendContractBody, redis_client: redis::Clie
     }
 }
 
-async fn receive_contract_handler(player_name: String, auth: AuthTokenSig, redis_client: redis::Client) -> WebResult<impl Reply> {
+async fn receive_contract_handler(auth: AuthTokenSig, redis_client: redis::Client) -> WebResult<impl Reply> {
     let mut con = redis_client.get_async_connection().await.unwrap();
-    match check_auth_token_sig(player_name.clone(), auth, &mut con).await {
+    match check_auth_token_sig(auth.player_name.clone(), auth.clone(), &mut con).await {
         Ok(true) => (),
         _ => return Err(warp::reject()),
     }
-    let r: RedisResult<String> = con.lpop(&format!("{}/contracts", player_name)).await;
+    let r: RedisResult<String> = con.lpop(&format!("{}/contracts", auth.player_name.0)).await;
     match r {
         Ok(contract_json) => Ok(contract_json),
         Err(_) => Err(warp::reject()),
@@ -228,14 +229,14 @@ async fn send_payout_handler(body: SendPayoutBody, redis_client: redis::Client) 
     }
 }
 
-async fn receive_payout_handler(player_name: String, auth: AuthTokenSig, redis_client: redis::Client) -> WebResult<impl Reply> {
+async fn receive_payout_handler(auth: AuthTokenSig, redis_client: redis::Client) -> WebResult<impl Reply> {
     let mut con = redis_client.get_async_connection().await.unwrap();
-    match check_auth_token_sig(player_name.clone(), auth, &mut con).await {
+    match check_auth_token_sig(auth.player_name.clone(), auth.clone(), &mut con).await {
         Ok(true) => (),
         _ => return Err(warp::reject()),
     }
 
-    let r: RedisResult<String> = con.lpop(&format!("{}/payouts", player_name)).await;
+    let r: RedisResult<String> = con.lpop(&format!("{}/payouts", auth.player_name.0)).await;
     match r {
         Ok(payout_json) => Ok(payout_json),
         Err(_) => Err(warp::reject()),
@@ -327,7 +328,6 @@ async fn main() {
 
     let receive_contract = warp::path("receive-contract")
         .and(warp::post())
-        .and(warp::path::param::<String>())
         .and(warp::body::json())
         .and(redis_client.clone())
         .and_then(receive_contract_handler);
@@ -340,7 +340,6 @@ async fn main() {
 
     let receive_payout = warp::path("receive-payout")
         .and(warp::post())
-        .and(warp::path::param::<String>())
         .and(warp::body::json())
         .and(redis_client.clone())
         .and_then(receive_payout_handler);

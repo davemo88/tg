@@ -23,7 +23,10 @@ use tglib::{
     secrecy::Secret,
     Result as TgResult,
     TgError,
-    arbiter::ArbiterService,
+    arbiter::{
+        ArbiterService,
+        AuthTokenSig,
+    },
     contract::{
         Contract,
         ContractRecord,
@@ -65,6 +68,23 @@ pub trait WalletUI {
     fn fund(&self) -> TgResult<Txid>;
 }
 
+impl PlayerWallet {
+    fn get_auth(&self, player_name: &PlayerName, pw: Secret<String>) -> TgResult<AuthTokenSig> {
+        let token = self.arbiter_client().get_auth_token(&player_name).unwrap();
+        let sig = self.sign_message(
+            Message::from_slice(&token).unwrap(), 
+            DerivationPath::from_str(&format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX)).unwrap(),
+            pw
+        ).unwrap();
+        let sig_hex = hex::encode(sig.serialize_compact());
+        Ok(AuthTokenSig {
+            player_name: player_name.clone(),
+            pubkey: self.name_pubkey(),
+            sig_hex,
+        })
+    }
+}
+
 // players
 pub trait PlayerUI {
     fn register(&self, name: PlayerName, pw: Secret<String>) -> TgResult<()>;
@@ -83,7 +103,7 @@ pub trait DocumentUI<T> {
     fn get(&self, cxid: &str) -> Option<T>;
     fn sign(&self, params: SignDocumentParams, pw: Secret<String>) -> TgResult<()>;
     fn send(&self, cxid: &str) -> TgResult<()>;
-    fn receive(&self, player_name: PlayerName) -> TgResult<()>;
+    fn receive(&self, player_name: PlayerName, pw: Secret<String>) -> TgResult<()>;
     fn submit(&self, cxid: &str) -> TgResult<()>;
     fn broadcast(&self, cxid: &str) -> TgResult<()>;
     fn list(&self) -> Vec<T>;
@@ -313,8 +333,9 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
         }
     }
 
-    fn receive(&self, player_name: PlayerName) -> TgResult<()> {
-        match self.arbiter_client().receive_contract(player_name) {
+    fn receive(&self, player_name: PlayerName, pw: Secret<String>) -> TgResult<()> {
+        let auth = self.get_auth(&player_name, pw).unwrap();
+        match self.arbiter_client().receive_contract(auth) {
             Ok(Some(contract_record)) =>  match self.db().insert_contract(contract_record) {
                     Ok(_) => Ok(()),
                     Err(e) => Err(TgError(format!("{:?}", e))),
@@ -440,8 +461,9 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
         }
     }
 
-    fn receive(&self, player_name: PlayerName) -> TgResult<()> {
-        match self.arbiter_client().receive_payout(player_name) {
+    fn receive(&self, player_name: PlayerName, pw: Secret<String>) -> TgResult<()> {
+        let auth = self.get_auth(&player_name, pw).unwrap();
+        match self.arbiter_client().receive_payout(auth) {
             Ok(Some(payout_record)) =>  match self.db().insert_payout(payout_record) {
                     Ok(_) => Ok(()),
                     Err(e) => Err(TgError(format!("{:?}", e))),
