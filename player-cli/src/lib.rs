@@ -9,8 +9,10 @@ use serde_json;
 use shell_words;
 use tglib::{
     bdk::bitcoin::{
+        consensus,
         Amount,
         secp256k1::Signature,
+        util::psbt::PartiallySignedTransaction,
     },
     hex,
     secrecy::Secret,
@@ -379,9 +381,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 None => format!("no such contract"),
             }
             "details" => match DocumentUI::<ContractRecord>::get(wallet, a.value_of("cxid").unwrap()) {
-                Some(cr) => {
-                    format!("{:?}\n{:?}", cr, Contract::from_bytes(hex::decode(&cr.hex).unwrap()).unwrap())
-                }
+                Some(cr) => format!("{:?}\n{:?}", cr, Contract::from_bytes(hex::decode(&cr.hex).unwrap()).unwrap()),
                 None => format!("no such contract"),
             }
             "sign" => match DocumentUI::<ContractRecord>::sign(
@@ -555,7 +555,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 None => format!("no such payout"),
             }
             "details" => match DocumentUI::<PayoutRecord>::get(wallet, a.value_of("cxid").unwrap()) {
-                Some(pr) => format!("{:?}", pr),
+                Some(pr) => format!("{:?}\n{:?}", pr, consensus::deserialize::<PartiallySignedTransaction>(&hex::decode(pr.clone().psbt).unwrap()).unwrap()),
                 None => format!("no such payout"),
             }
             "sign" => match DocumentUI::<PayoutRecord>::sign(
@@ -563,7 +563,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                     SignDocumentParams::SignPayoutParams {
                         cxid: a.value_of("cxid").unwrap().to_string(),
                         script_sig: match a.value_of("script_sig") {
-                            Some(sig_hex) => Some(Signature::from_compact(&hex::decode(sig_hex).unwrap()).unwrap()),
+                            Some(sig_hex) => Some(Signature::from_der(&hex::decode(sig_hex).unwrap()).unwrap()),
                             None => None,
                         },
                     },
@@ -575,7 +575,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 Ok(()) => format!("payout sent"),
                 Err(e) => format!("{}", e),
             }
-            "reeeive" => match DocumentUI::<PayoutRecord>::receive(
+            "receive" => match DocumentUI::<PayoutRecord>::receive(
                 wallet, 
                 PlayerName(a.value_of("player-name").unwrap().to_string()),
                 Secret::new(a.value_of("passphrase").unwrap().to_owned())) {

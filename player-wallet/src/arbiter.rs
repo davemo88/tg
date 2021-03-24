@@ -19,6 +19,8 @@ use tglib::{
         SendContractBody,
         SendPayoutBody,
         SetContractInfoBody,
+        SubmitContractBody,
+        SubmitPayoutBody,
     },
     contract::{
         Contract,
@@ -75,7 +77,7 @@ impl ArbiterService for ArbiterClient {
         let body = SetContractInfoBody {
             contract_info,
             pubkey,
-            sig_hex: hex::encode(sig.serialize_compact()),
+            sig_hex: hex::encode(sig.serialize_der()),
         };
         match self.post("set-contract-info", serde_json::to_string(&body).unwrap()) {
             Ok(_reply) => Ok(()),
@@ -145,17 +147,25 @@ impl ArbiterService for ArbiterClient {
     }
 
     fn submit_contract(&self, contract: &Contract) -> Result<Signature> {
-        match self.post("submit-contract", serde_json::to_string(contract).unwrap()) {
-            Ok(response) => match Signature::from_compact(&hex::decode(response.text().unwrap()).unwrap()) {
-                Ok(sig) => Ok(sig),
-                Err(_) => Err(TgError("invalid contract".to_string()))
+        let body = SubmitContractBody { 
+            contract_hex: hex::encode(contract.to_bytes()) 
+        };
+        match self.post("submit-contract", serde_json::to_string(&body).unwrap()) {
+            Ok(response) => {
+                match Signature::from_der(&hex::decode(response.text().unwrap()).unwrap()) {
+                    Ok(sig) => Ok(sig),
+                    Err(_) => Err(TgError("invalid contract".to_string()))
+                }
             }
             Err(_) => Err(TgError("couldn't submit contract".to_string()))
         }
     }
 
     fn submit_payout(&self, payout: &Payout) -> Result<PartiallySignedTransaction> {
-        match self.post("submit-payout", serde_json::to_string(payout).unwrap()) {
+        let body = SubmitPayoutBody {
+            payout_hex: hex::encode(payout.to_bytes())
+        };
+        match self.post("submit-payout", serde_json::to_string(&body).unwrap()) {
             Ok(response) => match consensus::deserialize(&hex::decode(response.text().unwrap()).unwrap()) {
                 Ok(psbt) => Ok(psbt),
                 Err(_) => Err(TgError("invalid payout".to_string())),

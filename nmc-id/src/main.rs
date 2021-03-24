@@ -9,19 +9,17 @@ use warp::{
 };
 use serde_json;
 use tglib::{
-    bdk::{
-        bitcoin::{
-            PublicKey,
-            secp256k1::{
-                Message,
-                Secp256k1,
-                Signature,
-            },
-            hashes::{
-                sha256,
-                HashEngine,
-                Hash as BitcoinHash,
-            },
+    bdk::bitcoin::{
+        PublicKey,
+        secp256k1::{
+            Message,
+            Secp256k1,
+            Signature,
+        },
+        hashes::{
+            sha256,
+            HashEngine,
+            Hash as BitcoinHash,
         },
     },
     hex,
@@ -45,11 +43,8 @@ pub const PLAYER_NAME_PREFIX: &'static str = "player/";
 
 type WebResult<T> = std::result::Result<T, Rejection>;
 
-//async fn register_name_handler(name: String, pubkey: String, sig: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
 async fn register_name_handler(body: RegisterNameBody, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply>{
-//    let name = String::from_utf8(hex::decode(name).unwrap()).unwrap();
-//    let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
-    let sig = Signature::from_compact(&hex::decode(body.sig_hex).unwrap()).unwrap();
+    let sig = Signature::from_der(&hex::decode(body.sig_hex).unwrap()).unwrap();
     let mut engine = sha256::HashEngine::default();
     engine.input(body.player_name.0.as_bytes());
     let hash: &[u8] = &sha256::Hash::from_engine(engine);

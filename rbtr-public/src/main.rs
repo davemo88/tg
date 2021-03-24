@@ -57,6 +57,8 @@ use tglib::{
         SendContractBody,
         SendPayoutBody,
         SetContractInfoBody,
+        SubmitContractBody,
+        SubmitPayoutBody,
     },
     contract::Contract,
     payout::Payout,
@@ -128,7 +130,7 @@ async fn check_auth_token_sig(player_name: PlayerName, auth: AuthTokenSig, con: 
         _ => return Ok(false),
     }
     let secp = Secp256k1::new();
-    let sig = Signature::from_compact(&hex::decode(&auth.sig_hex).unwrap()).unwrap();
+    let sig = Signature::from_der(&hex::decode(&auth.sig_hex).unwrap()).unwrap();
     let r: RedisResult<String> = con.get(format!("{}/token", player_name)).await;
     let token = match r {
         Ok(token) => token,
@@ -143,9 +145,9 @@ async fn submit_contract(con: &mut Connection, contract: &Contract) -> Result<Si
         for _ in 1..15 as u32 {
             sleep(Duration::from_secs(1));
             let r: RedisResult<String> = con.get(hex::encode(contract.cxid())).await;
-            if let Ok(sig) = r {
+            if let Ok(sig_hex) = r {
                 let _r : RedisResult<String> = con.del(cxid).await;
-                return Ok(Signature::from_compact(&hex::decode(sig).unwrap()).unwrap())
+                return Ok(Signature::from_der(&hex::decode(sig_hex).unwrap()).unwrap())
             }
         }
     }
@@ -176,7 +178,7 @@ async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redi
     }
  
     let secp = Secp256k1::new();
-    let sig = Signature::from_compact(&hex::decode(&body.sig_hex).unwrap()).unwrap();
+    let sig = Signature::from_der(&hex::decode(&body.sig_hex).unwrap()).unwrap();
     if secp.verify(&Message::from_slice(&body.contract_info.hash()).unwrap(), &sig, &body.pubkey.key).is_err() {
         return Err(warp::reject())
     }
@@ -243,18 +245,20 @@ async fn receive_payout_handler(auth: AuthTokenSig, redis_client: redis::Client)
     }
 }
 
-async fn submit_contract_handler(contract: Contract, redis_client: redis::Client) -> WebResult<impl Reply> {
+async fn submit_contract_handler(body: SubmitContractBody, redis_client: redis::Client) -> WebResult<impl Reply> {
     let mut con = redis_client.get_async_connection().await.unwrap();
+    let contract = Contract::from_bytes(hex::decode(body.contract_hex).unwrap()).unwrap();
     if let Ok(sig) = submit_contract(&mut con, &contract).await {
-        Ok(hex::encode(sig.serialize_compact()))
+        Ok(hex::encode(sig.serialize_der()))
     } else {
         Err(warp::reject())
     }
 }
 
 // TODO: somehow break out of serialize(decode( hell
-async fn submit_payout_handler(payout: Payout, redis_client: redis::Client) -> WebResult<impl Reply> {
+async fn submit_payout_handler(body: SubmitPayoutBody, redis_client: redis::Client) -> WebResult<impl Reply> {
     let mut con = redis_client.get_async_connection().await.unwrap();
+    let payout = Payout::from_bytes(hex::decode(body.payout_hex).unwrap()).unwrap();
     if let Ok(tx) = submit_payout(&mut con, &payout).await {
         Ok(hex::encode(consensus::serialize(&tx)))
     } else {

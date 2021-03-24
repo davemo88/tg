@@ -76,7 +76,7 @@ impl PlayerWallet {
             DerivationPath::from_str(&format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX)).unwrap(),
             pw
         ).unwrap();
-        let sig_hex = hex::encode(sig.serialize_compact());
+        let sig_hex = hex::encode(sig.serialize_der());
         Ok(AuthTokenSig {
             player_name: player_name.clone(),
             pubkey: self.name_pubkey(),
@@ -415,7 +415,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
             version: PAYOUT_VERSION,
             contract: Contract::from_bytes(hex::decode(cr.hex).unwrap()).unwrap(),
             psbt: consensus::deserialize(&hex::decode(pr.psbt).unwrap()).unwrap(),
-            script_sig: Signature::from_compact(&hex::decode(pr.sig).unwrap()).ok()
+            script_sig: Signature::from_der(&hex::decode(pr.sig).unwrap()).ok()
         };
         Some(hex::encode(p.to_bytes()))
     }
@@ -437,7 +437,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
                 cxid: pr.cxid, 
                 psbt,
                 sig: match script_sig {
-                    Some(sig) => hex::encode(sig.serialize_compact()),
+                    Some(sig) => hex::encode(sig.serialize_der()),
                     None => String::default(),
                 }
             }).unwrap();
@@ -481,7 +481,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
 // TODO: poster child for serde hell
             contract: Contract::from_bytes(hex::decode(cr.hex).unwrap()).unwrap(),
             psbt: consensus::deserialize(&hex::decode(pr.psbt).unwrap()).unwrap(),
-            script_sig: Signature::from_compact(&hex::decode(pr.sig).unwrap()).ok()
+            script_sig: Signature::from_der(&hex::decode(pr.sig).unwrap()).ok()
         };
         if let Ok(psbt) = self.arbiter_client().submit_payout(&p) {
             p.psbt = psbt; 

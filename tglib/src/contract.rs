@@ -107,9 +107,12 @@ impl Contract {
         let payout_script = Vec::from(self.payout_script.clone());
         v.write_u32::<BigEndian>(payout_script.len() as u32).unwrap();
         v.extend(payout_script);
-// signatures in compact (fixed length) format
         for sig in &self.sigs {
-            v.extend(sig.serialize_compact().to_vec());
+// der-encoded signatures with their lengths
+            let sig_bytes = sig.serialize_der().to_vec();
+// this is guaranteed to fit, right?
+            v.write_u8(sig_bytes.len() as u8).unwrap();
+            v.extend(sig_bytes);
         }
         v
     }
@@ -239,8 +242,8 @@ fn sigs(input: &[u8]) -> IResult<&[u8], Vec<Signature>> {
 }
 
 pub fn signature(input: &[u8]) -> IResult<&[u8], Signature> {
-    let (input, b) = take(64u8)(input)?;
-    let sig = Signature::from_compact(b).unwrap();
+    let (input, b) = length_data(be_u8)(input)?;
+    let sig = Signature::from_der(b).unwrap();
     Ok((input, sig))
 }
 

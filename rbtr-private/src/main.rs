@@ -52,7 +52,7 @@ async fn next_contract(con: &mut Connection) -> Option<Contract> {
 }
 
 async fn set_contract_signature(con: &mut Connection, contract: Contract, sig: Signature) -> redis::RedisResult<String> {
-    con.set(hex::encode(contract.cxid()), hex::encode(sig.serialize_compact())).await
+    con.set(hex::encode(contract.cxid()), hex::encode(sig.serialize_der())).await
 }
 
 async fn maybe_sign_payout(con: &mut Connection, wallet: &Wallet) {

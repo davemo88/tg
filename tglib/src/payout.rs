@@ -70,7 +70,7 @@ impl Payout {
         v.extend(payout_tx);
 // payout script sig
         if let Some(sig) = self.script_sig {
-            v.extend(sig.serialize_compact().to_vec());
+            v.extend(sig.serialize_der().to_vec());
         }
         v
 
@@ -161,7 +161,7 @@ pub struct PayoutRecord {
 impl From<Payout> for PayoutRecord {
     fn from(p: Payout) -> PayoutRecord {
         let sig = match p.script_sig {
-           Some(sig) => hex::encode(sig.serialize_compact().to_vec()),
+           Some(sig) => hex::encode(sig.serialize_der().to_vec()),
            None => "".to_string(),
         };
         PayoutRecord {

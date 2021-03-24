@@ -58,6 +58,16 @@ pub struct SendPayoutBody {
     pub player_name: PlayerName,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SubmitContractBody {
+    pub contract_hex: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SubmitPayoutBody {
+    pub payout_hex: String,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuthTokenSig {
     pub player_name: PlayerName,

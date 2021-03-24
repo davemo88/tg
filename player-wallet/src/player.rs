@@ -34,7 +34,7 @@ impl PlayerNameService for PlayerNameClient {
         let body = RegisterNameBody {
             player_name: player_name.clone(),
             pubkey,
-            sig_hex: hex::encode(sig.serialize_compact()),
+            sig_hex: hex::encode(sig.serialize_der()),
         };
         match self.post("register-name", serde_json::to_string(&body).unwrap()) {
             Ok(response) => {

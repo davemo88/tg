@@ -31,6 +31,6 @@ fn main() {
         let msg = Message::from_slice(&hex::decode(txid).unwrap()).unwrap();
         let sig = secp.sign(&msg, &key.key);
 
-        println!("{}", hex::encode(sig.serialize_compact()));
+        println!("{}", hex::encode(sig.serialize_der()));
     }
 }
