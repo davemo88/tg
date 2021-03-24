@@ -16,7 +16,7 @@ use tglib::{
         blockchain::Blockchain,
     },
     Result,
-    TgError,
+    Error,
     contract::Contract,
     wallet::{
         EscrowWallet,
@@ -96,7 +96,7 @@ where
 
     fn validate_contract(&self, contract: &Contract) -> Result<()> {
         if contract.arbiter_pubkey != EscrowWallet::get_escrow_pubkey(self) {
-            return Err(TgError("unexpected arbiter pubkey".to_string()));
+            return Err(Error::Adhoc("unexpected arbiter pubkey"));
         }
         contract.validate()
     }

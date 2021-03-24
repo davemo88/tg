@@ -10,7 +10,7 @@ use bdk::bitcoin::{
 };
 use crate::{
     Result,
-    TgError,
+    Error,
 //    contract::ContractState,
     payout::{
         Payout,
@@ -50,7 +50,7 @@ impl TgScriptEnv {
     pub fn validate_payout(&mut self) -> Result<()> {
 
         if self.payout.is_none() {
-            return Err(TgError("cannot validate payout request - payout request is None".to_string()));
+            return Err(Error::Adhoc("cannot validate payout request - payout request is None"));
         }
 
 // TODO: ensure payout_tx is signed by the same player making the request
@@ -61,20 +61,20 @@ impl TgScriptEnv {
 // TODO: check funding_tx is signed by the correct parties and in the blockchain
 //        if payout.contract.state() != ContractState::Live {
 //        if payout.contract.state() != ContractState::ArbiterSigned {
-//            return Err(TgError("invalid payout request - contract is uncertified"))
+//            return Err(Error::Adhoc("invalid payout request - contract is uncertified"))
 //        }
 //push script sig to stack then evaluate the payout script
         if payout.script_sig.is_some() {
             self.stack.push(payout.script_sig.unwrap().serialize_der().to_vec());
         } else {
-            return Err(TgError("no script sig".to_string()));
+            return Err(Error::Adhoc("no script sig"));
         };
 
         let _result = self.eval(payout.contract.payout_script.clone());
 
 // TODO: this is weird
         match self.validity {
-            None | Some(false)  => Err(TgError("invalid payout request".to_string())),
+            None | Some(false)  => Err(Error::Adhoc("invalid payout request")),
             Some(true) => Ok(())
         }
     }
@@ -103,7 +103,7 @@ impl Default for TgScriptEnv {
 
 // TODO: refactor ops to return results? could be easier to handle invalid scripts
 pub trait TgScriptInterpreter {
-    fn eval(&mut self, _script: TgScript) -> Result<()> { Err(TgError("".to_string())) }
+    fn eval(&mut self, _script: TgScript) -> Result<()> { Err(Error::Adhoc("")) }
 // NOTE: opcode functions - in own trait?
     fn op_pushdata1(&mut self, _n: u8, _bytes: Vec<u8>);
     fn op_pushdata2(&mut self, _n: u16, _bytes: Vec<u8>);

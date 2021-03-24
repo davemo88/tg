@@ -6,13 +6,13 @@ import { NETWORK, TITLE_IMAGE_SOURCE, TEST_IMAGE_SOURCE, LIVE_IMAGE_SOURCE, PASS
 import { styles } from '../../styles';
 import { initWallet } from '../../wallet';
 
-import { PassphraseEntry } from '../passphrase-entry';
+import { PasswordEntry } from '../password-entry';
 
 export const InitWallet = ({ navigation }) => {
 // TODO: is this ok? i have no idea (so probably not)
 // use this similar to rust:
 // https://www.npmjs.com/package/secret-value
-    const [passphrase, setPassphrase] = React.useState(new Secret(""));
+    const [password, setPassword] = React.useState(new Secret(""));
     const [initializing, setInitializing] = React.useState(false);
 
     return (
@@ -27,14 +27,14 @@ export const InitWallet = ({ navigation }) => {
                 }
             </View>
             <View style={{ flex:2, alignItems: 'center' }}>
-                <PassphraseEntry passphrase={passphrase} setPassphrase={setPassphrase} />
+                <PasswordEntry password={password} setPassword={setPassword} />
                 <Button
                     title="Ok"
-                    disabled={(passphrase.expose_secret().length < PASSPHRASE_MIN_LENGTH)
+                    disabled={(password.expose_secret().length < PASSPHRASE_MIN_LENGTH)
                               || initializing }
                     onPress={() => {
                         setInitializing(true); 
-                        initWallet(passphrase)
+                        initWallet(password)
                             .then(
                                 success => navigation.reset({ index:0, routes: [{ name: 'Loading Splash' }] }),
                                 failure => console.log("failure:", failure),

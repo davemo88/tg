@@ -34,10 +34,10 @@ public class PlayerWalletModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void call_cli_with_passphrase(String command, String passphrase, Promise promise) {
+    public void call_cli_with_password(String command, String password, Promise promise) {
         String command_with_wallet_dir = add_wallet_dir(command);
-        Log.d("PlayerWalletModule", "command: " + command_with_wallet_dir + " --passphrase [redacted]");
-        String cli_output = PlayerWalletModule.cli(command_with_wallet_dir + " --passphrase " + passphrase);
+        Log.d("PlayerWalletModule", "command: " + command_with_wallet_dir + " --password [redacted]");
+        String cli_output = PlayerWalletModule.cli(command_with_wallet_dir + " --password " + password);
         Log.d("PlayerWalletModule", "cli output: " + cli_output);
         promise.resolve(cli_output);
     }

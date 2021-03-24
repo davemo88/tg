@@ -12,7 +12,7 @@ import { Player, Contract, PayoutRequest, ContractStatus } from '../../datatypes
 import { Arbiter } from '../arbiter';
 import { Currency } from '../currency';
 import { PlayerPortrait } from '../player-portrait';
-import { PassphraseEntry } from '../passphrase-entry';
+import { PasswordEntry } from '../password-entry';
 
 export const RequestPayout = ({ route, navigation }) => {
   const { contractId } = route.params;
@@ -25,10 +25,10 @@ export const RequestPayout = ({ route, navigation }) => {
   const [isArbitratedPayout, setIsArbitratedPayout] = React.useState(false);
   const toggleArbitration = () => setIsArbitratedPayout(previousState => !previousState);
   const [arbitrationToken, setArbitrationToken] = React.useState('');
-  const [passphrase, setPassphrase] = React.useState(null);
+  const [password, setPassword] = React.useState(null);
 
   const valid = () => {
-    if (passphrase !== null && (!isArbitratedPayout || (arbitrationToken != ''))) {
+    if (password !== null && (!isArbitratedPayout || (arbitrationToken != ''))) {
       return true;
     }
     return false
@@ -88,7 +88,7 @@ export const RequestPayout = ({ route, navigation }) => {
         </View>
       }
       <View style={{ flexDirection: 'row' }}>
-        <PassphraseEntry passphrase={passphrase} setPassphrase={setPassphrase} />
+        <PasswordEntry password={password} setPassword={setPassword} />
         <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
           <Button 
             disabled={!valid()}

@@ -12,7 +12,7 @@ use tglib::{
     },
     hex,
     Result,
-    TgError,
+    Error,
     arbiter::{
         ArbiterService,
         AuthTokenSig,
@@ -62,14 +62,14 @@ impl ArbiterService for ArbiterClient {
     fn get_escrow_pubkey(&self) -> Result<PublicKey> {
         match self.get("escrow-pubkey", None) {
             Ok(response) => Ok(PublicKey::from_str(&response.text().unwrap()).unwrap()),
-            Err(_) => Err(TgError("couldn't get result pubkey".to_string())),
+            Err(_) => Err(Error("couldn't get result pubkey".to_string())),
         }
     }
 
     fn get_fee_address(&self) -> Result<Address> {
         match self.get("fee-address", None) {
             Ok(response) => Ok(Address::from_str(&response.text().unwrap()).unwrap()),
-            Err(_) => Err(TgError("couldn't get fee address".to_string())),
+            Err(_) => Err(Error("couldn't get fee address".to_string())),
         }
     }
 
@@ -81,7 +81,7 @@ impl ArbiterService for ArbiterClient {
         };
         match self.post("set-contract-info", serde_json::to_string(&body).unwrap()) {
             Ok(_reply) => Ok(()),
-            Err(e) => Err(TgError(e.to_string()))
+            Err(e) => Err(Error(e.to_string()))
         }
     }
 
@@ -104,7 +104,7 @@ impl ArbiterService for ArbiterClient {
         };
         match self.post("send-contract", serde_json::to_string(&body).unwrap()) {
             Ok(_) => Ok(()),
-            Err(e) => Err(TgError(format!("couldn't send contract: {:?}", e))), 
+            Err(e) => Err(Error(format!("couldn't send contract: {:?}", e))), 
         }
     }
 
@@ -115,14 +115,14 @@ impl ArbiterService for ArbiterClient {
         };
         match self.post("send-payout", serde_json::to_string(&body).unwrap()) {
             Ok(_) => Ok(()),
-            Err(e) => Err(TgError(format!("couldn't send payout: {:?}", e))), 
+            Err(e) => Err(Error(format!("couldn't send payout: {:?}", e))), 
         }
     }
 
     fn get_auth_token(&self, player_name: &PlayerName) -> Result<Vec<u8>> {
         match self.get("auth-token", Some(&player_name.0)) {
             Ok(response) => Ok(hex::decode(response.text().unwrap()).unwrap().to_vec()),
-            Err(e) => Err(TgError(format!("couldn't get auth token: {:?}", e))), 
+            Err(e) => Err(Error(format!("couldn't get auth token: {:?}", e))), 
         }
     }
 
@@ -132,7 +132,7 @@ impl ArbiterService for ArbiterClient {
                 Ok(contract_record) => Ok(Some(contract_record)),
                 Err(_) => Ok(None),
             }
-            Err(e) => Err(TgError(format!("couldn't receive contract: {:?}", e))), 
+            Err(e) => Err(Error(format!("couldn't receive contract: {:?}", e))), 
         }
     }
 
@@ -142,7 +142,7 @@ impl ArbiterService for ArbiterClient {
                 Ok(payout_record) => Ok(Some(payout_record)),
                 Err(_) => Ok(None),
             }
-            Err(e) => Err(TgError(format!("couldn't receive payout: {:?}", e))), 
+            Err(e) => Err(Error(format!("couldn't receive payout: {:?}", e))), 
         }
     }
 
@@ -154,10 +154,10 @@ impl ArbiterService for ArbiterClient {
             Ok(response) => {
                 match Signature::from_der(&hex::decode(response.text().unwrap()).unwrap()) {
                     Ok(sig) => Ok(sig),
-                    Err(_) => Err(TgError("invalid contract".to_string()))
+                    Err(_) => Err(Error("invalid contract".to_string()))
                 }
             }
-            Err(_) => Err(TgError("couldn't submit contract".to_string()))
+            Err(_) => Err(Error("couldn't submit contract".to_string()))
         }
     }
 
@@ -168,9 +168,9 @@ impl ArbiterService for ArbiterClient {
         match self.post("submit-payout", serde_json::to_string(&body).unwrap()) {
             Ok(response) => match consensus::deserialize(&hex::decode(response.text().unwrap()).unwrap()) {
                 Ok(psbt) => Ok(psbt),
-                Err(_) => Err(TgError("invalid payout".to_string())),
+                Err(_) => Err(Error("invalid payout".to_string())),
             }
-            Err(_) => Err(TgError("couldn't submit payout".to_string())),
+            Err(_) => Err(Error("couldn't submit payout".to_string())),
         }
     }
 
@@ -179,7 +179,7 @@ impl ArbiterService for ArbiterClient {
             Ok(response) => {
                 Ok(Txid::from_hash(sha256d::Hash::from_str(&response.text().unwrap()).unwrap()))
             },
-            Err(_) => Err(TgError("couldn't fund address".to_string())),
+            Err(_) => Err(Error("couldn't fund address".to_string())),
         }
     }
 }

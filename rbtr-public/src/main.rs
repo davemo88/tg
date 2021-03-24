@@ -51,7 +51,7 @@ use tglib::{
     hex,
     rand::{self, Rng},
     Result,
-    TgError,
+    Error,
     arbiter::{
         AuthTokenSig,
         SendContractBody,
@@ -117,9 +117,9 @@ async fn controls_name(pubkey: &PublicKey, player_name: &PlayerName) -> Result<b
     match reqwest::get(&format!("{}/{}/{}", NAME_SERVICE_URL, "get-name-address", hex::encode(player_name.0.as_bytes()))).await {
         Ok(response) => match response.text().await {
             Ok(name_address) => Ok(get_namecoin_address(pubkey, NETWORK).unwrap() == name_address), 
-            Err(e) => Err(TgError(format!("{:?}", e))),
+            Err(_) => Err(Error::Adhoc("controls name response failed to parse")),
         },
-        Err(e) => Err(TgError(format!("{:?}", e))),
+        Err(_) => Err(Error::Adhoc("controls name request to name service failed")),
     }
 }
 
@@ -151,7 +151,7 @@ async fn submit_contract(con: &mut Connection, contract: &Contract) -> Result<Si
             }
         }
     }
-    Err(TgError("invalid contract".to_string()))
+    Err(Error::Adhoc("invalid contract"))
 }
 
 async fn submit_payout(con: &mut Connection, payout: &Payout) -> Result<PartiallySignedTransaction> {
@@ -167,7 +167,7 @@ async fn submit_payout(con: &mut Connection, payout: &Payout) -> Result<Partiall
             }
         }
     }
-    Err(TgError("invalid payout".to_string()))
+    Err(Error::Adhoc("invalid payout"))
 }
 
 //TODO: this function needs to reply more clearly when it fails

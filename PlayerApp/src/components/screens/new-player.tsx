@@ -9,12 +9,12 @@ import PlayerWalletModule from './../../PlayerWallet';
 import { styles } from '../../styles';
 import { Player, Contract, ContractStatus } from '../../datatypes';
 import { Secret } from '../../secret';
-import { PassphraseEntry } from '../passphrase-entry';
+import { PasswordEntry } from '../password-entry';
 import { PlayerPortrait } from '../player-portrait';
 
 export const NewPlayer = ({ navigation }) => {
     const dispatch = useDispatch();
-    const [passphrase, setPassphrase] = React.useState(new Secret(""));
+    const [password, setPassword] = React.useState(new Secret(""));
     const [playerName, setPlayerName] = useState('');
     const [pictureUrl, setPictureUrl] = useState('https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0');
     const [registeringPlayer, setRegisteringPlayer] = useState(false);
@@ -41,13 +41,13 @@ export const NewPlayer = ({ navigation }) => {
         <View style={{flexDirection: 'row' }}>
         <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey' }}>
             
-          <PassphraseEntry passphrase={passphrase} setPassphrase={setPassphrase} />
+          <PasswordEntry password={password} setPassword={setPassword} />
           <Button 
             title="Ok" 
             disabled={registeringPlayer}
             onPress={() => {
                 setRegisteringPlayer(true);
-                dispatch(newPlayer(playerName, passphrase))
+                dispatch(newPlayer(playerName, password))
                     .then(
                         success => {
                             setRegisteringPlayer(false);

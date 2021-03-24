@@ -48,11 +48,11 @@ fn player_cli<'a, 'b>() -> App<'a, 'b> {
         .settings(&[AppSettings::NoBinaryName, AppSettings::SubcommandRequiredElseHelp,
             AppSettings::VersionlessSubcommands])
         .subcommand(SubCommand::with_name("init").about("initialize new wallet")
-            .arg(Arg::with_name("passphrase")
-                .long("passphrase")
+            .arg(Arg::with_name("password")
+                .long("password")
                 .required(true)
                 .takes_value(true)
-                .help("wallet passphrase"))
+                .help("wallet password"))
             .arg(Arg::with_name("seed-phrase")
                 .long("seed-phrase")
                 .required(false)
@@ -120,7 +120,7 @@ pub fn cli(line: String, conf: Conf) -> String {
                             Some(phrase) => Some(Secret::new(phrase.to_owned())),
                             None => None,
                         };
-                        let new_seed = match SavedSeed::new(Secret::new(a.value_of("passphrase").unwrap().to_owned()), mnemonic) {
+                        let new_seed = match SavedSeed::new(Secret::new(a.value_of("password").unwrap().to_owned()), mnemonic) {
                             Ok(seed) => seed,
                             Err(e) => return format!("{:?}", e),
                         };
@@ -169,11 +169,11 @@ pub fn player_ui<'a, 'b>() -> App<'a, 'b> {
                     .index(1)
                     .help("new player name")
                     .required(true))
-                .arg(Arg::with_name("passphrase")
-                    .long("passphrase")
+                .arg(Arg::with_name("password")
+                    .long("password")
                     .required(true)
                     .takes_value(true)
-                    .help("wallet passphrase")),
+                    .help("wallet password")),
             SubCommand::with_name("add").about("add to known players")
                 .arg(Arg::with_name("name")
                     .index(1)
@@ -195,11 +195,11 @@ pub fn player_ui<'a, 'b>() -> App<'a, 'b> {
                     .index(2)
                     .help("total utxo amount to post")
                     .required(true))
-                .arg(Arg::with_name("passphrase")
-                    .long("passphrase")
+                .arg(Arg::with_name("password")
+                    .long("password")
                     .required(true)
                     .takes_value(true)
-                    .help("wallet passphrase")),
+                    .help("wallet password")),
             SubCommand::with_name("posted").about("retrieve posted info for player")
                 .arg(Arg::with_name("name")
                     .index(1)
@@ -211,7 +211,7 @@ pub fn player_ui<'a, 'b>() -> App<'a, 'b> {
 pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &PlayerWallet) -> String {
     if let (c, Some(a)) = subcommand {
         match c {
-            "register" => match wallet.register(PlayerName(a.value_of("name").unwrap().to_string()), Secret::new(a.value_of("passphrase").unwrap().to_owned())) {
+            "register" => match wallet.register(PlayerName(a.value_of("name").unwrap().to_string()), Secret::new(a.value_of("password").unwrap().to_owned())) {
                 Ok(()) => format!("registered player"),
                 Err(e) => format!("{}", e),
             }
@@ -233,7 +233,7 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 } else {
                     wallet.mine().iter().map(|p| p.clone().0).collect::<Vec<String>>().join("\n")
                 },
-            "post" => match wallet.post(PlayerName(a.value_of("name").unwrap().to_string()), Amount::from_sat(a.value_of("amount").unwrap().parse::<u64>().unwrap()), Secret::new(a.value_of("passphrase").unwrap().to_owned())) {
+            "post" => match wallet.post(PlayerName(a.value_of("name").unwrap().to_string()), Amount::from_sat(a.value_of("amount").unwrap().parse::<u64>().unwrap()), Secret::new(a.value_of("password").unwrap().to_owned())) {
                 Ok(_) => format!("posted contract info"),
                 Err(e) => format!("{}", e),
             }
@@ -303,11 +303,11 @@ pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
                     .help("contract id")
                     .required(true)
                     .takes_value(true))
-                .arg(Arg::with_name("passphrase")
-                    .long("passphrase")
+                .arg(Arg::with_name("password")
+                    .long("password")
                     .required(true)
                     .takes_value(true)
-                    .help("wallet passphrase"))
+                    .help("wallet password"))
                 .arg(Arg::with_name("sign-funding-tx")
                     .long("sign-funding-tx")
                     .required(false)
@@ -324,11 +324,11 @@ pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
                     .help("player to receive payout for")
                     .required(true)
                     .takes_value(true))
-                .arg(Arg::with_name("passphrase")
-                    .long("passphrase")
+                .arg(Arg::with_name("password")
+                    .long("password")
                     .required(true)
                     .takes_value(true)
-                    .help("wallet passphrase")),
+                    .help("wallet password")),
             SubCommand::with_name("submit").about("submit contract to arbiter")
                 .arg(Arg::with_name("cxid")
                     .index(1)
@@ -390,7 +390,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                         cxid: a.value_of("cxid").unwrap().to_string(),
                         sign_funding_tx: a.is_present("sign-funding-tx"),
                     },
-                    Secret::new(a.value_of("passphrase").unwrap().to_owned())) {
+                    Secret::new(a.value_of("password").unwrap().to_owned())) {
                 Ok(()) => format!("contract signed"),
                 Err(e) => format!("{}", e),
             }
@@ -401,7 +401,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
             "receive" => match DocumentUI::<ContractRecord>::receive(
                 wallet, 
                 PlayerName(a.value_of("player-name").unwrap().to_string()),
-                Secret::new(a.value_of("passphrase").unwrap().to_owned())) {
+                Secret::new(a.value_of("password").unwrap().to_owned())) {
                 Ok(()) => format!("contract received"),
                 Err(e) => format!("{}", e),
             }
@@ -484,11 +484,11 @@ pub fn payout_ui<'a, 'b>() -> App<'a, 'b> {
                     .required(false)
                     .help("payout script sig")
                     .takes_value(true))
-                .arg(Arg::with_name("passphrase")
-                    .long("passphrase")
+                .arg(Arg::with_name("password")
+                    .long("password")
                     .required(true)
                     .takes_value(true)
-                    .help("wallet passphrase")),
+                    .help("wallet password")),
             SubCommand::with_name("send").about("send payout to other player")
                 .arg(Arg::with_name("cxid")
                     .index(1)
@@ -502,11 +502,11 @@ pub fn payout_ui<'a, 'b>() -> App<'a, 'b> {
                     .help("player to receive payout for")
                     .required(true)
                     .takes_value(true))
-                .arg(Arg::with_name("passphrase")
-                    .long("passphrase")
+                .arg(Arg::with_name("password")
+                    .long("password")
                     .required(true)
                     .takes_value(true)
-                    .help("wallet passphrase")),
+                    .help("wallet password")),
             SubCommand::with_name("submit").about("submit payout to arbiter")
                 .arg(Arg::with_name("cxid")
                     .index(1)
@@ -567,7 +567,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                             None => None,
                         },
                     },
-                    Secret::new(a.value_of("passphrase").unwrap().to_owned())) {
+                    Secret::new(a.value_of("password").unwrap().to_owned())) {
                 Ok(()) => format!("payout created"),
                 Err(e) => format!("{}", e),
             }
@@ -578,7 +578,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
             "receive" => match DocumentUI::<PayoutRecord>::receive(
                 wallet, 
                 PlayerName(a.value_of("player-name").unwrap().to_string()),
-                Secret::new(a.value_of("passphrase").unwrap().to_owned())) {
+                Secret::new(a.value_of("password").unwrap().to_owned())) {
                 Ok(()) => format!("payout received"),
                 Err(e) => format!("{}", e),
             }

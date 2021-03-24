@@ -1,10 +1,58 @@
 pub use sled;
+pub use rusqlite;
 
 pub mod arbiter;
 pub mod db;
 pub mod player;
 pub mod ui;
 pub mod wallet;
+
+use std::{
+    convert::From,
+    fmt,
+    sync::Arc,
+};
+
+pub type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Debug)]
+pub enum Error {
+    Adhoc(&'static str),
+    Database(Arc<rusqlite::Error>),
+    TgLib(Arc<tglib::Error>),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Error::Adhoc(message) => write!(f, "Adhoc({})", message),
+            Error::Database(error) => write!(f, "Database({})", error),
+            Error::TgLib(error) => write!(f, "TgLib({})", error),
+        }
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::Adhoc(_) => None,
+            Error::Database(error) => Some(error.as_ref()),
+            Error::TgLib(error) => Some(error.as_ref()),
+        }
+    }
+}
+
+impl From<rusqlite::Error> for Error {
+    fn from(error: rusqlite::Error) -> Self {
+        Error::Database(Arc::new(error))
+    }
+}
+
+impl From<tglib::Error> for Error {
+    fn from(error: tglib::Error) -> Self {
+        Error::TgLib(Arc::new(error))
+    }
+}
 
 #[cfg(test)]
 mod tests {

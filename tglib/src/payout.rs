@@ -25,7 +25,7 @@ use bdk::bitcoin::{
 };
 use crate::{
     Result,
-    TgError,
+    Error,
     contract::{
         Contract,
         contract,
@@ -82,7 +82,7 @@ impl Payout {
             return Ok(p)
         }
         else {
-            return Err(TgError("couldn't parse payout".to_string()))
+            return Err(Error::Adhoc("couldn't parse payout"))
         }
     }
 
@@ -94,7 +94,7 @@ impl Payout {
                 return Ok(Address::from_script(&txout.script_pubkey, NETWORK).unwrap())
             }
         };
-        Err(TgError("couldn't determine payout address".to_string()))
+        Err(Error::Adhoc("couldn't determine payout address"))
     }
 
     pub fn recipient_pubkey(&self) -> Result<PublicKey> {
@@ -104,7 +104,7 @@ impl Payout {
         } else if address == Address::p2wpkh(&self.contract.p2_pubkey, address.network).unwrap() {
             Ok(self.contract.p2_pubkey.clone())
         } else {
-            Err(TgError("couldn't determine recipient pubkey".to_string()))
+            Err(Error::Adhoc("couldn't determine recipient pubkey"))
         }
     }
 }

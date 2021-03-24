@@ -17,7 +17,7 @@ use tglib::{
     },
     secrecy::Secret,
     Result as TgResult,
-    TgError,
+    Error,
     contract::Contract,
     wallet::{
         derive_account_xprivkey,
@@ -59,7 +59,7 @@ impl SigningWallet for Wallet {
             }
             Err(e) => {
                 println!("err: {:?}", e);
-                Err(TgError("cannot sign transaction".to_string()))
+                Err(Error::Adhoc("cannot sign transaction"))
             }
         }
     }
@@ -83,7 +83,7 @@ impl EscrowWallet for Wallet {
     fn validate_contract(&self, contract: &Contract) -> TgResult<()> {
 // TODO: better fee validation
         if contract.arbiter_pubkey != self.get_escrow_pubkey() {
-            return Err(TgError("unexpected arbiter pubkey".to_string()));
+            return Err(Error::Adhoc("unexpected arbiter pubkey"));
         }
         contract.validate()
     }

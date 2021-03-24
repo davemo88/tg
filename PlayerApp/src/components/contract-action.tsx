@@ -12,7 +12,7 @@ import { broadcastFundingTx, broadcastPayoutTx, signPayoutRequest, signContract,
 import { Secret } from '../secret';
 import { Currency } from './currency';
 import { PlayerPortrait } from './player-portrait';
-import { PassphraseEntry } from './passphrase-entry';
+import { PasswordEntry } from './password-entry';
 
 export const ContractAction = (props) => {
   const [isSigned, setIsSigned] = React.useState(false);
@@ -38,11 +38,11 @@ export const ContractAction = (props) => {
 }
 
 const ActionUnsigned = (props) => {
-  const [passphrase, setPassphrase] = React.useState(new Secret(""));
+  const [password, setPassword] = React.useState(new Secret(""));
 
   return (
     <View>
-      <PassphraseEntry passphrase={passphrase} setPassphrase={setPassphrase} />
+      <PasswordEntry password={password} setPassword={setPassword} />
       <Button 
         disabled={!props.isSigned} 
         title="Issue Contract" 
@@ -64,11 +64,11 @@ const ActionIssued = (props) => {
 }
 
 const ActionReceived = (props) => {
-  const [passphrase, setPassphrase] = React.useState(new Secret(""));
+  const [password, setPassword] = React.useState(new Secret(""));
 
   return (
     <View>
-      <PassphraseEntry passphrase={passphrase} setPassphrase={setPassphrase} />
+      <PasswordEntry password={password} setPassword={setPassword} />
       <Button 
         disabled={!props.isSigned} 
         title="Accept Contract" 
@@ -143,7 +143,7 @@ const ActionPayoutRequestIssued = (props) => {
 }
 
 const ActionPayoutRequestReceived = (props) => {
-  const [passphrase, setPassphrase] = React.useState(new Secret(""));
+  const [password, setPassword] = React.useState(new Secret(""));
   const payoutRequest = payoutRequestSelectors.selectAll(store.getState())
     .filter((pr, i, a) => pr.contractId === props.contract.id ).pop();
   return (
@@ -152,7 +152,7 @@ const ActionPayoutRequestReceived = (props) => {
       <View>
         <Text>Player One Payout: </Text><Currency amount={payoutRequest.playerOneAmount} />
         <Text>Player Two Payout: </Text><Currency amount={payoutRequest.playerTwoAmount} />
-        <PassphraseEntry passphrase={passphrase} setPassphrase={setPassphrase} />
+        <PasswordEntry password={password} setPassword={setPassword} />
         <Button 
           disabled={!props.isSigned} 
           title='Accept Payout Request'

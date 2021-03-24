@@ -41,11 +41,11 @@ export const loadPlayers = () => {
 }
 
 // might want to actually use createAsyncThunk for this one
-export const newPlayer = (name: string, passphrase: Secret<string>) => {
+export const newPlayer = (name: string, password: Secret<string>) => {
     return async (dispatch) => {
         try {
 // confusing because of native module. what should its signature in typescript be?
-            let cli_response: string = await PlayerWalletModule.call_cli_with_passphrase(`player register "${name}"`, passphrase.expose_secret()); 
+            let cli_response: string = await PlayerWalletModule.call_cli_with_password(`player register "${name}"`, password.expose_secret()); 
             console.log(cli_response);
             if (cli_response === "registered player") {
                 return dispatch(playerSlice.actions.playerAdded({

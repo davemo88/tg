@@ -6,6 +6,7 @@ pub use bdk;
 pub use bip39;
 pub use byteorder;
 pub use hex;
+pub use log;
 pub use nom;
 pub use rand;
 pub use secrecy;
@@ -20,13 +21,25 @@ pub mod payout;
 pub mod script;
 pub mod wallet;
 
-#[derive(Debug)]
-pub struct TgError(pub String);
+pub type Result<T> = std::result::Result<T, Error>;
 
-impl fmt::Display for TgError {
+#[derive(Clone, Debug)]
+pub enum Error {
+    Adhoc(&'static str),
+}
+
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "TgError: {}", self.0)
+        match self {
+            Error::Adhoc(message) => write!(f, "Adhoc({})", message),
+        }
     }
 }
 
-pub type Result<T> = std::result::Result<T, TgError>;
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::Adhoc(_) => None,
+        }
+    }
+}

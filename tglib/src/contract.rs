@@ -40,7 +40,7 @@ use nom::{
 
 use crate::{
     Result,
-    TgError,
+    Error,
     player::PlayerName,
     script::{
         parser::tg_script,
@@ -123,7 +123,7 @@ impl Contract {
             Ok(c)
         }
         else {
-            Err(TgError("couldn't parse contract".to_string()))
+            Err(Error::Adhoc("couldn't parse contract"))
         }
     }
 
@@ -134,7 +134,7 @@ impl Contract {
                 return Ok(Amount::from_sat(txout.value))
             }
         }
-        Err(TgError("couldn't determine amount".to_string()))
+        Err(Error::Adhoc("couldn't determine amount"))
     }
 
     pub fn fee(&self) -> Result<Address> {
@@ -144,7 +144,7 @@ impl Contract {
                return Ok(Address::from_script(&txout.script_pubkey, NETWORK).unwrap())
             }
         }
-        Err(TgError("fee not found".to_string()))
+        Err(Error::Adhoc("fee not found"))
     }
 
     pub fn validate(&self) -> Result<()> {
@@ -169,7 +169,7 @@ impl Contract {
             NETWORK,
         );
         if self.payout_script != payout_script {
-            Err(TgError("invalid payout script".to_string()))
+            Err(Error::Adhoc("invalid payout script"))
         } else {
             Ok(())
         }
@@ -183,10 +183,10 @@ impl Contract {
                 0 => self.p1_pubkey.key,
                 1 => self.p2_pubkey.key,
                 2 => self.arbiter_pubkey.key,
-                _ => return Err(TgError("too many signatures".to_string())),
+                _ => return Err(Error::Adhoc("too many signatures")),
             };
             if secp.verify(&msg, &sig, &pubkey).is_err() {
-                return Err(TgError("invalid signature".to_string()))
+                return Err(Error::Adhoc("invalid signature"))
             }
         };
         Ok(())

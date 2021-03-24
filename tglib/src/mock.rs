@@ -10,7 +10,6 @@ use bdk::bitcoin::{
 };
 pub use crate::{
     Result as TgResult,
-    TgError,
     contract::Contract,
     wallet::{ 
         derive_account_xpubkey,
@@ -34,6 +33,7 @@ pub const CONTRACT_VERSION: u8 = 1;
 pub const PAYOUT_VERSION: u8 = 1;
 pub const ESCROW_KIX: &'static str = "0";
 
+// TODO: i think all of this can be moved into tests
 pub const PLAYER_1_MNEMONIC: &'static str = "deny income tiger glove special recycle cup surface unusual sleep speed scene enroll finger protect dice powder unit";
 pub const PLAYER_2_MNEMONIC: &'static str = "carry tooth vague volcano refuse purity bike owner diary dignity toe body notable foil hedgehog mesh dream shock";
 // m/44'/0'/0'/7/0

@@ -15,9 +15,9 @@ export const LIVE_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'live.png';
 // this is appdata
 export const NETWORK: string = 'Test';
 
-export const initWallet = async (passphrase: Secret<string>) => {
+export const initWallet = async (password: Secret<string>) => {
     try {
-        let cli_response = await PlayerWalletModule.call_cli_with_passphrase("init", passphrase.expose_secret());
+        let cli_response = await PlayerWalletModule.call_cli_with_password("init", password.expose_secret());
         if (cli_response !== "wallet initialized") {
             throw(cli_response);
         }
