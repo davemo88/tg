@@ -238,8 +238,9 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 Err(e) => format!("{}", e),
             }
             "posted" => match wallet.arbiter_client().get_contract_info(PlayerName(a.value_of("name").unwrap().to_string())) {
-                Some(info) => format!("{} has posted {} worth of utxos", info.name.0, info.utxos.iter().map(|(_, sats, _)| sats).sum::<u64>()),
-                None => format!("no info posted"),
+                Ok(Some(info)) => format!("{} has posted {} worth of utxos", info.name.0, info.utxos.iter().map(|(_, sats, _)| sats).sum::<u64>()),
+                Ok(None) => format!("no info posted"),
+                Err(e) => format!("{}", e),
             }
             _ => format!("command '{}' is not implemented", c),
         }

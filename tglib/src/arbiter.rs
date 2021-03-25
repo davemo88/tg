@@ -10,7 +10,7 @@ use bdk::bitcoin::{
     util::psbt::PartiallySignedTransaction,
 };
 use crate::{
-    Result,
+//    Result,
     contract::{
         Contract,
         ContractRecord,
@@ -23,11 +23,13 @@ use crate::{
     player::PlayerName,
 };
 
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
 pub trait ArbiterService {
     fn get_escrow_pubkey(&self) -> Result<PublicKey>;
     fn get_fee_address(&self) -> Result<Address>;
     fn set_contract_info(&self, info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<()>;
-    fn get_contract_info(&self, player_name: PlayerName) -> Option<PlayerContractInfo>;
+    fn get_contract_info(&self, player_name: PlayerName) -> Result<Option<PlayerContractInfo>>;
     fn send_contract(&self, contract: ContractRecord, player_name: PlayerName) -> Result<()>;
     fn send_payout(&self, payout: PayoutRecord, player_name: PlayerName) -> Result<()>;
     fn get_auth_token(&self, player_name: &PlayerName) -> Result<Vec<u8>>;

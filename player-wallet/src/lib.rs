@@ -19,6 +19,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     Adhoc(&'static str),
     Database(Arc<rusqlite::Error>),
+    Io(Arc<std::io::Error>),
+    Reqwest(Arc<reqwest::Error>),
     TgLib(Arc<tglib::Error>),
 }
 
@@ -27,6 +29,8 @@ impl fmt::Display for Error {
         match self {
             Error::Adhoc(message) => write!(f, "Adhoc({})", message),
             Error::Database(error) => write!(f, "Database({})", error),
+            Error::Io(error) => write!(f, "Io({})", error),
+            Error::Reqwest(error) => write!(f, "Reqwest({})", error),
             Error::TgLib(error) => write!(f, "TgLib({})", error),
         }
     }
@@ -37,6 +41,8 @@ impl std::error::Error for Error {
         match self {
             Error::Adhoc(_) => None,
             Error::Database(error) => Some(error.as_ref()),
+            Error::Io(error) => Some(error.as_ref()),
+            Error::Reqwest(error) => Some(error.as_ref()),
             Error::TgLib(error) => Some(error.as_ref()),
         }
     }
@@ -45,6 +51,18 @@ impl std::error::Error for Error {
 impl From<rusqlite::Error> for Error {
     fn from(error: rusqlite::Error) -> Self {
         Error::Database(Arc::new(error))
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(error: std::io::Error) -> Self {
+        Error::Io(Arc::new(error))
+    }
+}
+
+impl From<reqwest::Error> for Error {
+    fn from(error: reqwest::Error) -> Self {
+        Error::Reqwest(Arc::new(error))
     }
 }
 

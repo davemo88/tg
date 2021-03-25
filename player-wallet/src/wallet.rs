@@ -66,6 +66,8 @@ use tglib::{
     },
 };
 use crate::{
+    Result,
+//    Error,
     player::PlayerNameClient,
     arbiter::ArbiterClient,
     db::DB,
@@ -91,28 +93,23 @@ impl PlayerWallet {
         }
     }
 
-    fn saved_seed(&self) -> TgResult<SavedSeed> {
+    fn saved_seed(&self) -> Result<SavedSeed> {
         let mut seed_path = self.wallet_dir.clone();
         seed_path.push(SEED_NAME);
-        match File::open(&seed_path) {
-            Ok(reader) => {
-                let mut seed: SavedSeed = serde_json::from_reader(reader).unwrap();
+        let reader = File::open(&seed_path)?;
+        let mut seed: SavedSeed = serde_json::from_reader(reader).unwrap();
 // serde json bug ? where regtest keys load as testnet
 // maybe because they have the same string form
-                if seed.xpubkey.network == Network::Testnet 
-                && self.network == Network::Regtest {
-                    seed.xpubkey.network = Network::Regtest;
-                }
-                Ok(seed)
-            },
-            Err(e) => Err(TgError(format!("{:?}", e))),
+        if seed.xpubkey.network == Network::Testnet 
+        && self.network == Network::Regtest {
+            seed.xpubkey.network = Network::Regtest;
         }
+        Ok(seed)
     }
 
     pub fn wallet(&self) -> Wallet<ElectrumBlockchain, sled::Tree> {
         let saved_seed = self.saved_seed().unwrap();
         let descriptor_key = format!("[{}/{}]{}", saved_seed.fingerprint, BITCOIN_ACCOUNT_PATH, saved_seed.xpubkey);
-//        let descriptor_key = format!("{}", saved_seed.xpubkey);
 
         let w = Wallet::new(
             &self.external_descriptor(&descriptor_key),
@@ -130,7 +127,6 @@ impl PlayerWallet {
         let seed = saved_seed.get_seed(pw).unwrap();
         let account_key = derive_account_xprivkey(seed, self.network);
         let descriptor_key = format!("[{}/{}]{}", saved_seed.fingerprint, BITCOIN_ACCOUNT_PATH, account_key);
-//        let descriptor_key = format!("{}", account_key);
 
         Wallet::new(
             &self.external_descriptor(&descriptor_key),
@@ -311,10 +307,7 @@ impl EscrowWallet for PlayerWallet {
 impl SigningWallet for PlayerWallet {
 
     fn sign_tx(&self, psbt: PartiallySignedTransaction, path: Option<DerivationPath>, pw: Secret<String>) -> TgResult<PartiallySignedTransaction> {
-        let seed = match self.saved_seed().unwrap().get_seed(pw.clone()) {
-            Ok(seed) => seed,
-            Err(e) => return Err(TgError(format!("{:?}", e))),
-        };
+        let seed = self.saved_seed().unwrap().get_seed(pw.clone())?;
         match path {
             Some(path) => {
                 let account_key = derive_account_xprivkey(seed, self.network);
@@ -343,10 +336,7 @@ impl SigningWallet for PlayerWallet {
     }
 
     fn sign_message(&self, msg: Message, path: DerivationPath, pw: Secret<String>) -> TgResult<Signature> {
-        let seed = match self.saved_seed().unwrap().get_seed(pw) {
-            Ok(seed) => seed,
-            Err(e) => return Err(TgError(format!("{:?}", e))),
-        };
+        let seed = self.saved_seed().unwrap().get_seed(pw.clone())?;
         let account_key = derive_account_xprivkey(seed, self.network);
         let secp = Secp256k1::new();
         let signing_key = account_key.derive_priv(&secp, &path).unwrap();

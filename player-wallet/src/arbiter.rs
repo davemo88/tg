@@ -11,7 +11,7 @@ use tglib::{
         util::psbt::PartiallySignedTransaction,
     },
     hex,
-    Result,
+//    Result,
     Error,
     arbiter::{
         ArbiterService,
@@ -34,6 +34,7 @@ use tglib::{
     player::PlayerName,
 };
 
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 pub struct ArbiterClient(String);
 
@@ -62,14 +63,14 @@ impl ArbiterService for ArbiterClient {
     fn get_escrow_pubkey(&self) -> Result<PublicKey> {
         match self.get("escrow-pubkey", None) {
             Ok(response) => Ok(PublicKey::from_str(&response.text().unwrap()).unwrap()),
-            Err(_) => Err(Error("couldn't get result pubkey".to_string())),
+            Err(_) => Err(Error::Adhoc("couldn't get result pubkey").into()),
         }
     }
 
     fn get_fee_address(&self) -> Result<Address> {
         match self.get("fee-address", None) {
             Ok(response) => Ok(Address::from_str(&response.text().unwrap()).unwrap()),
-            Err(_) => Err(Error("couldn't get fee address".to_string())),
+            Err(_) => Err(Error::Adhoc("couldn't get fee address").into()),
         }
     }
 
@@ -79,22 +80,17 @@ impl ArbiterService for ArbiterClient {
             pubkey,
             sig_hex: hex::encode(sig.serialize_der()),
         };
-        match self.post("set-contract-info", serde_json::to_string(&body).unwrap()) {
-            Ok(_reply) => Ok(()),
-            Err(e) => Err(Error(e.to_string()))
-        }
+        let _response = self.post("set-contract-info", serde_json::to_string(&body)?)?; 
+        Ok(())
     }
 
-    fn get_contract_info(&self, player_name: PlayerName) -> Option<PlayerContractInfo> {
-        match self.get("get-contract-info", Some(&hex::encode(player_name.0.as_bytes()))) {
-            Ok(response) => {
-                match serde_json::from_str::<PlayerContractInfo>(&response.text().unwrap()) {
-                    Ok(info) => Some(info),
-                    Err(_) => None,
-                }
-            },
+    fn get_contract_info(&self, player_name: PlayerName) -> Result<Option<PlayerContractInfo>> {
+        let response = self.get("get-contract-info", Some(&hex::encode(player_name.0.as_bytes())))?;
+        let contract_info = match serde_json::from_str::<PlayerContractInfo>(&response.text().unwrap()) {
+            Ok(info) => Some(info),
             Err(_) => None,
-        }
+        };
+        Ok(contract_info)
     }
 
     fn send_contract(&self, contract: ContractRecord, player_name: PlayerName) -> Result<()> {
@@ -102,10 +98,8 @@ impl ArbiterService for ArbiterClient {
             contract,
             player_name,
         };
-        match self.post("send-contract", serde_json::to_string(&body).unwrap()) {
-            Ok(_) => Ok(()),
-            Err(e) => Err(Error(format!("couldn't send contract: {:?}", e))), 
-        }
+        self.post("send-contract", serde_json::to_string(&body).unwrap())?;
+        Ok(())
     }
 
     fn send_payout(&self, payout: PayoutRecord, player_name: PlayerName) -> Result<()> {
@@ -113,73 +107,52 @@ impl ArbiterService for ArbiterClient {
             payout,
             player_name,
         };
-        match self.post("send-payout", serde_json::to_string(&body).unwrap()) {
-            Ok(_) => Ok(()),
-            Err(e) => Err(Error(format!("couldn't send payout: {:?}", e))), 
-        }
+        self.post("send-payout", serde_json::to_string(&body).unwrap())?; 
+        Ok(())
     }
 
     fn get_auth_token(&self, player_name: &PlayerName) -> Result<Vec<u8>> {
-        match self.get("auth-token", Some(&player_name.0)) {
-            Ok(response) => Ok(hex::decode(response.text().unwrap()).unwrap().to_vec()),
-            Err(e) => Err(Error(format!("couldn't get auth token: {:?}", e))), 
-        }
+        let response = self.get("auth-token", Some(&player_name.0))?; 
+        let token = hex::decode(response.text()?)?.to_vec();
+        Ok(token)
     }
 
     fn receive_contract(&self, auth: AuthTokenSig) -> Result<Option<ContractRecord>> {
-        match self.post("receive-contract", serde_json::to_string(&auth).unwrap()) {
-            Ok(response) => match serde_json::from_str::<ContractRecord>(&response.text().unwrap()) {
-                Ok(contract_record) => Ok(Some(contract_record)),
-                Err(_) => Ok(None),
-            }
-            Err(e) => Err(Error(format!("couldn't receive contract: {:?}", e))), 
-        }
+        let response = self.post("receive-contract", serde_json::to_string(&auth)?)?; 
+        let contract_record = match serde_json::from_str::<ContractRecord>(&response.text().unwrap()) {
+                Ok(contract_record) => Some(contract_record),
+                Err(_) => None,
+            };
+        Ok(contract_record)
     }
 
     fn receive_payout(&self, auth: AuthTokenSig) -> Result<Option<PayoutRecord>> {
-        match self.post("receive-payout", serde_json::to_string(&auth).unwrap()) {
-            Ok(response) => match serde_json::from_str::<PayoutRecord>(&response.text().unwrap()) {
-                Ok(payout_record) => Ok(Some(payout_record)),
-                Err(_) => Ok(None),
-            }
-            Err(e) => Err(Error(format!("couldn't receive payout: {:?}", e))), 
-        }
+        let response = self.post("receive-payout", serde_json::to_string(&auth).unwrap())?;
+        let payout_record = serde_json::from_str::<PayoutRecord>(&response.text().unwrap())?;
+        Ok(Some(payout_record))
     }
 
     fn submit_contract(&self, contract: &Contract) -> Result<Signature> {
         let body = SubmitContractBody { 
             contract_hex: hex::encode(contract.to_bytes()) 
         };
-        match self.post("submit-contract", serde_json::to_string(&body).unwrap()) {
-            Ok(response) => {
-                match Signature::from_der(&hex::decode(response.text().unwrap()).unwrap()) {
-                    Ok(sig) => Ok(sig),
-                    Err(_) => Err(Error("invalid contract".to_string()))
-                }
-            }
-            Err(_) => Err(Error("couldn't submit contract".to_string()))
-        }
+        let response = self.post("submit-contract", serde_json::to_string(&body)?)?; 
+        let sig = Signature::from_der(&hex::decode(response.text()?)?)?;
+        Ok(sig)
     }
 
     fn submit_payout(&self, payout: &Payout) -> Result<PartiallySignedTransaction> {
         let body = SubmitPayoutBody {
             payout_hex: hex::encode(payout.to_bytes())
         };
-        match self.post("submit-payout", serde_json::to_string(&body).unwrap()) {
-            Ok(response) => match consensus::deserialize(&hex::decode(response.text().unwrap()).unwrap()) {
-                Ok(psbt) => Ok(psbt),
-                Err(_) => Err(Error("invalid payout".to_string())),
-            }
-            Err(_) => Err(Error("couldn't submit payout".to_string())),
-        }
+        let response = self.post("submit-payout", serde_json::to_string(&body)?)?; 
+        let psbt = consensus::deserialize(&hex::decode(response.text()?)?)?; 
+        Ok(psbt)
     }
 
     fn fund_address(&self, address: Address) -> Result<Txid> {
-        match self.get("fund-address", Some(&address.to_string())) {
-            Ok(response) => {
-                Ok(Txid::from_hash(sha256d::Hash::from_str(&response.text().unwrap()).unwrap()))
-            },
-            Err(_) => Err(Error("couldn't fund address".to_string())),
-        }
+        let response = self.get("fund-address", Some(&address.to_string()))?;
+        let txid = Txid::from_hash(sha256d::Hash::from_str(&response.text()?)?);
+        Ok(txid)
     }
 }
