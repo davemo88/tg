@@ -25,7 +25,7 @@ fn op_bytecode(op: TgOpcode) -> impl Fn(&[u8]) -> IResult<&[u8], TgOpcode> {
             Ok((input, op.clone()))
         }
         else{
-            Err(nom::Err::Error((input, nom::error::ErrorKind::IsNot)))
+            Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::IsNot)))
         }
     }
 }

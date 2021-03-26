@@ -16,6 +16,7 @@ use tglib::{
     arbiter::{
         ArbiterService,
         AuthTokenSig,
+        Error as ArbiterError,
         SendContractBody,
         SendPayoutBody,
         SetContractInfoBody,
@@ -34,7 +35,7 @@ use tglib::{
     player::PlayerName,
 };
 
-type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+type Result<T> = std::result::Result<T, ArbiterError>;
 
 pub struct ArbiterClient(String);
 

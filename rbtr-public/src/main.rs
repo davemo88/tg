@@ -49,6 +49,10 @@ use tglib::{
         electrum_client::Client,
     },
     hex,
+    log::{
+        info,
+        error,
+    },
     rand::{self, Rng},
     Result,
     Error,
@@ -116,7 +120,7 @@ async fn push_payout(con: &mut Connection, hex: &str) -> RedisResult<String> {
 async fn controls_name(pubkey: &PublicKey, player_name: &PlayerName) -> Result<bool> {
     match reqwest::get(&format!("{}/{}/{}", NAME_SERVICE_URL, "get-name-address", hex::encode(player_name.0.as_bytes()))).await {
         Ok(response) => match response.text().await {
-            Ok(name_address) => Ok(get_namecoin_address(pubkey, NETWORK).unwrap() == name_address), 
+            Ok(name_address) => Ok(get_namecoin_address(pubkey, NETWORK) == name_address), 
             Err(_) => Err(Error::Adhoc("controls name response failed to parse")),
         },
         Err(_) => Err(Error::Adhoc("controls name request to name service failed")),
@@ -172,21 +176,31 @@ async fn submit_payout(con: &mut Connection, payout: &Payout) -> Result<Partiall
 
 //TODO: this function needs to reply more clearly when it fails
 async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redis::Client) -> WebResult<impl Reply> {
+    info!("set_contract_info body: {}", serde_json::to_string(&body).unwrap());
+//    controls_name(&body.pubkey, &body.contract_info.name).await?;
     match controls_name(&body.pubkey, &body.contract_info.name).await {
         Ok(true) => (),
-        _ => return Err(warp::reject()),
+        _ => {
+            error!("set_contract_info pubkey doesn't control name");
+            return Err(warp::reject());
+        },
     }
  
     let secp = Secp256k1::new();
     let sig = Signature::from_der(&hex::decode(&body.sig_hex).unwrap()).unwrap();
     if secp.verify(&Message::from_slice(&body.contract_info.hash()).unwrap(), &sig, &body.pubkey.key).is_err() {
+// TODO: responses with proper errors and data
+        error!("set_contract_info invalid signature");
         return Err(warp::reject())
     }
 
     let mut con = redis_client.get_async_connection().await.unwrap();
     let r: RedisResult<String> = con.set(body.contract_info.name.clone().0, &serde_json::to_string(&body.contract_info).unwrap()).await;
     match r {
-        Ok(_string) => Ok(format!("set contract info for {}", body.contract_info.name.0)),
+        Ok(_string) => {
+            info!("set contract info for {}", body.contract_info.name.0);
+            Ok(format!("set contract info for {}", body.contract_info.name.0))
+        },
         Err(_) => Err(warp::reject()),
     }
 }

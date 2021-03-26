@@ -23,7 +23,43 @@ use crate::{
     player::PlayerName,
 };
 
-type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+// type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
+pub type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Debug)]
+#[allow(dead_code)]
+pub enum Error {
+    Adhoc(&'static str),
+    Tglib(crate::Error),
+    Web(Box<dyn std::error::Error>),
+} 
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Error::Adhoc(message) => write!(f, "Adhoc({})", message),
+            Error::Tglib(error) => write!(f, "Tglib({})", error),
+            Error::Web(error) => write!(f, "Web({})", error),
+        }
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::Adhoc(_) => None,
+            Error::Tglib(error) => Some(error),
+            Error::Web(error) => Some(error.as_ref()),
+        }
+    }
+}
+
+impl From<crate::Error> for Error {
+    fn from(error: crate::Error) -> Self {
+        Error::Tglib(error)
+    }
+}
 
 pub trait ArbiterService {
     fn get_escrow_pubkey(&self) -> Result<PublicKey>;
@@ -69,6 +105,7 @@ pub struct SubmitContractBody {
 pub struct SubmitPayoutBody {
     pub payout_hex: String,
 }
+
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuthTokenSig {

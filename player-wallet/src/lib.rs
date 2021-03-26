@@ -21,7 +21,7 @@ pub enum Error {
     Database(Arc<rusqlite::Error>),
     Io(Arc<std::io::Error>),
     Reqwest(Arc<reqwest::Error>),
-    TgLib(Arc<tglib::Error>),
+    Tglib(Arc<tglib::Error>),
 }
 
 impl fmt::Display for Error {
@@ -31,7 +31,7 @@ impl fmt::Display for Error {
             Error::Database(error) => write!(f, "Database({})", error),
             Error::Io(error) => write!(f, "Io({})", error),
             Error::Reqwest(error) => write!(f, "Reqwest({})", error),
-            Error::TgLib(error) => write!(f, "TgLib({})", error),
+            Error::Tglib(error) => write!(f, "Tglib({})", error),
         }
     }
 }
@@ -43,7 +43,7 @@ impl std::error::Error for Error {
             Error::Database(error) => Some(error.as_ref()),
             Error::Io(error) => Some(error.as_ref()),
             Error::Reqwest(error) => Some(error.as_ref()),
-            Error::TgLib(error) => Some(error.as_ref()),
+            Error::Tglib(error) => Some(error.as_ref()),
         }
     }
 }
@@ -68,7 +68,7 @@ impl From<reqwest::Error> for Error {
 
 impl From<tglib::Error> for Error {
     fn from(error: tglib::Error) -> Self {
-        Error::TgLib(Arc::new(error))
+        Error::Tglib(Arc::new(error))
     }
 }
 

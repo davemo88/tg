@@ -134,6 +134,7 @@ impl SavedSeed {
     }
 
     pub fn get_seed(&self, pw: Secret<String>) -> TgResult<Secret<Vec<u8>>> {
+// TODO: fix unwrap on wrong password
         if argon2::verify_encoded(&self.pw_hash, pw.expose_secret().as_bytes()).unwrap() {
             {
                 let decryptor = match age::Decryptor::new(&self.encrypted_seed[..]).unwrap() {
@@ -343,7 +344,7 @@ pub fn derive_account_xpubkey(seed: Secret<Vec<u8>>, network: Network) -> Extend
         ExtendedPubKey::from_private(&secp, &derive_account_xprivkey(seed, network))
 }
 
-pub fn get_namecoin_address(pubkey: &PublicKey, network: Network) -> Result<String, String> {
+pub fn get_namecoin_address(pubkey: &PublicKey, network: Network) -> String {
     let mut sha256_engine = sha256::HashEngine::default();
     sha256_engine.input(&pubkey.key.serialize());
     let hash: &[u8] = &sha256::Hash::from_engine(sha256_engine);
@@ -363,7 +364,7 @@ pub fn get_namecoin_address(pubkey: &PublicKey, network: Network) -> Result<Stri
         }
     }
 
-    Ok(base58::check_encode_slice(&hash))
+    base58::check_encode_slice(&hash)
 }
 
 #[cfg(test)]

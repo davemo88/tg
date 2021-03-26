@@ -55,7 +55,7 @@ async fn register_name_handler(body: RegisterNameBody, nmc_rpc: NamecoinRpcClien
     }
     let _r = nmc_rpc.import_pubkey(&body.pubkey);
 // create namecoin address from supplied pubkey
-    let name_address = get_namecoin_address(&body.pubkey, NETWORK).unwrap();
+    let name_address = get_namecoin_address(&body.pubkey, NETWORK);
     let name = format!("{}{}",PLAYER_NAME_PREFIX, body.player_name.0);
     let new_address = nmc_rpc.get_new_address().await.unwrap();
     match nmc_rpc.name_new(&name, &new_address).await {
@@ -89,7 +89,7 @@ async fn get_player_names_handler(pubkey: String, nmc_rpc: NamecoinRpcClient) ->
 
     let players = nmc_rpc.name_scan(None, None, Some(options)).await.unwrap();
     let pubkey = PublicKey::from_slice(&hex::decode(pubkey).unwrap()).unwrap();
-    let namecoin_address = get_namecoin_address(&pubkey, NETWORK).unwrap();
+    let namecoin_address = get_namecoin_address(&pubkey, NETWORK);
     let controlled_players: Vec<NameStatus> = players.iter().filter(|p| !p.expired && p.address == namecoin_address).cloned().collect();
     Ok(serde_json::to_string::<Vec<String>>(&controlled_players.iter().map(|p| p.name.replace(PLAYER_NAME_PREFIX,"")).collect()).unwrap())
 }
