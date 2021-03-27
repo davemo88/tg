@@ -12,6 +12,7 @@ use std::{
     fmt,
     sync::Arc,
 };
+use tglib::reqwest;
 
 pub type Result<T> = std::result::Result<T, Error>;
 

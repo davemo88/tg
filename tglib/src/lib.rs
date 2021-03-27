@@ -9,6 +9,7 @@ pub use hex;
 pub use log;
 pub use nom;
 pub use rand;
+pub use reqwest;
 pub use secrecy;
 //pub use serde;
 

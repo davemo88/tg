@@ -1,5 +1,4 @@
 use std::str::FromStr;
-use reqwest;
 use tglib::{
     bdk::bitcoin::{
         hashes::sha256d,
@@ -11,6 +10,7 @@ use tglib::{
         util::psbt::PartiallySignedTransaction,
     },
     hex,
+    reqwest,
 //    Result,
     Error,
     arbiter::{
