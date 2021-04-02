@@ -1,14 +1,12 @@
-use tglib::{
-    bdk::bitcoin::PublicKey,
-    reqwest::{
-        Result as ReqwestResult,
-        Client,
-        Response,
-    },
-};
+use tglib::bdk::bitcoin::PublicKey;
 use serde::{
     Serialize,
     Deserialize,
+};
+use reqwest::{
+    Result as ReqwestResult,
+    Client,
+    Response,
 };
 
 pub const STRING_ENCODING: &'static str = "utf8";

@@ -4,7 +4,6 @@ use tglib::{
         PublicKey,
     },
     hex,
-    reqwest,
     player::{
         PlayerName,
         PlayerNameService,

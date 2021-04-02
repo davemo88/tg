@@ -118,7 +118,7 @@ async fn push_payout(con: &mut Connection, hex: &str) -> RedisResult<String> {
 }
 
 async fn controls_name(pubkey: &PublicKey, player_name: &PlayerName) -> Result<bool> {
-    match tglib::reqwest::get(&format!("{}/{}/{}", NAME_SERVICE_URL, "get-name-address", hex::encode(player_name.0.as_bytes()))).await {
+    match reqwest::get(&format!("{}/{}/{}", NAME_SERVICE_URL, "get-name-address", hex::encode(player_name.0.as_bytes()))).await {
         Ok(response) => match response.text().await {
             Ok(name_address) => Ok(get_namecoin_address(pubkey, NETWORK) == name_address), 
             Err(_) => Err(Error::Adhoc("controls name response failed to parse")),

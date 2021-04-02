@@ -10,13 +10,11 @@ use tglib::{
         util::psbt::PartiallySignedTransaction,
     },
     hex,
-    reqwest,
-//    Result,
     Error,
     arbiter::{
+        Result,
         ArbiterService,
         AuthTokenSig,
-        Error as ArbiterError,
         SendContractBody,
         SendPayoutBody,
         SetContractInfoBody,
@@ -34,8 +32,6 @@ use tglib::{
     },
     player::PlayerName,
 };
-
-type Result<T> = std::result::Result<T, ArbiterError>;
 
 pub struct ArbiterClient(String);
 
