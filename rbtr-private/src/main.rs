@@ -31,11 +31,9 @@ use wallet::Wallet;
 const ARBITER_PW: &'static str = "somebogusarbiterpwweeee4j14hrkqj3htlkj";
 
 async fn maybe_sign_contract(con: &mut Connection, wallet: &Wallet) {
-    if let Some(mut contract) = next_contract(con).await {
-        println!("retrieved contract:\n{:?}", contract);
+    if let Some(contract) = next_contract(con).await {
         if wallet.validate_contract(&contract).is_ok() {
-            if let Ok(sig) = sign_contract(wallet, &mut contract, Secret::new(ARBITER_PW.to_owned())) {
-                println!("signed contract {}", hex::encode(contract.cxid()));
+            if let Ok(sig) = sign_contract(wallet, &contract, Secret::new(ARBITER_PW.to_owned())) {
                 let _r = set_contract_signature(con, contract, sig).await;
             }
         }
@@ -44,11 +42,7 @@ async fn maybe_sign_contract(con: &mut Connection, wallet: &Wallet) {
 
 async fn next_contract(con: &mut Connection) -> Option<Contract> {
     let r: redis::RedisResult<String> = con.lpop("contracts").await;
-    if let Ok(contract_hex) = r {
-       Some(Contract::from_bytes(hex::decode(contract_hex).unwrap()).unwrap())
-    } else {
-        None
-    }
+    Contract::from_bytes(hex::decode(r.ok()?).ok()?).ok()
 }
 
 async fn set_contract_signature(con: &mut Connection, contract: Contract, sig: Signature) -> redis::RedisResult<String> {
@@ -57,10 +51,8 @@ async fn set_contract_signature(con: &mut Connection, contract: Contract, sig: S
 
 async fn maybe_sign_payout(con: &mut Connection, wallet: &Wallet) {
     if let Some(payout) = next_payout(con).await {
-        println!("retrieved payout:\n{:?}", payout);
         if wallet.validate_payout(&payout).is_ok() {
             if let Ok(psbt) = sign_payout_psbt(wallet, payout.psbt.clone(), Secret::new(ARBITER_PW.to_owned())) {
-                println!("signed transaction for payout for contract {}", hex::encode(payout.contract.cxid()));
                 let _r = set_payout_psbt(con, payout, psbt).await;
             }
         }
@@ -69,11 +61,7 @@ async fn maybe_sign_payout(con: &mut Connection, wallet: &Wallet) {
 
 async fn next_payout(con: &mut Connection) -> Option<Payout> {
     let r: redis::RedisResult<String> = con.lpop("payouts").await;
-    if let Ok(payout_hex) = r {
-       Some(Payout::from_bytes(hex::decode(payout_hex).unwrap()).unwrap())
-    } else {
-        None
-    }
+    Payout::from_bytes(hex::decode(r.ok()?).ok()?).ok()
 }
 
 async fn set_payout_psbt(con: &mut Connection, payout: Payout, psbt: PartiallySignedTransaction) -> redis::RedisResult<String> {
@@ -81,13 +69,18 @@ async fn set_payout_psbt(con: &mut Connection, payout: Payout, psbt: PartiallySi
 }
 
 fn redis_client() -> redis::Client {
-    sleep(Duration::from_secs(1));
-    let mut client = redis::Client::open(REDIS_SERVER);
-    while client.is_err() {
-        sleep(Duration::from_secs(1));
-        client = redis::Client::open(REDIS_SERVER);
+    let mut waiting_time = Duration::from_secs(1);
+    loop {
+        match redis::Client::open(REDIS_SERVER) {
+            Ok(client) => return client,
+            Err(_) => {
+                sleep(waiting_time);
+                waiting_time = waiting_time * 2;
+            }
+
+        }
+
     }
-    client.unwrap()
 }
 
 #[tokio::main]
@@ -98,6 +91,6 @@ async fn main() {
     loop {
         maybe_sign_contract(&mut con, &wallet).await;
         maybe_sign_payout(&mut con, &wallet).await;
-        sleep(Duration::from_secs(5));
+        sleep(Duration::from_secs(1));
     }
 }
