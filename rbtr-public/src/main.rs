@@ -49,10 +49,7 @@ use tglib::{
         electrum_client::Client,
     },
     hex,
-    log::{
-        info,
-        error,
-    },
+    log::error,
     rand::{self, Rng},
     Result,
     Error,
@@ -155,7 +152,7 @@ async fn submit_contract(con: &mut Connection, contract: &Contract) -> Result<Si
             }
         }
     }
-    Err(Error::Adhoc("invalid contract"))
+    Err(Error::Adhoc("arbiter refused contract"))
 }
 
 async fn submit_payout(con: &mut Connection, payout: &Payout) -> Result<PartiallySignedTransaction> {
@@ -171,12 +168,11 @@ async fn submit_payout(con: &mut Connection, payout: &Payout) -> Result<Partiall
             }
         }
     }
-    Err(Error::Adhoc("invalid payout"))
+    Err(Error::Adhoc("arbiter refused payout"))
 }
 
 //TODO: this function needs to reply more clearly when it fails
 async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redis::Client) -> WebResult<impl Reply> {
-    info!("set_contract_info body: {}", serde_json::to_string(&body).unwrap());
 //    controls_name(&body.pubkey, &body.contract_info.name).await?;
     match controls_name(&body.pubkey, &body.contract_info.name).await {
         Ok(true) => (),
