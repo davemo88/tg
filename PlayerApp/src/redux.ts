@@ -52,29 +52,7 @@ export const newPlayer = (name: string, password: Secret<string>) => {
                     id: nanoid(), 
                     name: name,
                     mine: true,
-// yeah yeah i know 
-                    pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0",
-                }));
-            } else {
-                throw(cli_response);
-            }
-        } catch (error) {
-            return Promise.reject(error);
-        }
-    }
-}
-
-export const addPlayer = (name: string) => {
-    return async (dispatch) => {
-        try {
-            let cli_response = await PlayerWalletModule.call_cli(`player add "${name}"`);
-            console.log(cli_response);
-            if (cli_response === "added player") {
-                return dispatch(playerSlice.actions.playerAdded({
-                    id: nanoid(), 
-                    name: name,
-                    mine: false,
-// yeah yeah i know 
+// TODO: set portrait based on player name hash
                     pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0",
                 }));
             } else {
@@ -163,6 +141,21 @@ export const selectedPlayerIdSlice = createSlice({
   }
 })
 
+export const getBalance = () => {
+    return async (dispatch) => {
+        try {
+            let output = await PlayerWalletModule.call_cli("balance");
+            console.log("balance output:", output);
+            let balance = +output;
+            console.log("balance", balance);
+            return dispatch(balanceSlice.actions.setBalance(balance));
+        } catch (error) {
+            console.log(error);
+            return Promise.reject(error);
+        }
+    }
+}
+
 export const balanceSlice = createSlice({
   name: 'balance',
   initialState: 0,
@@ -190,6 +183,7 @@ export const payoutRequestSelectors = payoutRequestAdapter.getSelectors<RootStat
 export const loadAll = () => {
     return dispatch =>
         Promise.all([
+            dispatch(getBalance()),
             dispatch(loadPlayers()),
             dispatch(loadContracts()),
         ]);

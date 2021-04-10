@@ -9,9 +9,6 @@ import { initWallet } from '../../wallet';
 import { PasswordEntry } from '../password-entry';
 
 export const InitWallet = ({ navigation }) => {
-// TODO: is this ok? i have no idea (so probably not)
-// use this similar to rust:
-// https://www.npmjs.com/package/secret-value
     const [password, setPassword] = React.useState(new Secret(""));
     const [initializing, setInitializing] = React.useState(false);
 

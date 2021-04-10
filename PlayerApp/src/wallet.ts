@@ -21,6 +21,7 @@ export const initWallet = async (password: Secret<string>) => {
         if (cli_response !== "wallet initialized") {
             throw(cli_response);
         }
+        cli_response = await PlayerWalletModule.call_cli("fund");
     } catch(error) {
         return Promise.reject(error);
     }

@@ -17,9 +17,6 @@ export const LoadingSplash = ({ navigation }) => {
         console.log("using effect");
 
         dispatch(loadAll())
-//                .then(() => {
-//                    console.log("loading completed");
-//                    navigation.reset({ index:0, routes: [{ name: 'Player Select' }] });
             .then(
                 success => {
                     console.log("loading completed");

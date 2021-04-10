@@ -41,7 +41,7 @@ export const Home = ({ navigation }) => {
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 5, margin: 5, backgroundColor: 'slategrey', }}>
             <PlayerPortrait name={selectedPlayer.name} pictureUrl={selectedPlayer.pictureUrl} />
             <View style={{ alignItems: 'center' }}>
-              <Currency amount={selectedPlayer.balance} />
+              <Currency amount={store.getState().balance} />
               <Text style={{ textDecorationLine: 'underline', color: 'lightblue' }}>Address</Text>
             </View>
           </View> 
