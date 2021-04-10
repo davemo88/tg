@@ -82,6 +82,7 @@ pub trait ArbiterService {
     fn fund_address(&self, address: Address) -> Result<Txid>;
 }
 
+// TODO: should this use auth token sig scheme? probably
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SetContractInfoBody {
     pub contract_info: PlayerContractInfo,

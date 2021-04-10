@@ -103,7 +103,6 @@ impl SavedSeed {
             Some(m) => match Mnemonic::from_str(m.expose_secret()) {
                 Ok(m) => Secret::new(m.to_seed("").to_vec()),
                 Err(_) => return Err(Error::Adhoc("bad mnemonic")),
-//                Err(e) => return Err(Error(format!("{:?}", e))),
             }
 //  else generate random BIP 39 seed
             None => Secret::new(Mnemonic::from_entropy(&rand::thread_rng().gen::<[u8; 32]>()).unwrap().to_seed("").to_vec()),
@@ -148,7 +147,7 @@ impl SavedSeed {
                 Ok(Secret::new(decrypted))
             }
         } else {
-            Err(Error::Adhoc("invalid_pw"))
+            Err(Error::WrongPassword)
         }
     }
 }
@@ -177,25 +176,25 @@ pub trait EscrowWallet {
     fn get_escrow_pubkey(&self) -> PublicKey;
     fn validate_contract(&self, contract: &Contract) -> TgResult<()>;
     fn validate_payout(&self, payout: &Payout) -> TgResult<()> {
-        if self.validate_contract(&payout.contract).is_ok() {
+        self.validate_contract(&payout.contract)?;
 // payouts require fully signed contracts
-            let fully_signed = payout.contract.sigs.len() == 3 as usize;
+        let fully_signed = payout.contract.sigs.len() == 3 as usize;
+        if !fully_signed {
+            return Err(Error::InvalidPayout("contract is not fully signed"))
+        }
 // the payout tx must be an expected one
-            let payout_address = &payout.address().unwrap();
-            let payout_tx = payout.psbt.clone().extract_tx();
-            let matching_tx = payout_tx.txid() == create_payout(&payout.contract, &payout_address).psbt.clone().extract_tx().txid();
-            if !fully_signed {
-                return Err(Error::Adhoc("invalid payout - contract not fully signed"))
-            }
-            if !matching_tx {
-                return Err(Error::Adhoc("invalid payout - invalid payout tx"))
-            }
-            let recipient_pubkey = payout.recipient_pubkey();
-            if recipient_pubkey.is_err() {
-                return Err(Error::Adhoc("invalid payout - invalid recipient"))
-            }
-            println!("{:?}", payout.psbt);
-            if payout.psbt.inputs[0].partial_sigs.len() != 1 { //|| 
+        let payout_address = &payout.address().unwrap();
+        let payout_tx = payout.psbt.clone().extract_tx();
+        let matching_tx = payout_tx.txid() == create_payout(&payout.contract, &payout_address).psbt.clone().extract_tx().txid();
+        if !matching_tx {
+            return Err(Error::InvalidPayout("invalid payout tx"))
+        }
+        let recipient_pubkey = payout.recipient_pubkey();
+        if recipient_pubkey.is_err() {
+            return Err(Error::InvalidPayout("invalid recipient"))
+        }
+        println!("{:?}", payout.psbt);
+        if payout.psbt.inputs[0].partial_sigs.len() != 1 { //|| 
 //                !payout.psbt.inputs[0].partial_sigs.contains_key(&recipient_pubkey.unwrap()) {
 // TODO: need to create psbt correctly.  options: 
 //  manually set values following bdk::wallet::Wallet::create_tx
@@ -205,16 +204,13 @@ pub trait EscrowWallet {
 //  when creating payout tx psbt
 //      this might work great
 //
-                return Err(Error::Adhoc("invalid payout - payout tx signed incorrectly"))
-            };
-            if payout.script_sig.is_none() {
-                return Err(Error::Adhoc("invalid payout - no script sig"))
-            }
-            let mut env = TgScriptEnv::new(payout.clone());
-            env.validate_payout()
-        } else {
-            Err(Error::Adhoc("invalid payout"))
+            return Err(Error::InvalidPayout("payout tx signed incorrectly"))
+        };
+        if payout.script_sig.is_none() {
+            return Err(Error::InvalidPayout("no script sig"))
         }
+        let mut env = TgScriptEnv::new(payout.clone());
+        env.validate_payout()
     }
 }
 

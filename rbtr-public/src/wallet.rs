@@ -15,6 +15,7 @@ use tglib::{
         },
         blockchain::Blockchain,
     },
+    log::error,
     Result,
     Error,
     contract::Contract,
@@ -39,12 +40,12 @@ where
     B: Blockchain,
     D: BatchDatabase + Default,
 {
-    pub fn new(fingerprint: Fingerprint, xpubkey: ExtendedPubKey, client: B, network: Network) -> Result<Self> {
+    pub fn new(fingerprint: Fingerprint, xpubkey: ExtendedPubKey, client: B, network: Network) -> Self {
         let descriptor_key = format!("[{}/{}]{}", fingerprint, BITCOIN_ACCOUNT_PATH, xpubkey);
         let external_descriptor = format!("wpkh({}/0/*)", descriptor_key);
         let internal_descriptor = format!("wpkh({}/1/*)", descriptor_key);
 
-        Ok(Wallet {
+        Wallet {
             xpubkey,
             network,
             wallet: BdkWallet::new(
@@ -56,7 +57,7 @@ where
                 client,
             ).unwrap(),
             escrow_kix: ESCROW_KIX,
-        })
+        }
     }
 }
 
@@ -96,7 +97,9 @@ where
 
     fn validate_contract(&self, contract: &Contract) -> Result<()> {
         if contract.arbiter_pubkey != EscrowWallet::get_escrow_pubkey(self) {
-            return Err(Error::Adhoc("unexpected arbiter pubkey"));
+            let e = Error::Adhoc("unexpected arbiter pubkey");
+            error!("{}", e);
+            return Err(e);
         }
         contract.validate()
     }

@@ -10,6 +10,7 @@ use tglib::{
         util::psbt::PartiallySignedTransaction,
     },
     hex,
+    log::error,
     Error,
     arbiter::{
         Result,

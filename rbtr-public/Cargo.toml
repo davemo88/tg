@@ -8,11 +8,11 @@ edition = "2018"
 
 [dependencies]
 tglib = { path = "../tglib" }
-warp = "0.2.5"
-tokio = { version = "0.2", features = ["full"] }
+warp = "0.3"
+tokio = { version = "1", features = ["full"] }
 futures = "0.3"
 sled = "0.34"
-redis = "0.17"
+redis = { version = "0.17", features = ["tokio-comp"] }
 serde_json = "1.0"
 bitcoincore-rpc = "0.12.0"
 reqwest = { version="0.11.2", features = ["blocking", "json"] }

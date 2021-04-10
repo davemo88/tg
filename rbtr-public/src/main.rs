@@ -49,10 +49,7 @@ use tglib::{
         electrum_client::Client,
     },
     hex,
-    log::{
-        info,
-        error,
-    },
+    log::error,
     rand::{self, Rng},
     Result,
     Error,
@@ -93,17 +90,18 @@ fn wallet() -> Wallet<ElectrumBlockchain, MemoryDatabase> {
         sleep(Duration::from_secs(1));
         client = Client::new(ELECTRS_SERVER);
     }
-    Wallet::<ElectrumBlockchain, MemoryDatabase>::new(Fingerprint::from_str(ARBITER_FINGERPRINT).unwrap(), ExtendedPubKey::from_str(ARBITER_XPUBKEY).unwrap(), ElectrumBlockchain::from(client.unwrap()), NETWORK).unwrap()
+//TODO: should this database be persisted?
+    Wallet::<ElectrumBlockchain, MemoryDatabase>::new(Fingerprint::from_str(ARBITER_FINGERPRINT).unwrap(), ExtendedPubKey::from_str(ARBITER_XPUBKEY).unwrap(), ElectrumBlockchain::from(client.unwrap()), NETWORK)
 }
 
-fn get_escrow_pubkey() -> Result<PublicKey> {
-    Ok(EscrowWallet::get_escrow_pubkey(&wallet()))
+fn get_escrow_pubkey() -> PublicKey {
+    EscrowWallet::get_escrow_pubkey(&wallet())
 }
 
-fn get_fee_address() -> Result<Address> {
+fn get_fee_address() -> Address  {
     let w = wallet();
     let a = w.xpubkey.derive_pub(&Secp256k1::new(), &DerivationPath::from_str("m/0/0").unwrap()).unwrap();
-    Ok(Address::p2wpkh(&a.public_key, w.network).unwrap())
+    Address::p2wpkh(&a.public_key, w.network).unwrap()
 }
 
 // TODO: more functions like these for the other redis ops
@@ -121,9 +119,17 @@ async fn controls_name(pubkey: &PublicKey, player_name: &PlayerName) -> Result<b
     match reqwest::get(&format!("{}/{}/{}", NAME_SERVICE_URL, "get-name-address", hex::encode(player_name.0.as_bytes()))).await {
         Ok(response) => match response.text().await {
             Ok(name_address) => Ok(get_namecoin_address(pubkey, NETWORK) == name_address), 
-            Err(_) => Err(Error::Adhoc("controls name response failed to parse")),
+            Err(_) => {
+                let e = Error::Adhoc("controls name response failed to parse");
+                error!("{}", e);
+                Err(e)
+            },
         },
-        Err(_) => Err(Error::Adhoc("controls name request to name service failed")),
+        Err(_) => {
+            let e = Error::Adhoc("controls name request to name service failed");
+            error!("{}", e);
+            Err(e)
+        }
     }
 }
 
@@ -144,44 +150,44 @@ async fn check_auth_token_sig(player_name: PlayerName, auth: AuthTokenSig, con: 
 }
 
 async fn submit_contract(con: &mut Connection, contract: &Contract) -> Result<Signature> {
-    if wallet().validate_contract(&contract).is_ok() {
-        let cxid = push_contract(con, &hex::encode(contract.to_bytes())).await.unwrap();
-        for _ in 1..15 as u32 {
-            sleep(Duration::from_secs(1));
-            let r: RedisResult<String> = con.get(hex::encode(contract.cxid())).await;
-            if let Ok(sig_hex) = r {
-                let _r : RedisResult<String> = con.del(cxid).await;
-                return Ok(Signature::from_der(&hex::decode(sig_hex).unwrap()).unwrap())
-            }
+    wallet().validate_contract(&contract)?;
+    let cxid = push_contract(con, &hex::encode(contract.to_bytes())).await.unwrap();
+    for _ in 1..15 as u32 {
+        sleep(Duration::from_secs(1));
+        let r: RedisResult<String> = con.get(hex::encode(contract.cxid())).await;
+        if let Ok(sig_hex) = r {
+            let _r : RedisResult<String> = con.del(cxid).await;
+            return Ok(Signature::from_der(&hex::decode(sig_hex).unwrap()).unwrap())
         }
     }
-    Err(Error::Adhoc("invalid contract"))
+    let e = Error::InvalidContract("arbiter rejected contract");
+    error!("{}",e);
+    Err(e)
 }
 
 async fn submit_payout(con: &mut Connection, payout: &Payout) -> Result<PartiallySignedTransaction> {
-    if wallet().validate_payout(&payout).is_ok() {
-        let _r = push_payout(con, &hex::encode(payout.to_bytes())).await.unwrap();
-        let cxid = hex::encode(payout.contract.cxid());
-        for _ in 1..15 as u32 {
-            sleep(Duration::from_secs(1));
-            let r: RedisResult<String> = con.get(cxid.clone()).await;
-            if let Ok(tx) = r {
-                let _r : RedisResult<String> = con.del(cxid).await;
-                return Ok(consensus::deserialize::<PartiallySignedTransaction>(&hex::decode(tx).unwrap()).unwrap())
-            }
+    wallet().validate_payout(&payout)?;
+    let _r = push_payout(con, &hex::encode(payout.to_bytes())).await.unwrap();
+    let cxid = hex::encode(payout.contract.cxid());
+    for _ in 1..15 as u32 {
+        sleep(Duration::from_secs(1));
+        let r: RedisResult<String> = con.get(cxid.clone()).await;
+        if let Ok(tx) = r {
+            let _r : RedisResult<String> = con.del(cxid).await;
+            return Ok(consensus::deserialize::<PartiallySignedTransaction>(&hex::decode(tx).unwrap()).unwrap())
         }
     }
-    Err(Error::Adhoc("invalid payout"))
+    let e = Error::InvalidPayout("arbiter rejected payout");
+    error!("{}",e);
+    Err(e)
 }
 
 //TODO: this function needs to reply more clearly when it fails
 async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redis::Client) -> WebResult<impl Reply> {
-    info!("set_contract_info body: {}", serde_json::to_string(&body).unwrap());
 //    controls_name(&body.pubkey, &body.contract_info.name).await?;
     match controls_name(&body.pubkey, &body.contract_info.name).await {
         Ok(true) => (),
         _ => {
-            error!("set_contract_info pubkey doesn't control name");
             return Err(warp::reject());
         },
     }
@@ -190,7 +196,6 @@ async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redi
     let sig = Signature::from_der(&hex::decode(&body.sig_hex).unwrap()).unwrap();
     if secp.verify(&Message::from_slice(&body.contract_info.hash()).unwrap(), &sig, &body.pubkey.key).is_err() {
 // TODO: responses with proper errors and data
-        error!("set_contract_info invalid signature");
         return Err(warp::reject())
     }
 
@@ -198,7 +203,6 @@ async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redi
     let r: RedisResult<String> = con.set(body.contract_info.name.clone().0, &serde_json::to_string(&body.contract_info).unwrap()).await;
     match r {
         Ok(_string) => {
-            info!("set contract info for {}", body.contract_info.name.0);
             Ok(format!("set contract info for {}", body.contract_info.name.0))
         },
         Err(_) => Err(warp::reject()),
@@ -312,9 +316,9 @@ fn redis_client() -> redis::Client {
 #[tokio::main]
 async fn main() {
     
-    let escrow_pubkey = get_escrow_pubkey().unwrap();
+    let escrow_pubkey = get_escrow_pubkey();
     let escrow_pubkey = warp::any().map(move || escrow_pubkey.clone());
-    let fee_address = get_fee_address().unwrap();
+    let fee_address = get_fee_address();
     let fee_address = warp::any().map(move || fee_address.clone());
     let redis_client = redis_client();
     let redis_client = warp::any().map(move || redis_client.clone());

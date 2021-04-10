@@ -8,5 +8,5 @@ edition = "2018"
 
 [dependencies]
 tglib = { path = "../tglib" }
-tokio = { version = "0.2", features = ["full"] }
-redis = "0.17"
+tokio = { version = "1", features = ["full"] }
+redis = { version = "0.17", features = ["tokio-comp"] }

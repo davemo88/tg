@@ -1,5 +1,3 @@
-use std::fmt;
-
 pub use age;
 pub use argon2;
 pub use bdk;
@@ -10,7 +8,6 @@ pub use log;
 pub use nom;
 pub use rand;
 pub use secrecy;
-//pub use serde;
 
 pub mod mock;
 
@@ -21,17 +18,25 @@ pub mod payout;
 pub mod script;
 pub mod wallet;
 
+use std::fmt;
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Clone, Debug)]
 pub enum Error {
     Adhoc(&'static str),
+    WrongPassword,
+    InvalidContract(&'static str),
+    InvalidPayout(&'static str),
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Error::Adhoc(message) => write!(f, "Adhoc({})", message),
+            Error::WrongPassword => write!(f, "WrongPassword"),
+            Error::InvalidContract(message) => write!(f, "InvalidContract({})", message),
+            Error::InvalidPayout(message) => write!(f, "InvalidPayout({})", message),
         }
     }
 }
@@ -40,6 +45,9 @@ impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Error::Adhoc(_) => None,
+            Error::WrongPassword => None,
+            Error::InvalidPayout(_) => None,
+            Error::InvalidContract(_) => None,
         }
     }
 }

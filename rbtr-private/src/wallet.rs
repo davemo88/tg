@@ -15,6 +15,7 @@ use tglib::{
         },
         signer::TransactionSigner,
     },
+    log::error,
     secrecy::Secret,
     Result as TgResult,
     Error,
@@ -49,7 +50,7 @@ impl SigningWallet for Wallet {
     fn sign_tx(&self, psbt: PartiallySignedTransaction, _path: Option<DerivationPath>, pw: Secret<String>) -> TgResult<PartiallySignedTransaction> {
         let secp = Secp256k1::new();
         let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
-        let account_key = derive_account_xprivkey(self.saved_seed.get_seed(pw).unwrap(), NETWORK);
+        let account_key = derive_account_xprivkey(self.saved_seed.get_seed(pw)?, NETWORK);
         let escrow_key = account_key.derive_priv(&secp, &path).unwrap();
         let mut maybe_signed = psbt.clone();
         match &escrow_key.private_key.sign_tx(&mut maybe_signed, &secp) {
@@ -57,14 +58,14 @@ impl SigningWallet for Wallet {
                 Ok(maybe_signed)
             }
             Err(e) => {
-                println!("err: {:?}", e);
+                error!("{}", e);
                 Err(Error::Adhoc("cannot sign transaction"))
             }
         }
     }
 
     fn sign_message(&self, msg: Message, path: DerivationPath, pw: Secret<String>) -> TgResult<Signature> {
-        let account_key = derive_account_xprivkey(self.saved_seed.get_seed(pw).unwrap(), NETWORK);
+        let account_key = derive_account_xprivkey(self.saved_seed.get_seed(pw)?, NETWORK);
         let secp = Secp256k1::new();
         let signing_key = account_key.derive_priv(&secp, &path).unwrap();
         Ok(secp.sign(&msg, &signing_key.private_key.key))
@@ -81,7 +82,8 @@ impl EscrowWallet for Wallet {
     fn validate_contract(&self, contract: &Contract) -> TgResult<()> {
 // TODO: better fee validation
         if contract.arbiter_pubkey != self.get_escrow_pubkey() {
-            return Err(Error::Adhoc("unexpected arbiter pubkey"));
+            error!("incorrect arbiter pubkey");
+            return Err(Error::Adhoc("incorrect arbiter pubkey"));
         }
         contract.validate()
     }

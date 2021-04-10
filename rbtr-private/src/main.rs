@@ -14,6 +14,7 @@ use tglib::{
         util::psbt::PartiallySignedTransaction,
     },
     hex,
+    log::error,
     secrecy::Secret,
     contract::Contract,
     payout::Payout,
@@ -68,29 +69,23 @@ async fn set_payout_psbt(con: &mut Connection, payout: Payout, psbt: PartiallySi
     con.set(hex::encode(payout.contract.cxid()), hex::encode(consensus::serialize(&psbt))).await
 }
 
-fn redis_client() -> redis::Client {
-    let mut waiting_time = Duration::from_secs(1);
-    loop {
-        match redis::Client::open(REDIS_SERVER) {
-            Ok(client) => return client,
-            Err(_) => {
-                sleep(waiting_time);
-                waiting_time = waiting_time * 2;
-            }
-
-        }
-
-    }
-}
-
 #[tokio::main]
 async fn main() {
-    let redis_client = redis_client();
-    let mut con = redis_client.get_async_connection().await.unwrap();
+    let redis_client = redis::Client::open(REDIS_SERVER).unwrap();
     let wallet = Wallet::new(Secret::new(ARBITER_PW.to_owned()));
+    let mut waiting_time = Duration::from_secs(1);
     loop {
-        maybe_sign_contract(&mut con, &wallet).await;
-        maybe_sign_payout(&mut con, &wallet).await;
-        sleep(Duration::from_secs(1));
+        match redis_client.get_async_connection().await {
+            Ok(mut con) => {
+                maybe_sign_contract(&mut con, &wallet).await;
+                maybe_sign_payout(&mut con, &wallet).await;
+                waiting_time = Duration::from_secs(1);
+            }
+            Err(e) => {
+                error!("{}",e);
+                waiting_time = waiting_time * 2;
+            }
+        }
+        sleep(waiting_time);
     }
 }
