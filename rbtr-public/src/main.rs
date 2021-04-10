@@ -98,7 +98,7 @@ fn get_escrow_pubkey() -> PublicKey {
     EscrowWallet::get_escrow_pubkey(&wallet())
 }
 
-fn get_fee_address() -> Address  {
+fn get_fee_address() -> Address {
     let w = wallet();
     let a = w.xpubkey.derive_pub(&Secp256k1::new(), &DerivationPath::from_str("m/0/0").unwrap()).unwrap();
     Address::p2wpkh(&a.public_key, w.network).unwrap()
@@ -329,7 +329,7 @@ async fn main() {
 
     let get_fee_address = warp::path("fee-address")
         .and(fee_address)
-        .map(|f: Address| f.to_string()); 
+        .map(|f: Address| f.to_string() ); 
 
     let set_contract_info = warp::path("set-contract-info")
         .and(warp::post())

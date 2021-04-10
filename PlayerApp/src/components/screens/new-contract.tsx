@@ -67,7 +67,7 @@ export const NewContract = ({ navigation }) => {
                                 .then(
                                     success => navigation.reset({ index:0, routes: [{ name: 'Home' }] }),
                                     failure => console.log(failure),
-                                )
+                               )
                                 .finally(setCreatingContract(false));
                           } }
                     />

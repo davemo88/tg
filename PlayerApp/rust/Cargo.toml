@@ -11,6 +11,10 @@ crate-type = ["cdylib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+tglib = { path = "../../tglib" }
 player-cli = { path = "../../player-cli" }
 openssl = { version = "0.10", features = ["vendored"] }
 jni = "0.18.0"
+[target.'cfg(target_os = "android")'.dependencies]
+android_logger = "0.10"
+

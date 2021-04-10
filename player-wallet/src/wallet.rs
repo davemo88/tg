@@ -56,7 +56,6 @@ use tglib::{
         NAME_KIX,
     },
     mock::{
-        ARBITER_PUBLIC_URL,
         DB_NAME,
         ESCROW_SUBACCOUNT,
         ESCROW_KIX,
@@ -67,7 +66,7 @@ use tglib::{
 };
 use crate::{
     Result,
-//    Error,
+    Error,
     player::PlayerNameClient,
     arbiter::ArbiterClient,
     db::DB,
@@ -167,30 +166,29 @@ impl PlayerWallet {
         db
     }
 
-    pub fn create_contract(&self, p2_contract_info: PlayerContractInfo, amount: Amount, arbiter_pubkey: PublicKey ) -> Contract {
+    pub fn create_contract(&self, p2_contract_info: PlayerContractInfo, amount: Amount, arbiter_pubkey: PublicKey ) -> Result<Contract> {
 
         let p1_pubkey = self.get_escrow_pubkey();
         let escrow_address = create_escrow_address(&p1_pubkey, &p2_contract_info.escrow_pubkey, &arbiter_pubkey, self.network).unwrap();
-        let funding_tx = self.create_funding_tx(&p2_contract_info, amount, &escrow_address);
+        let funding_tx = self.create_funding_tx(&p2_contract_info, amount, &escrow_address)?;
         let payout_script = create_payout_script(&p1_pubkey, &p2_contract_info.escrow_pubkey, &arbiter_pubkey, &funding_tx.clone().extract_tx(), self.network);
 
-        Contract::new(
+        Ok(Contract::new(
             p1_pubkey,
             p2_contract_info.escrow_pubkey,
             arbiter_pubkey,
             funding_tx,
             payout_script,
-        )
+        ))
     }
 
-    fn create_funding_tx(&self, p2_contract_info: &PlayerContractInfo, amount: Amount, escrow_address: &Address) -> PartiallySignedTransaction {
+    fn create_funding_tx(&self, p2_contract_info: &PlayerContractInfo, amount: Amount, escrow_address: &Address) -> Result<PartiallySignedTransaction> {
         let mut input = Vec::new();
         let mut psbt_inputs = Vec::new();
         let arbiter_fee = amount.as_sat()/100;
         let sats_per_player = (amount.as_sat() + arbiter_fee)/2;
         let mut total: u64 = 0;
 
-        assert_ne!(p2_contract_info.utxos.len(), 0);
         for (outpoint, value, psbt_input) in &p2_contract_info.utxos {
             if total > sats_per_player {
                 break
@@ -205,7 +203,9 @@ impl PlayerWallet {
                 psbt_inputs.push(psbt_input.clone());
             }
         }
-        assert!(total > sats_per_player);
+        if total < sats_per_player {
+            return Err(Error::Adhoc("p2 has insufficient funds"))
+        }
         let p2_change = total - sats_per_player;
         let wallet = self.wallet();
         assert!(wallet.sync(noop_progress(), None).is_ok());
@@ -227,8 +227,8 @@ impl PlayerWallet {
         assert!(total > 2 * sats_per_player + p2_change);
         let p1_change = total - 2 * sats_per_player - p2_change;
 
-        let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
-        let fee_address = arbiter_client.get_fee_address().unwrap();
+        let arbiter_client = self.arbiter_client();
+        let fee_address = arbiter_client.get_fee_address().map_err(|_| Error::Adhoc("couldn't get fee address"))?;
 
         let output = vec!(
             TxOut {
@@ -258,17 +258,17 @@ impl PlayerWallet {
 
         psbt.inputs = psbt_inputs;
 
-        psbt
+        Ok(psbt)
     }
 
-    pub fn get_other_player_name(&self, contract_record: &ContractRecord) -> TgResult<PlayerName> {
+    pub fn get_other_player_name(&self, contract_record: &ContractRecord) -> Result<PlayerName> {
         let my_players = self.mine();
         if my_players.contains(&contract_record.p1_name) {
             Ok(contract_record.p2_name.clone())
         } else if my_players.contains(&contract_record.p2_name) {
             Ok(contract_record.p1_name.clone())
         } else {
-            Err(TgError::Adhoc("not party to this contract"))
+            Err(Error::Adhoc("not party to this contract"))
         }
     }
 }
@@ -295,7 +295,7 @@ impl EscrowWallet for PlayerWallet {
         if contract.p1_pubkey != player_pubkey && contract.p2_pubkey != player_pubkey {
             return Err(TgError::Adhoc("contract doesn't contain our pubkey"));
         }
-        let arbiter_client = ArbiterClient::new(ARBITER_PUBLIC_URL);
+        let arbiter_client = self.arbiter_client();
         let arbiter_pubkey = arbiter_client.get_escrow_pubkey().unwrap();
         if contract.arbiter_pubkey != arbiter_pubkey {
             return Err(TgError::Adhoc("unexpected arbiter pubkey"));

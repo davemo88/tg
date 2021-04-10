@@ -355,7 +355,7 @@ pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
         ])
 }
 
-pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &PlayerWallet) -> String{
+pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &PlayerWallet) -> String {
     if let (c, Some(a)) = subcommand {
         match c {
             "new" => match DocumentUI::<ContractRecord>::new(

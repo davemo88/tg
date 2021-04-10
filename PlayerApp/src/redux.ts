@@ -20,13 +20,9 @@ export const loadPlayers = () => {
     return async (dispatch) => {
         try {
             let output = await PlayerWalletModule.call_cli("player list --json-output");
-            console.log("player list output:", output);
             let players = JSON.parse(output);
-            console.log("player list:", players);
             output = await PlayerWalletModule.call_cli("player mine --json-output");
-            console.log("player mine output:", output);
             const my_players = JSON.parse(output);
-            console.log("my players:", my_players);
             players.forEach(function (p) { 
                 p.id = nanoid(); 
                 p.pictureUrl = "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0";
@@ -46,7 +42,6 @@ export const newPlayer = (name: string, password: Secret<string>) => {
         try {
 // confusing because of native module. what should its signature in typescript be?
             let cli_response: string = await PlayerWalletModule.call_cli_with_password(`player register "${name}"`, password.expose_secret()); 
-            console.log(cli_response);
             if (cli_response === "registered player") {
                 return dispatch(playerSlice.actions.playerAdded({
                     id: nanoid(), 
@@ -62,7 +57,29 @@ export const newPlayer = (name: string, password: Secret<string>) => {
             return Promise.reject(error);
         }
     }
-}
+} 
+
+export const addPlayer = (name: string) => {
+    return async (dispatch) => {
+        try {
+            let cli_response = await PlayerWalletModule.call_cli(`player add "${name}"`);
+            if (cli_response === "added player") {
+                return dispatch(playerSlice.actions.playerAdded({
+                    id: nanoid(),
+                    name: name,
+                    mine: false,
+// TODO: set portrait based on player name hash
+                    pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0",
+                }));
+            } else {
+                throw(cli_response);
+            }
+        } catch (error) {
+            return Promise.reject(error);
+        }
+    }
+} 
+
 
 const contractAdapter = createEntityAdapter<Contract>({});
 
@@ -145,12 +162,9 @@ export const getBalance = () => {
     return async (dispatch) => {
         try {
             let output = await PlayerWalletModule.call_cli("balance");
-            console.log("balance output:", output);
             let balance = +output;
-            console.log("balance", balance);
             return dispatch(balanceSlice.actions.setBalance(balance));
         } catch (error) {
-            console.log(error);
             return Promise.reject(error);
         }
     }

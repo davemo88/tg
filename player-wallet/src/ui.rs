@@ -20,6 +20,7 @@ use tglib::{
         },
     },
     hex,
+    log::error,
     secrecy::Secret,
     arbiter::{
         ArbiterService,
@@ -241,7 +242,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
         };
 
 // TODO: could fail if amount is too large
-        let contract = self.create_contract(p2_contract_info, amount, arbiter_pubkey);
+        let contract = self.create_contract(p2_contract_info, amount, arbiter_pubkey)?;
 
         let contract_record = ContractRecord {
             cxid: hex::encode(contract.cxid()),
