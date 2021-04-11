@@ -15,19 +15,18 @@ import { PlayerPortrait } from './player-portrait';
 import { PasswordEntry } from './password-entry';
 
 export const ContractAction = (props) => {
-  const [isSigned, setIsSigned] = React.useState(false);
   return(
     <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
     {
       {
-        [ContractStatus.Unsigned]: <ActionUnsigned navigation={props.navigation} isSigned={isSigned} setIsSigned={setIsSigned} />,
+        [ContractStatus.Unsigned]: <ActionUnsigned navigation={props.navigation} />,
         [ContractStatus.Issued]: <ActionIssued />,
-        [ContractStatus.Received]: <ActionReceived navigation={props.navigation} isSigned={isSigned} setIsSigned={setIsSigned} contract={props.contract}/>,
+        [ContractStatus.Received]: <ActionReceived navigation={props.navigation} contract={props.contract}/>,
         [ContractStatus.Accepted]: <ActionAccepted navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Certified]: <ActionCertified navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Live]: <ActionLive navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.PayoutRequestIssued]: <ActionPayoutRequestIssued navigation={props.navigation} contract={props.contract} />,
-        [ContractStatus.PayoutRequestReceived]: <ActionPayoutRequestReceived navigation={props.navigation} contract={props.contract} isSigned={isSigned} setIsSigned={setIsSigned} />,
+        [ContractStatus.PayoutRequestReceived]: <ActionPayoutRequestReceived navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.PayoutRequestLive]: <ActionPayoutRequestLive navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Resolved]: <ActionResolved navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Invalid]: <ActionInvalid navigation={props.navigation} contract={props.contract} />,
@@ -44,7 +43,6 @@ const ActionUnsigned = (props) => {
     <View>
       <PasswordEntry password={password} setPassword={setPassword} />
       <Button 
-        disabled={!props.isSigned} 
         title="Issue Contract" 
         onPress={() => {
           signContract(props.contract);
@@ -70,7 +68,6 @@ const ActionReceived = (props) => {
     <View>
       <PasswordEntry password={password} setPassword={setPassword} />
       <Button 
-        disabled={!props.isSigned} 
         title="Accept Contract" 
         onPress={() => {
           signContract(props.contract);
@@ -154,7 +151,6 @@ const ActionPayoutRequestReceived = (props) => {
         <Text>Player Two Payout: </Text><Currency amount={payoutRequest.playerTwoAmount} />
         <PasswordEntry password={password} setPassword={setPassword} />
         <Button 
-          disabled={!props.isSigned} 
           title='Accept Payout Request'
           onPress={() => {
             signPayoutRequest(payoutRequest)

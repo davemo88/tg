@@ -13,7 +13,7 @@ import { PlayerSelector } from '../player-selector';
 
 export const PlayerSelect = ({ navigation }) => {
     const dispatch = useDispatch();
-    const players = playerSelectors.selectAll(store.getState());
+    const players = playerSelectors.selectAll(store.getState()).filter(p => p.mine);
     const [selectedPlayerId, setSelectedPlayerId] = React.useState(players.length > 0 ? players[0].id : null)
 
 //   TODO: move Test / Live images to navigation header
@@ -35,7 +35,7 @@ export const PlayerSelect = ({ navigation }) => {
                             <PlayerSelector 
                               selectedPlayerId={selectedPlayerId}
                               setSelectedPlayerId={setSelectedPlayerId}
-                              playerIds={players.filter(p => p.mine).map(p => p.id)}
+                              playerIds={players.map(p => p.id)}
                             />
                         </View>
                         <View style={{ flex: 1, width: 60 }}>
@@ -63,5 +63,3 @@ export const PlayerSelect = ({ navigation }) => {
         </View>
     );
 }
-
-
