@@ -8,15 +8,17 @@ export interface Player {
 }
 
 export interface Contract {
-  id:               EntityId;
-  playerOneId:      EntityId;
-  PlayerTwoId:      EntityId;
-  cxid:             string,
-  amount:           number;
-  fundingTx:        boolean;
-  playerOneSig:     boolean;
-  playerTwoSig:     boolean;
-  arbiterSig:       boolean;
+    id:                 EntityId;
+    playerOneId:        EntityId;
+    PlayerTwoId:        EntityId;
+    cxid:               string;
+    amount:             number;
+    desc:               string; 
+    playerOneSig:       boolean;
+    playerTwoSig:       boolean;
+    arbiterSig:         boolean;
+    fundingTx:          boolean;
+    payoutTx:           boolean;
 }
 
 export interface PayoutRequest {

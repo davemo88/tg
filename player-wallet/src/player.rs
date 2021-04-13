@@ -31,6 +31,7 @@ impl PlayerNameClient {
 
 impl PlayerNameService for PlayerNameClient {
     fn register_name(&self, player_name: PlayerName, pubkey: PublicKey, sig: Signature) -> Result<(), String> {
+// TODO: require player_name isn't empty / all whitespace or something lame
         let body = RegisterNameBody {
             player_name: player_name.clone(),
             pubkey,
