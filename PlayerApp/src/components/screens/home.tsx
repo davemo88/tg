@@ -19,6 +19,7 @@ export const Home = ({ navigation }) => {
 
   const contracts = contractSelectors.selectAll(store.getState())
   .filter((contract, i, a) =>{ return (
+// TODO: these ID's aren't persisted; they only exist in redux. need to filter on the names instead
     (contract.playerOneId === selectedPlayer.id || contract.playerTwoId === selectedPlayer.id) 
     && 
     (getContractStatus(contract) != ContractStatus.Resolved)

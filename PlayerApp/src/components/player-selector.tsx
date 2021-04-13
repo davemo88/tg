@@ -3,31 +3,35 @@ import { Button, Text, View, } from 'react-native';
 
 import { styles } from '../styles';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, } from '../redux';
+import { useDispatch } from 'react-redux';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, removePlayer } from '../redux';
 import { Player, Contract, ContractStatus } from '../datatypes';
 
 import { PlayerPortrait } from './player-portrait';
 
 export interface PlayerSelectorProps {
-  playerIds: string[];
-  selectedPlayerId: string;
-  setSelectedPlayerId: (newPlayerId: string) => void;
+    playerIds: string[];
+    selectedPlayerId: string;
+    setSelectedPlayerId: (newPlayerId: string) => void;
+    allowRemoval: boolean;
 }
 
 // TODO: fix moving buttons based on name length
 export const PlayerSelector: React.FC<PlayerSelectorProps> = (props) => {
-  const selectedPlayer = playerSelectors.selectById(store.getState(), props.selectedPlayerId);
+    const dispatch = useDispatch();
+    const selectedPlayer = playerSelectors.selectById(store.getState(), props.selectedPlayerId);
+    const [removingPlayer, setRemovingPlayer] = React.useState(false);
 
-  return (
-    <View style={styles.playerSelector}>
-      <PlayerSelectorButton forward={false} selectedPlayerId={props.selectedPlayerId} setSelectedPlayerId={props.setSelectedPlayerId} playerIds={props.playerIds} />
-      <PlayerPortrait 
-        name={selectedPlayer.name}
-        pictureUrl={selectedPlayer.pictureUrl}
-      />
-      <PlayerSelectorButton forward={true} selectedPlayerId={props.selectedPlayerId} setSelectedPlayerId={props.setSelectedPlayerId} playerIds={props.playerIds} />
-    </View>
-  );
+    return (
+      <View style={styles.playerSelector}>
+        <PlayerSelectorButton forward={false} selectedPlayerId={props.selectedPlayerId} setSelectedPlayerId={props.setSelectedPlayerId} playerIds={props.playerIds} />
+        <PlayerPortrait 
+          name={selectedPlayer.name}
+          pictureUrl={selectedPlayer.pictureUrl}
+        />
+        <PlayerSelectorButton forward={true} selectedPlayerId={props.selectedPlayerId} setSelectedPlayerId={props.setSelectedPlayerId} playerIds={props.playerIds} />
+      </View>
+    );
 }
 
 interface PlayerSelectorButtonProps {

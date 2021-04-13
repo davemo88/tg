@@ -36,7 +36,7 @@ export const NewContract = ({ navigation }) => {
         <View style={styles.container}>
             <Text style={{ fontSize: 20 }}>Choose Player</Text>
             { playerTwoId !== null ? 
-                <PlayerSelector selectedPlayerId={playerTwoId} setSelectedPlayerId={setPlayerTwoId} playerIds={playerTwos.map((p: Player) => p.id)} />
+                <PlayerSelector selectedPlayerId={playerTwoId} setSelectedPlayerId={setPlayerTwoId} playerIds={playerTwos.map((p: Player) => p.id)} allowRemoval={true} />
                 : <Text>No Players</Text>
             }
             <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>

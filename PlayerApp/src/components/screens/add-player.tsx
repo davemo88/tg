@@ -39,7 +39,7 @@ export const AddPlayer = ({ navigation }) => {
                       dispatch(addPlayer(playerName))
                           .then(
                               success => navigation.reset({ index:0, routes: [{ name: 'Home' }, { name: 'New Contract' }] }),
-                              failure => console.log(failure),
+                              failure => console.error(failure),
                           )
                           .finally(() => setAddingPlayer(false));
                   } }

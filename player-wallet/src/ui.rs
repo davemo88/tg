@@ -1,4 +1,7 @@
-use std::str::FromStr;
+use std::{
+    str::FromStr,
+    sync::Arc,
+};
 use tglib::{
     bdk::bitcoin::{
         Address,
@@ -20,7 +23,6 @@ use tglib::{
         },
     },
     hex,
-    log::error,
     secrecy::Secret,
     arbiter::{
         ArbiterService,
@@ -100,7 +102,7 @@ pub trait PlayerUI {
 
 // contracts and payouts
 pub trait DocumentUI<T> {
-    fn new(&self, params: NewDocumentParams) -> Result<()>;
+    fn new(&self, params: NewDocumentParams) -> Result<T>;
     fn import(&self, hex: &str) -> Result<()>;
     fn export(&self, cxid: &str) -> Option<String>;
     fn get(&self, cxid: &str) -> Option<T>;
@@ -162,7 +164,7 @@ impl PlayerUI for PlayerWallet {
         let player = PlayerRecord { name };
         match self.db().insert_player(player.clone()) {
             Ok(_) => Ok(()),
-            Err(_) => Err(Error::Adhoc("add player failed").into()),
+            Err(e) => Err(Box::new(Error::Database(Arc::new(e)))),
         }
     }
 
@@ -217,7 +219,7 @@ impl PlayerUI for PlayerWallet {
 }
 
 impl DocumentUI<ContractRecord> for PlayerWallet {
-    fn new(&self, params: NewDocumentParams) -> Result<()> {
+    fn new(&self, params: NewDocumentParams) -> Result<ContractRecord> {
         let (p1_name, p2_name, amount, desc) = match params {
             NewDocumentParams::NewContractParams { p1_name, p2_name, amount, desc } => (p1_name, p2_name, amount, desc),
             _ => return Err(Error::Adhoc("invalid params").into()),
@@ -253,7 +255,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
         };
 
         match self.db().insert_contract(contract_record.clone()) {
-            Ok(_) => Ok(()),
+            Ok(_) => Ok(contract_record),
             Err(_) => Err(Error::Adhoc("couldn't create contract: db insertion failed").into()),
         }
     }
@@ -381,7 +383,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
 }
 
 impl DocumentUI<PayoutRecord> for PlayerWallet {
-    fn new(&self, params: NewDocumentParams) -> Result<()> {
+    fn new(&self, params: NewDocumentParams) -> Result<PayoutRecord> {
         let (cxid, _name, _amount): (String, PlayerName, Amount) = match params {
             NewDocumentParams::NewPayoutParams { cxid, name, amount } => (cxid, name, amount),
             _ => return Err(Error::Adhoc("invalid params").into()),
@@ -390,8 +392,9 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
         let contract = Contract::from_bytes(hex::decode(contract_record.hex).unwrap()).unwrap();
         let escrow_pubkey = self.get_escrow_pubkey();
         let payout = create_payout(&contract, &Address::p2wpkh(&escrow_pubkey, NETWORK).unwrap());
-        let _r = self.db().insert_payout(PayoutRecord::from(payout.clone()));
-        Ok(())
+        let payout_record = PayoutRecord::from(payout);
+        let _r = self.db().insert_payout(payout_record.clone());
+        Ok(payout_record)
     }
 
     fn import(&self, hex: &str) -> Result<()> {

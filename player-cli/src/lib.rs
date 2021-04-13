@@ -369,7 +369,11 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                         None => None,
                     } 
                 }) {
-                Ok(()) => format!("contract created"),
+                Ok(contract_record) => if a.is_present("json-output") {
+                    serde_json::to_string(&contract_record).unwrap()
+                } else {
+                    format!("contract {} created", contract_record.cxid)
+                }
                 Err(e) => format!("{}", e),
             }
             "import" => match DocumentUI::<ContractRecord>::import(wallet, &a.value_of("contract-value").unwrap()) {
@@ -543,7 +547,11 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                     name: PlayerName(a.value_of("player").unwrap().to_string()),
                     amount: Amount::from_sat(a.value_of("amount").unwrap().parse::<u64>().unwrap()),
                 }) {
-                Ok(()) => format!("payout created"),
+                Ok(payout_record) => if a.is_present("json-output") {
+                    serde_json::to_string(&payout_record).unwrap()
+                } else {
+                    format!("payout created for contract {}", payout_record.cxid)
+                }
                 Err(e) => format!("{}", e),
             }
             "import" => match DocumentUI::<PayoutRecord>::import(wallet, a.value_of("payout-value").unwrap()) {
@@ -569,7 +577,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                         },
                     },
                     Secret::new(a.value_of("password").unwrap().to_owned())) {
-                Ok(()) => format!("payout created"),
+                Ok(()) => format!("payout signed"),
                 Err(e) => format!("{}", e),
             }
             "send" => match DocumentUI::<PayoutRecord>::send(wallet, a.value_of("cxid").unwrap()) {

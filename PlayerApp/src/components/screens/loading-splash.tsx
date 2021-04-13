@@ -19,12 +19,11 @@ export const LoadingSplash = ({ navigation }) => {
         dispatch(loadAll())
             .then(
                 success => {
-                    console.log("loading completed");
+                    console.log("loading complete");
                     navigation.reset({ index:0, routes: [{ name: 'Player Select' }] });
                 }, 
                 failure => {
-                    console.log("loading failed");
-                    console.log("failure:", failure);
+                    console.error("loading failed:", failure);
                     navigation.reset({ index:0, routes: [{ name: 'Initialize Wallet' }] });
                 }
             );

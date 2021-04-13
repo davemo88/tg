@@ -1,7 +1,7 @@
 import { createStore } from 'redux';
 import { nanoid, createEntityAdapter, createSlice, createReducer, createAction, configureStore, createAsyncThunk } from '@reduxjs/toolkit';
 import { Secret, } from './secret';
-import { Player, Contract, PayoutRequest, } from './datatypes';
+import { EntityId, Player, Contract, PayoutRequest, } from './datatypes';
 
 import PlayerWalletModule from './PlayerWallet';
 
@@ -13,6 +13,7 @@ export const playerSlice = createSlice({
     reducers: {
         playerAdded: playerAdapter.addOne,
         playerAddedMany: playerAdapter.addMany,
+        playerRemoved: playerAdapter.removeOne,
     },
 })
 
@@ -28,6 +29,7 @@ export const loadPlayers = () => {
                 p.pictureUrl = "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0";
                 p.mine = my_players.some(mp => mp === p.name);
             });
+            console.debug("loaded players:", players);
             return dispatch(playerSlice.actions.playerAddedMany(players));
         } catch (error) {
             console.log(error);
@@ -80,6 +82,21 @@ export const addPlayer = (name: string) => {
     }
 } 
 
+export const removePlayer = (player: Player) => {
+    return async (dispatch) => {
+        try {
+            let cli_response = await PlayerWalletModule.call_cli(`player remove "${player.name}"`);
+            if (cli_response === "remove player") {
+                return dispatch(playerSlice.actions.playerRemoved(player.id));
+            } else {
+                throw(cli_response);
+            }
+        } catch (error) {
+            return Promise.reject(error);
+        }
+    }
+}
+
 
 const contractAdapter = createEntityAdapter<Contract>({});
 
@@ -99,10 +116,13 @@ export const loadContracts = () => {
         try {
             let cli_response = await PlayerWalletModule.call_cli("contract list --json-output");
             let contracts = JSON.parse(cli_response);
+// TODO: should I load players then contracts so I can use the playerId's
+// or just use the names?
             contracts.forEach(function (c) {c.id = nanoid();});
+            console.debug("loaded contracts:", contracts);
             return dispatch(contractSlice.actions.contractAddedMany(contracts));
         } catch (error) {
-            console.log(error);
+            console.error(error);
             return Promise.reject(error);
         }
     }
@@ -113,15 +133,15 @@ export const newContract = (p1Id: string, p2Id: string, sats: number) => {
         try {
             let p1 = playerSelectors.selectById(getState(), p1Id);
             let p2 = playerSelectors.selectById(getState(), p2Id);
-            let cli_response = await PlayerWalletModule.call_cli(`contract new "${p1.name}" "${p2.name}" ${sats}`); 
-            console.log("cli response", cli_response);
-            if (cli_response === "contract created") {
-                dispatch(balanceSlice.actions.setBalance(getState().balance - Math.ceil(sats/2)));
+            let cli_response = await PlayerWalletModule.call_cli(`contract new "${p1.name}" "${p2.name}" ${sats} --json-output`); 
+            let contract_record = JSON.parse(cli_response);
+            console.log("contract_record", contract_record);
+            if (contract_record !== null) {
                 return dispatch(contractSlice.actions.contractAdded({
                     id: nanoid(), 
                     playerOneId: p1Id,
                     playerTwoId: p2Id,
-                    cxid: "",
+                    cxid: contract_record.cxid,
                     amount: sats,
                     fundingTx: false,
                     playerOneSig: false,
