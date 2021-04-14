@@ -1,5 +1,4 @@
 import React, { useState, } from 'react';
-import { nanoid } from '@reduxjs/toolkit'
 import { Switch, FlatList, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 import { store, playerSlice, newPlayer } from '../../redux';
 import { useDispatch } from 'react-redux';

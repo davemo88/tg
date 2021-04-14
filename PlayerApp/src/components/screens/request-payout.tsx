@@ -1,5 +1,4 @@
 import React from 'react';
-import { nanoid } from '@reduxjs/toolkit'
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 import Slider from '@react-native-community/slider';
 
@@ -7,7 +6,7 @@ import { styles } from '../../styles';
 import { Secret } from '../../secret';
 
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, payoutSlice, } from '../../redux';
-import { Player, Contract, PayoutRequest, ContractStatus } from '../../datatypes';
+import { Player, Contract, Payout, ContractStatus } from '../../datatypes';
 
 import { Arbiter } from '../arbiter';
 import { Currency } from '../currency';
@@ -20,7 +19,7 @@ export const RequestPayout = ({ route, navigation }) => {
   const playerOne = playerSelectors.selectById(store.getState(), contract.playerOneName)
   const playerTwo = playerSelectors.selectById(store.getState(), contract.playerTwoName)
   const selectedPlayer = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerName);
-  const [playerOnePayout, setPlayerOnePayout] = React.useState(contract.pot);
+  const [playerOnePayout, setPlayerOnePayout] = React.useState(contract.amount);
   const [playerTwoPayout, setPlayerTwoPayout] = React.useState(0);
   const [isArbitratedPayout, setIsArbitratedPayout] = React.useState(false);
   const toggleArbitration = () => setIsArbitratedPayout(previousState => !previousState);
@@ -40,7 +39,7 @@ export const RequestPayout = ({ route, navigation }) => {
         <View style={{ alignItems: 'center' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={{ fontSize: 16 }}>Total Pot: </Text>
-            <Currency amount={contract.pot} />
+            <Currency amount={contract.amount} />
           </View>
           <Text style={{ fontSize: 16 }}>Distribute Pot</Text>
           <View style={{ flexDirection: 'row', }}>
@@ -59,9 +58,9 @@ export const RequestPayout = ({ route, navigation }) => {
             style={{ width: 200, height: 40, padding: 5, margin: 5, }}
             value="0"
             onValueChange={ (value) => {
-              const newPLayerOnePayout = Math.floor((1-value) * contract.pot);
+              const newPLayerOnePayout = Math.floor((1-value) * contract.amount);
               setPlayerOnePayout(newPLayerOnePayout);
-              setPlayerTwoPayout(contract.pot - newPLayerOnePayout);
+              setPlayerTwoPayout(contract.amount - newPLayerOnePayout);
             }}
           />
         </View>

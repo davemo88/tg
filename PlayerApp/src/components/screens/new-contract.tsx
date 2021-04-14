@@ -1,5 +1,4 @@
 import React from 'react';
-import { nanoid } from '@reduxjs/toolkit';
 import { useDispatch } from 'react-redux';
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
@@ -36,7 +35,7 @@ export const NewContract = ({ navigation }) => {
         <View style={styles.container}>
             <Text style={{ fontSize: 20 }}>Choose Player</Text>
             { playerTwoName !== null ? 
-                <PlayerSelector selectedPlayerName={playerTwoName} setSelectedPlayerName={setPlayerTwoId} playerNames={playerTwos.map((p: Player) => p.name)} allowRemoval={true} />
+                <PlayerSelector selectedPlayerName={playerTwoName} setSelectedPlayerName={setPlayerTwoName} playerNames={playerTwos.map((p: Player) => p.name)} allowRemoval={true} />
                 : <Text>No Players</Text>
             }
             <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>

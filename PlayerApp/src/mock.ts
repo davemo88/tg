@@ -1,6 +1,5 @@
-import { nanoid } from '@reduxjs/toolkit';
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutRequestSelectors, payoutRequestSlice, selectedPlayerNameSlice, } from './redux.ts';
-import { Player, Url, Contract, PayoutRequest, } from './datatypes.ts';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, payoutSlice, selectedPlayerNameSlice, } from './redux.ts';
+import { Player, Url, Contract, Payout, } from './datatypes.ts';
 
 // probably still s3 somewhere
 export const STATIC_CONTENT_HOST: string = 'https://whatchadoinhere.s3.amazonaws.com/';
@@ -15,16 +14,16 @@ export const PASSPHRASE_MIN_LENGTH = 12;
 export const NETWORK: string = 'Test';
 
 // delete some local data? set flag in db more likely
-export const declineContract = (cxid: ContractId) => {
+export const declineContract = (cxid: string) => {
   store.dispatch(contractSlice.actions.contractRemoved(cxid));
 }
 
-export const dismissContract = (cxid: ContractId) => {
+export const dismissContract = (cxid: string) => {
   store.dispatch(contractSlice.actions.contractRemoved(cxid));
 }
 
-export const denyPayoutRequest = (payoutRequestId: PayoutRequestId) => {
-  store.dispatch(payoutRequestSlice.actions.payoutRequestRemoved(payoutRequestId));
+export const denyPayout = (payoutId: string) => {
+  store.dispatch(payoutSlice.actions.payoutRemoved(payoutId));
 }
 
 // arbiter prefixed functions require calls to the arbiter service
@@ -36,10 +35,10 @@ export const arbiterSignContract = (contract: Contract) => {
   }));
 }
 
-export const arbiterSignPayoutRequest = (payoutRequest: PayoutRequest) => {
-  if (payoutRequest.payoutToken) {
-    store.dispatch(payoutRequestSlice.actions.payoutRequestUpdated({
-      id: payoutRequest.id,
+export const arbiterSignPayout = (payout: Payout) => {
+  if (payout.payoutToken) {
+    store.dispatch(payoutSlice.actions.payoutUpdated({
+      id: payout.id,
       changes: { arbiterSig: true },
     }));
   }
@@ -50,14 +49,14 @@ export const arbiterSignPayoutRequest = (payoutRequest: PayoutRequest) => {
 //
 
 export const newPlayer = (playerName: string, pictureUrl: Url) => {
-  store.dispatch(playerSlice.actions.playerAdded({ id: nanoid(), name: playerName, pictureUrl: pictureUrl }));
+  store.dispatch(playerSlice.actions.playerAdded({ name: playerName, pictureUrl: pictureUrl }));
 }
 
 export const createContract = (contract: Contract) => {
   store.dispatch
 }
 
-export const createPayoutRequest = (contract: Contract) => {
+export const createPayout = (contract: Contract) => {
   store.dispatch
 }
 
@@ -73,17 +72,17 @@ export const signContract = (contract: Contract) => {
   store.dispatch(contractSlice.actions.contractUpdated(action));
 }
 
-export const signPayoutRequest = (payoutRequest: PayoutRequest) => {
+export const signPayout = (payout: Payout) => {
   const selectedPlayerName = store.getState().selectedPlayerName;
-  const contract = contractSelectors.selectById(store.getState(), payoutRequest.cxid);
-  let action = {id: payoutRequest.id, changes: {}};
+  const contract = contractSelectors.selectById(store.getState(), payout.cxid);
+  let action = {id: payout.id, changes: {}};
   if (contract.playerOneName === selectedPlayerName) {
     action.changes.playerOneSig = true;
   }
   else if (contract.playerTwoName === selectedPlayerName) {
     action.changes.playerTwoSig = true;
   }
-  store.dispatch(payoutRequestSlice.actions.payoutRequestUpdated(action));
+  store.dispatch(payoutSlice.actions.payoutUpdated(action));
 }
 
 export const broadcastFundingTx = (contract: Contract) => {
@@ -95,9 +94,9 @@ export const broadcastFundingTx = (contract: Contract) => {
   }));
 }
 
-export const broadcastPayoutTx = (payoutRequest: PayoutRequest) => {
-  store.dispatch(payoutRequestSlice.actions.payoutRequestUpdated({
-    id: payoutRequest.id,
+export const broadcastPayoutTx = (payout: Payout) => {
+  store.dispatch(payoutSlice.actions.payoutUpdated({
+    id: payout.id,
     changes: {
       payoutTx: true,
     }

@@ -1,5 +1,4 @@
 import { LogBox } from 'react-native';
-import { nanoid } from '@reduxjs/toolkit';
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, payoutSlice, selectedPlayerNameSlice, } from './redux';
 import { Secret } from './secret';
 import { Player, Contract, Payout, } from './datatypes';
@@ -88,7 +87,7 @@ export const dismissContract = (cxid: string) => {
   store.dispatch(contractSlice.actions.contractRemoved(cxid));
 }
 
-export const denyPayoutRequest = (cxid: string) => {
+export const denyPayout = (cxid: string) => {
   store.dispatch(payoutSlice.actions.payoutRemoved(cxid));
 }
 
@@ -101,7 +100,7 @@ export const arbiterSignContract = (contract: Contract) => {
   }));
 }
 
-export const arbiterSignPayoutRequest = (payout: Payout) => {
+export const arbiterSignPayout = (payout: Payout) => {
   if (payout.payoutToken) {
     store.dispatch(payoutSlice.actions.payoutUpdated({
       id: payout.cxid,

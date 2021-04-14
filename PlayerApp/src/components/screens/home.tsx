@@ -1,6 +1,5 @@
 import React from 'react';
 import { StackActions } from '@react-navigation/native'
-import { nanoid } from '@reduxjs/toolkit'
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
 import { styles } from '../../styles';

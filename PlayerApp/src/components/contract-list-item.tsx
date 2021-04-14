@@ -1,12 +1,11 @@
 import React from 'react';
-import { nanoid } from '@reduxjs/toolkit'
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
-import { getOtherPlayerName } from '../dump';
+import { getOtherPlayerName, getContractStatus } from '../dump';
 import { styles } from '../styles';
 
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, } from '../redux';
-import { Player, Contract, ContractStatus, getContractStatus } from '../datatypes';
+import { Player, Contract, ContractStatus, } from '../datatypes';
 
 import { Currency } from './currency';
 import { PlayerPortrait } from './player-portrait';
@@ -14,7 +13,7 @@ import { ContractSummary } from './contract-summary';
 
 export const ContractListItem = (props) => {
   const selectedPlayer: Player = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerName);
-  const otherPlayer = playerSelectors.selectById(store.getState(), getOtherPlayerName(selectedPlayer.id, props.contract));
+  const otherPlayer = playerSelectors.selectById(store.getState(), getOtherPlayerName(selectedPlayer.name, props.contract));
 
   return (
     <View style={{ flexDirection: 'row', backgroundColor: 'slategrey', margin: 2, padding: 2 }}>
@@ -28,7 +27,7 @@ export const ContractListItem = (props) => {
         <Button 
           title="Details" 
           onPress={() => 
-            props.navigation.push('Contract Details', { cxid: props.contract.id })
+            props.navigation.push('Contract Details', { cxid: props.contract.cxid })
           }
         />
       </View>

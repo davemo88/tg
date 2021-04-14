@@ -1,7 +1,7 @@
 import { createStore } from 'redux';
-import { nanoid, createEntityAdapter, createSlice, createReducer, createAction, configureStore, createAsyncThunk } from '@reduxjs/toolkit';
+import { createEntityAdapter, createSlice, createReducer, createAction, configureStore, createAsyncThunk } from '@reduxjs/toolkit';
 import { Secret, } from './secret';
-import { EntityId, Player, Contract, Payout, } from './datatypes';
+import { Player, Contract, Payout, } from './datatypes';
 
 import PlayerWalletModule from './PlayerWallet';
 
@@ -173,7 +173,7 @@ export const payoutSlice = createSlice({
 // the selected player is the current player which the user is managing contracts for
 export const selectedPlayerNameSlice = createSlice({
   name: 'selectedPlayerName',
-  initialState: 'bogus selected player id',
+  initialState: 'bogus selected player name',
   reducers: {
     setSelectedPlayerName:  (state, action) => action.payload
   }
