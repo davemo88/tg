@@ -8,18 +8,13 @@ import PlayerWalletModule from '../../PlayerWallet';
 import { store, loadPlayers, loadAll } from '../../redux';
 
 export const LoadingSplash = ({ navigation }) => {
-//    const [playersLoading, setPlayersLoading] = React.useState(false);
     const dispatch = useDispatch();
 
-    console.log("render loading splash");
-//    console.log("players loading:", playersLoading);
     useEffect(() => {
-        console.log("using effect");
-
         dispatch(loadAll())
             .then(
                 success => {
-                    console.log("loading complete");
+                    console.debug("loading complete");
                     navigation.reset({ index:0, routes: [{ name: 'Player Select' }] });
                 }, 
                 failure => {

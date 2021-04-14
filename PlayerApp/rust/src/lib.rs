@@ -22,7 +22,8 @@ const LOCALHOST: &'static str  = "10.0.2.2";
 pub unsafe extern "system" fn Java_com_playerapp_PlayerWalletModule_cli(env: JNIEnv, _: JClass, command: JString) -> jstring { 
     android_logger::init_once(Config::default().with_min_level(Level::Debug));
     let command: String = env.get_string(command).unwrap().into();
-    debug!("JNI command: {}", command);
+// TODO: hide passwords
+//    debug!("JNI command: {}", command);
 // 10.0.2.2 is for testing in the android studio emulator
     let conf = libcli::Conf {
         electrum_url: format!("tcp://{}:60401", LOCALHOST),

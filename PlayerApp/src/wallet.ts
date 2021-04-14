@@ -17,10 +17,12 @@ export const NETWORK: string = 'Test';
 export const initWallet = async (password: Secret<string>) => {
     try {
         let cli_response = await PlayerWalletModule.call_cli_with_password("init", password.expose_secret());
+        console.debug(cli_response);
         if (cli_response !== "wallet initialized") {
             throw(cli_response);
         }
         cli_response = await PlayerWalletModule.call_cli("fund");
+        console.debug(cli_response);
     } catch(error) {
         return Promise.reject(error);
     }
