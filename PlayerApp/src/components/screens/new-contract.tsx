@@ -5,7 +5,7 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 
 import { styles } from '../../styles';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, balanceSlice, newContract, } from '../../redux';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, balanceSlice, newContract, } from '../../redux';
 import { Player, Contract, ContractStatus } from '../../datatypes';
 import { signContract } from '../../mock';
 
@@ -17,12 +17,12 @@ import { PlayerSelector } from '../player-selector';
 // TODO: add referee / game-domain expertise delegate pubkey input
 export const NewContract = ({ navigation }) => {
     const dispatch = useDispatch();
-    const selectedPlayer = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerId);
+    const selectedPlayer = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerName);
     const playerTwos = playerSelectors
         .selectAll(store.getState())
         .filter((player: Player, i, a) => !player.mine);
     const [contractAmount, onChangeContractAmount] = React.useState('0');
-    const [playerTwoId, setPlayerTwoId] = React.useState(playerTwos.length > 0 ? playerTwos[0].id : null);
+    const [playerTwoName, setPlayerTwoName] = React.useState(playerTwos.length > 0 ? playerTwos[0].name : null);
     const [creatingContract, setCreatingContract] = React.useState(false);
 
     const valid = () => {
@@ -35,8 +35,8 @@ export const NewContract = ({ navigation }) => {
     return (
         <View style={styles.container}>
             <Text style={{ fontSize: 20 }}>Choose Player</Text>
-            { playerTwoId !== null ? 
-                <PlayerSelector selectedPlayerId={playerTwoId} setSelectedPlayerId={setPlayerTwoId} playerIds={playerTwos.map((p: Player) => p.id)} allowRemoval={true} />
+            { playerTwoName !== null ? 
+                <PlayerSelector selectedPlayerName={playerTwoName} setSelectedPlayerName={setPlayerTwoId} playerNames={playerTwos.map((p: Player) => p.name)} allowRemoval={true} />
                 : <Text>No Players</Text>
             }
             <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
@@ -63,7 +63,7 @@ export const NewContract = ({ navigation }) => {
                         title="Create" 
                         onPress={() => {
                             setCreatingContract(true);
-                            dispatch(newContract(selectedPlayer.id, playerTwoId, parseInt(contractAmount)))
+                            dispatch(newContract(selectedPlayer.name, playerTwoName, parseInt(contractAmount)))
                                 .then(
                                     success => navigation.reset({ index:0, routes: [{ name: 'Home' }] }),
                                     failure => console.log(failure),

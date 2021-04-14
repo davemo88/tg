@@ -10,39 +10,39 @@ import { Player, Contract, ContractStatus } from '../datatypes';
 import { PlayerPortrait } from './player-portrait';
 
 export interface PlayerSelectorProps {
-    playerIds: string[];
-    selectedPlayerId: string;
-    setSelectedPlayerId: (newPlayerId: string) => void;
+    playerNames: string[];
+    selectedPlayerName: string;
+    setSelectedPlayerName: (newPlayerName: string) => void;
     allowRemoval: boolean;
 }
 
 // TODO: fix moving buttons based on name length
 export const PlayerSelector: React.FC<PlayerSelectorProps> = (props) => {
     const dispatch = useDispatch();
-    const selectedPlayer = playerSelectors.selectById(store.getState(), props.selectedPlayerId);
+    const selectedPlayer = playerSelectors.selectById(store.getState(), props.selectedPlayerName);
     const [removingPlayer, setRemovingPlayer] = React.useState(false);
 
     return (
       <View style={styles.playerSelector}>
-        <PlayerSelectorButton forward={false} selectedPlayerId={props.selectedPlayerId} setSelectedPlayerId={props.setSelectedPlayerId} playerIds={props.playerIds} />
+        <PlayerSelectorButton forward={false} selectedPlayerName={props.selectedPlayerName} setSelectedPlayerName={props.setSelectedPlayerName} playerNames={props.playerNames} />
         <PlayerPortrait 
           name={selectedPlayer.name}
           pictureUrl={selectedPlayer.pictureUrl}
         />
-        <PlayerSelectorButton forward={true} selectedPlayerId={props.selectedPlayerId} setSelectedPlayerId={props.setSelectedPlayerId} playerIds={props.playerIds} />
+        <PlayerSelectorButton forward={true} selectedPlayerName={props.selectedPlayerName} setSelectedPlayerName={props.setSelectedPlayerName} playerNames={props.playerNames} />
       </View>
     );
 }
 
 interface PlayerSelectorButtonProps {
   forward: boolean;
-  playerIds: string[];
-  selectedPlayerId: string;
-  setSelectedPlayerId: (newPlayerId: string) => void;
+  playerNames: string[];
+  selectedPlayerName: string;
+  setSelectedPlayerName: (newPlayerName: string) => void;
 }
 
 const PlayerSelectorButton: React.FC<PlayerSelectorButtonProps> = (props) => {
-  const playerIndex = props.playerIds.findIndex((playerId) => playerId === props.selectedPlayerId );
+  const playerIndex = props.playerNames.findIndex((playerName) => playerName === props.selectedPlayerName );
 
   return (
     <View style={{ justifyContent: 'center', padding: 10 }}>
@@ -50,8 +50,8 @@ const PlayerSelectorButton: React.FC<PlayerSelectorButtonProps> = (props) => {
         title={ props.forward ? ">" : "<" } 
         onPress={() => {
           let newPlayerIndex = props.forward ? playerIndex+1 : playerIndex-1;
-          newPlayerIndex = (newPlayerIndex + props.playerIds.length) % props.playerIds.length;
-          props.setSelectedPlayerId(props.playerIds[newPlayerIndex]);
+          newPlayerIndex = (newPlayerIndex + props.playerNames.length) % props.playerNames.length;
+          props.setSelectedPlayerName(props.playerNames[newPlayerIndex]);
         }}
       />
     </View>

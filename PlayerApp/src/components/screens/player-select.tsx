@@ -5,7 +5,7 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 import { styles } from '../../styles';
 
 import { useDispatch } from 'react-redux';
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, } from '../../redux';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, } from '../../redux';
 import { Player, Contract, ContractStatus, } from '../../datatypes';
 import { NETWORK, TITLE_IMAGE_SOURCE, TEST_IMAGE_SOURCE, LIVE_IMAGE_SOURCE, } from '../../mock';
 
@@ -14,7 +14,7 @@ import { PlayerSelector } from '../player-selector';
 export const PlayerSelect = ({ navigation }) => {
     const dispatch = useDispatch();
     const players = playerSelectors.selectAll(store.getState()).filter(p => p.mine);
-    const [selectedPlayerId, setSelectedPlayerId] = React.useState(players.length > 0 ? players[0].id : null)
+    const [selectedPlayerName, setSelectedPlayerName] = React.useState(players.length > 0 ? players[0].name: null)
 
 //   TODO: move Test / Live images to navigation header
     return (
@@ -29,21 +29,21 @@ export const PlayerSelect = ({ navigation }) => {
                       <Image style={{ width: 133, height: 45 }} source={{uri: LIVE_IMAGE_SOURCE}} />
                     }
                 </View>
-                { selectedPlayerId !== null ? 
+                { selectedPlayerName !== null ? 
                     <View style = {{ flex: 2, alignItems: 'center' }}>
                         <View style = {{ flex: 1, justifyContent: 'flex-end' }}>
                             <PlayerSelector 
-                              selectedPlayerId={selectedPlayerId}
-                              setSelectedPlayerId={setSelectedPlayerId}
-                              playerIds={players.map(p => p.id)}
+                              selectedPlayerName={selectedPlayerName}
+                              setSelectedPlayerName={setSelectedPlayerName}
+                              playerNames={players.map(p => p.name)}
                             />
                         </View>
                         <View style={{ flex: 1, width: 60 }}>
                             <Button 
                               title="Ok" 
                               onPress={() => {
-                                const selectedPlayer = players.find(p => p.id === selectedPlayerId);
-                                dispatch(selectedPlayerIdSlice.actions.setSelectedPlayerId(selectedPlayer.id));
+                                const selectedPlayer = players.find(p => p.name === selectedPlayerName);
+                                dispatch(selectedPlayerNameSlice.actions.setSelectedPlayerName(selectedPlayer.name));
                                 navigation.reset({ index:0,   routes: [{ name: 'Home' }] })
                               } }
                             />

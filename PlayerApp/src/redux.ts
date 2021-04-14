@@ -1,11 +1,13 @@
 import { createStore } from 'redux';
 import { nanoid, createEntityAdapter, createSlice, createReducer, createAction, configureStore, createAsyncThunk } from '@reduxjs/toolkit';
 import { Secret, } from './secret';
-import { EntityId, Player, Contract, PayoutRequest, } from './datatypes';
+import { EntityId, Player, Contract, Payout, } from './datatypes';
 
 import PlayerWalletModule from './PlayerWallet';
 
-const playerAdapter = createEntityAdapter<Player>({});
+const playerAdapter = createEntityAdapter<Player>({
+    selectId: (player) => player.name,
+});
 
 export const playerSlice = createSlice({
     name: 'players',
@@ -25,7 +27,6 @@ export const loadPlayers = () => {
             output = await PlayerWalletModule.call_cli("player mine --json-output");
             const my_players = JSON.parse(output);
             players.forEach(function (p) { 
-                p.id = nanoid(); 
                 p.pictureUrl = "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0";
                 p.mine = my_players.some(mp => mp === p.name);
             });
@@ -46,7 +47,7 @@ export const newPlayer = (name: string, password: Secret<string>) => {
             let cli_response: string = await PlayerWalletModule.call_cli_with_password(`player register "${name}"`, password.expose_secret()); 
             if (cli_response === "registered player") {
                 return dispatch(playerSlice.actions.playerAdded({
-                    id: nanoid(), 
+                    id: name, 
                     name: name,
                     mine: true,
 // TODO: set portrait based on player name hash
@@ -67,7 +68,7 @@ export const addPlayer = (name: string) => {
             let cli_response = await PlayerWalletModule.call_cli(`player add "${name}"`);
             if (cli_response === "added player") {
                 return dispatch(playerSlice.actions.playerAdded({
-                    id: nanoid(),
+                    id: name,
                     name: name,
                     mine: false,
 // TODO: set portrait based on player name hash
@@ -87,7 +88,7 @@ export const removePlayer = (player: Player) => {
         try {
             let cli_response = await PlayerWalletModule.call_cli(`player remove "${player.name}"`);
             if (cli_response === "remove player") {
-                return dispatch(playerSlice.actions.playerRemoved(player.id));
+                return dispatch(playerSlice.actions.playerRemoved(player.name));
             } else {
                 throw(cli_response);
             }
@@ -98,7 +99,9 @@ export const removePlayer = (player: Player) => {
 }
 
 
-const contractAdapter = createEntityAdapter<Contract>({});
+const contractAdapter = createEntityAdapter<Contract>({
+    selectId: (contract) => contract.cxid,
+});
 
 export const contractSlice = createSlice({
   name: 'contracts',
@@ -116,9 +119,6 @@ export const loadContracts = () => {
         try {
             let cli_response = await PlayerWalletModule.call_cli("contract list --json-output");
             let contracts = JSON.parse(cli_response);
-// TODO: should I load players then contracts so I can use the playerId's
-// or just use the names?
-            contracts.forEach(function (c) {c.id = nanoid();});
             console.debug("loaded contracts:", contracts);
             return dispatch(contractSlice.actions.contractAddedMany(contracts));
         } catch (error) {
@@ -128,20 +128,19 @@ export const loadContracts = () => {
     }
 }
 
-export const newContract = (p1Id: string, p2Id: string, sats: number) => {
+export const newContract = (p1Name: string, p2Name: string, sats: number) => {
     return async (dispatch, getState) => {
         try {
-            let p1 = playerSelectors.selectById(getState(), p1Id);
-            let p2 = playerSelectors.selectById(getState(), p2Id);
+            let p1 = playerSelectors.selectById(getState(), p1Name);
+            let p2 = playerSelectors.selectById(getState(), p2Name);
             let cli_response = await PlayerWalletModule.call_cli(`contract new "${p1.name}" "${p2.name}" ${sats} --json-output`); 
             let contract_record = JSON.parse(cli_response);
             console.log("contract_record", contract_record);
             if (contract_record !== null) {
                 return dispatch(contractSlice.actions.contractAdded({
-                    id: nanoid(), 
-                    playerOneId: p1Id,
-                    playerTwoId: p2Id,
                     cxid: contract_record.cxid,
+                    playerOneName: p1Name,
+                    playerTwoName: p2Name,
                     amount: sats,
                     fundingTx: false,
                     playerOneSig: false,
@@ -157,24 +156,26 @@ export const newContract = (p1Id: string, p2Id: string, sats: number) => {
     }
 }
 
-const payoutRequestAdapter = createEntityAdapter<PayoutRequest>({});
+const payoutAdapter = createEntityAdapter<Payout>({
+    selectId: (payout) => payout.cxid,
+});
 
-export const payoutRequestSlice = createSlice({
-  name: 'payoutRequests',
-  initialState: payoutRequestAdapter.getInitialState(),
+export const payoutSlice = createSlice({
+  name: 'payouts',
+  initialState: payoutAdapter.getInitialState(),
   reducers: {
-    payoutRequestAdded: payoutRequestAdapter.addOne,
-    payoutRequestUpdated: payoutRequestAdapter.updateOne,
-    payoutRequestRemoved: payoutRequestAdapter.removeOne,
+    payoutAdded: payoutAdapter.addOne,
+    payoutUpdated: payoutAdapter.updateOne,
+    payoutRemoved: payoutAdapter.removeOne,
   }
 })
 
 // the selected player is the current player which the user is managing contracts for
-export const selectedPlayerIdSlice = createSlice({
-  name: 'selectedPlayerId',
+export const selectedPlayerNameSlice = createSlice({
+  name: 'selectedPlayerName',
   initialState: 'bogus selected player id',
   reducers: {
-    setSelectedPlayerId:  (state, action) => action.payload
+    setSelectedPlayerName:  (state, action) => action.payload
   }
 })
 
@@ -202,8 +203,8 @@ export const store = configureStore({
   reducer: {
     players: playerSlice.reducer,
     contracts: contractSlice.reducer,
-    payoutRequests: payoutRequestSlice.reducer,
-    selectedPlayerId: selectedPlayerIdSlice.reducer,
+    payouts: payoutSlice.reducer,
+    selectedPlayerName: selectedPlayerNameSlice.reducer,
     balance: balanceSlice.reducer,
   }
 })
@@ -212,7 +213,7 @@ type RootState = ReturnType<typeof store.getState>
 
 export const playerSelectors = playerAdapter.getSelectors<RootState>( state => state.players );
 export const contractSelectors = contractAdapter.getSelectors<RootState>( state => state.contracts );
-export const payoutRequestSelectors = payoutRequestAdapter.getSelectors<RootState>( state => state.payoutRequests );
+export const payoutSelectors = payoutAdapter.getSelectors<RootState>( state => state.payouts );
 
 export const loadAll = () => {
     return dispatch =>

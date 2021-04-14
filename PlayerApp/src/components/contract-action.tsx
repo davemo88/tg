@@ -4,7 +4,7 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 
 import { styles } from '../styles';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutRequestSelectors, payoutRequestSlice, selectedPlayerIdSlice, } from '../redux';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, payoutSlice, selectedPlayerNameSlice, } from '../redux';
 import { Player, Contract, ContractStatus, } from '../datatypes';
 import { getContractStatus } from '../dump';
 import { broadcastFundingTx, broadcastPayoutTx, signPayoutRequest, signContract, arbiterSignContract, declineContract, dismissContract, denyPayoutRequest, } from '../mock';
@@ -25,9 +25,9 @@ export const ContractAction = (props) => {
         [ContractStatus.Accepted]: <ActionAccepted navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Certified]: <ActionCertified navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Live]: <ActionLive navigation={props.navigation} contract={props.contract} />,
-        [ContractStatus.PayoutRequestIssued]: <ActionPayoutRequestIssued navigation={props.navigation} contract={props.contract} />,
-        [ContractStatus.PayoutRequestReceived]: <ActionPayoutRequestReceived navigation={props.navigation} contract={props.contract} />,
-        [ContractStatus.PayoutRequestLive]: <ActionPayoutRequestLive navigation={props.navigation} contract={props.contract} />,
+        [ContractStatus.PayoutIssued]: <ActionPayoutRequestIssued navigation={props.navigation} contract={props.contract} />,
+        [ContractStatus.PayoutReceived]: <ActionPayoutRequestReceived navigation={props.navigation} contract={props.contract} />,
+        [ContractStatus.PayoutLive]: <ActionPayoutRequestLive navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Resolved]: <ActionResolved navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Invalid]: <ActionInvalid navigation={props.navigation} contract={props.contract} />,
       }[getContractStatus(props.contract)]
@@ -46,7 +46,7 @@ const ActionUnsigned = (props) => {
         title="Issue Contract" 
         onPress={() => {
           signContract(props.contract);
-          resetDetails(props.navigation, props.contract.id);
+          resetDetails(props.navigation, props.contract.cxid);
         } }
       />
     </View>
@@ -71,13 +71,13 @@ const ActionReceived = (props) => {
         title="Accept Contract" 
         onPress={() => {
           signContract(props.contract);
-          resetDetails(props.navigation, props.contract.id);
+          resetDetails(props.navigation, props.contract.cxid);
         } }
       />
       <Button 
         title="Decline Contract" 
         onPress={() => {
-          declineContract(props.contract.id);
+          declineContract(props.contract.cxid);
           props.navigation.reset({ index:0, routes: [{ name: 'Home', },] });
         } }
       />
@@ -92,7 +92,7 @@ const ActionAccepted = (props) => {
         title="Send to Arbiter" 
         onPress={() => {
           arbiterSignContract(props.contract);
-          resetDetails(props.navigation, props.contract.id);
+          resetDetails(props.navigation, props.contract.cxid);
         } }
       />
     </View>
@@ -106,7 +106,7 @@ const ActionCertified = (props) => {
         title="Broadcast Funding Tx" 
         onPress={() => {
           broadcastFundingTx(props.contract);
-          resetDetails(props.navigation, props.contract.id);
+          resetDetails(props.navigation, props.contract.cxid);
         } }
       />
     </View>
@@ -118,7 +118,7 @@ const ActionLive = (props) => {
     <View>
       <Button 
         title="Request Payout" 
-        onPress={() => props.navigation.push('Request Payout', { contractId: props.contract.id }) }
+        onPress={() => props.navigation.push('Request Payout', { cxid: props.contract.cxid }) }
       />
     </View>
   )
@@ -141,27 +141,27 @@ const ActionPayoutRequestIssued = (props) => {
 
 const ActionPayoutRequestReceived = (props) => {
   const [password, setPassword] = React.useState(new Secret(""));
-  const payoutRequest = payoutRequestSelectors.selectAll(store.getState())
-    .filter((pr, i, a) => pr.contractId === props.contract.id ).pop();
+  const payout = payoutSelectors.selectAll(store.getState())
+    .filter((pr, i, a) => pr.cxid === props.contract.cxid ).pop();
   return (
     <View>
       <Text>Payout Request Received</Text>
       <View>
-        <Text>Player One Payout: </Text><Currency amount={payoutRequest.playerOneAmount} />
-        <Text>Player Two Payout: </Text><Currency amount={payoutRequest.playerTwoAmount} />
+        <Text>Player One Payout: </Text><Currency amount={payout.playerOneAmount} />
+        <Text>Player Two Payout: </Text><Currency amount={payout.playerTwoAmount} />
         <PasswordEntry password={password} setPassword={setPassword} />
         <Button 
           title='Accept Payout Request'
           onPress={() => {
-            signPayoutRequest(payoutRequest)
-            resetDetails(props.navigation, props.contract.id);
+            signPayoutRequest(payout)
+            resetDetails(props.navigation, props.contract.cxid);
           } }
         />
         <Button
           title='Deny Payout Request'
           onPress={() => {
-            denyPayoutRequest(payoutRequest.id)
-            resetDetails(props.navigation, props.contract.id);
+            denyPayoutRequest(payout.cxid)
+            resetDetails(props.navigation, props.contract.cxid);
           } } 
         />
       </View>
@@ -170,16 +170,16 @@ const ActionPayoutRequestReceived = (props) => {
 }
 
 const ActionPayoutRequestLive = (props) => {
-  const payoutRequest = payoutRequestSelectors.selectAll(store.getState())
-    .filter((pr, i, a) => pr.contractId === props.contract.id ).pop();
+  const payout = payoutSelectors.selectAll(store.getState())
+    .filter((pr, i, a) => pr.cxid === props.contract.cxid ).pop();
   return (
     <View>
       <Text>Payout Request Live</Text>
       <Button 
         title="Broadcast Payout Tx" 
         onPress={() => {
-          broadcastPayoutTx(payoutRequest);
-          resetDetails(props.navigation, props.contract.id);
+          broadcastPayoutTx(payout);
+          resetDetails(props.navigation, props.contract.cxid);
         } }
       />
     </View>
@@ -187,17 +187,17 @@ const ActionPayoutRequestLive = (props) => {
 }
 
 const ActionResolved = (props) => {
-  const payoutRequest = payoutRequestSelectors.selectAll(store.getState())
-    .filter((pr, i, a) => pr.contractId === props.contract.id ).pop();
+  const payout = payoutSelectors.selectAll(store.getState())
+    .filter((pr, i, a) => pr.cxid === props.contract.cxid ).pop();
   return (
     <View>
       <Text>Resolved Contract</Text>
       <View style={{ flexDirection: 'row' }}>
         <View>
-          <Text>Player One Payout: </Text><Currency amount={payoutRequest.playerOneAmount} />
+          <Text>Player One Payout: </Text><Currency amount={payout.playerOneAmount} />
         </View>
         <View>
-          <Text>Player Two Payout: </Text><Currency amount={payoutRequest.playerTwoAmount} />
+          <Text>Player Two Payout: </Text><Currency amount={payout.playerTwoAmount} />
         </View>
       </View>
     </View>
@@ -213,6 +213,6 @@ const ActionInvalid = (props) => {
   )
 }
 
-const resetDetails = (navigation, contractId: ContractId) => {
-  navigation.reset({ index:0, routes: [{ name: 'Home', }, { name: 'Contract Details', params: {contractId: contractId } }] });
+const resetDetails = (navigation, cxid: ContractId) => {
+  navigation.reset({ index:0, routes: [{ name: 'Home', }, { name: 'Contract Details', params: {cxid: cxid } }] });
 }

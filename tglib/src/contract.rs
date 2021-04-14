@@ -266,17 +266,11 @@ pub struct ContractSummary {
     pub p1_sig:         bool,
     pub p2_sig:         bool,
     pub arbiter_sig:    bool,
-// need to check blockchain for these
-// since this is effectively cached metadata,
-// could be part of ContractRecord
-    pub funding_tx:     bool,
 }
 
 impl From<ContractRecord> for ContractSummary {
     fn from(cr: ContractRecord) -> Self {
-        
         let contract = Contract::from_bytes(hex::decode(cr.hex).unwrap()).unwrap();
-        
         ContractSummary {
             cxid: cr.cxid,
             p1_name: cr.p1_name,
@@ -286,7 +280,6 @@ impl From<ContractRecord> for ContractSummary {
             p1_sig: contract.sigs.len() > 0,
             p2_sig: contract.sigs.len() > 1,
             arbiter_sig: contract.sigs.len() > 2,
-            funding_tx: false,
         }
     }
 }

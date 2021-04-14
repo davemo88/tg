@@ -35,7 +35,6 @@ impl DB {
                     p2_name         TEXT NOT NULL,
                     hex             TEXT NOT NULL,
                     desc            TEXT,
-                    funding_tx      NUMERIC NOT NULL,
                     FOREIGN KEY(p1_name) REFERENCES player(name),
                     FOREIGN KEY(p2_name) REFERENCES player(name)
                 );
@@ -43,7 +42,6 @@ impl DB {
                     cxid            TEXT PRIMARY KEY,
                     psbt            TEXT NOT NULL,
                     sig             TEXT NOT NULL,
-//                    payout_tx       NUMERIC NOT NULL,
                     FOREIGN KEY(cxid) REFERENCES contract(cxid)
                 );
             COMMIT;"

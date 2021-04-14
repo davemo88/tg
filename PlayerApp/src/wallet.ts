@@ -1,8 +1,8 @@
 import { LogBox } from 'react-native';
 import { nanoid } from '@reduxjs/toolkit';
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutRequestSelectors, payoutRequestSlice, selectedPlayerIdSlice, } from './redux';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, payoutSlice, selectedPlayerNameSlice, } from './redux';
 import { Secret } from './secret';
-import { Player, Contract, PayoutRequest, } from './datatypes';
+import { Player, Contract, Payout, } from './datatypes';
 
 import PlayerWalletModule from './PlayerWallet';
 
@@ -31,47 +31,47 @@ export const createContract = (contract: Contract) => {
   store.dispatch
 }
 
-export const createPayoutRequest = (contract: Contract) => {
+export const createPayout = (contract: Contract) => {
   store.dispatch
 }
 
 export const signContract = (contract: Contract) => {
-  const selectedPlayerId = store.getState().selectedPlayerId;
-  let action = {id: contract.id, changes: {}};
-  if (contract.playerOneId === selectedPlayerId) {
+  const selectedPlayerName = store.getState().selectedPlayerName;
+  let action = {id: contract.cxid, changes: {}};
+  if (contract.playerOneName === selectedPlayerName) {
     action.changes.playerOneSig = true;
   }
-  else if (contract.playerTwoId === selectedPlayerId) {
+  else if (contract.playerTwoName === selectedPlayerName) {
     action.changes.playerTwoSig = true;
   }
   store.dispatch(contractSlice.actions.contractUpdated(action));
 }
 
-export const signPayoutRequest = (payoutRequest: PayoutRequest) => {
-  const selectedPlayerId = store.getState().selectedPlayerId;
-  const contract = contractSelectors.selectById(store.getState(), payoutRequest.contractId);
-  let action = {id: payoutRequest.id, changes: {}};
-  if (contract.playerOneId === selectedPlayerId) {
+export const signPayout = (payout: Payout) => {
+  const selectedPlayerName = store.getState().selectedPlayerName;
+  const contract = contractSelectors.selectById(store.getState(), payout.cxid);
+  let action = {id: payout.cxid, changes: {}};
+  if (contract.playerOneName === selectedPlayerName) {
     action.changes.playerOneSig = true;
   }
-  else if (contract.playerTwoId === selectedPlayerId) {
+  else if (contract.playerTwoName === selectedPlayerName) {
     action.changes.playerTwoSig = true;
   }
-  store.dispatch(payoutRequestSlice.actions.payoutRequestUpdated(action));
+  store.dispatch(payoutSlice.actions.payoutUpdated(action));
 }
 
 export const broadcastFundingTx = (contract: Contract) => {
   store.dispatch(contractSlice.actions.contractUpdated({
-    id: contract.id,
+    id: contract.cxid,
     changes: {
       fundingTx: true,
     }
   }));
 }
 
-export const broadcastPayoutTx = (payoutRequest: PayoutRequest) => {
-  store.dispatch(payoutRequestSlice.actions.payoutRequestUpdated({
-    id: payoutRequest.id,
+export const broadcastPayoutTx = (payout: Payout) => {
+  store.dispatch(payoutSlice.actions.payoutUpdated({
+    id: payout.cxid,
     changes: {
       payoutTx: true,
     }
@@ -80,31 +80,31 @@ export const broadcastPayoutTx = (payoutRequest: PayoutRequest) => {
 }
 
 // delete some local data? set flag in db more likely
-export const declineContract = (contractId: ContractId) => {
-  store.dispatch(contractSlice.actions.contractRemoved(contractId));
+export const declineContract = (cxid: string) => {
+  store.dispatch(contractSlice.actions.contractRemoved(cxid));
 }
 
-export const dismissContract = (contractId: ContractId) => {
-  store.dispatch(contractSlice.actions.contractRemoved(contractId));
+export const dismissContract = (cxid: string) => {
+  store.dispatch(contractSlice.actions.contractRemoved(cxid));
 }
 
-export const denyPayoutRequest = (payoutRequestId: PayoutRequestId) => {
-  store.dispatch(payoutRequestSlice.actions.payoutRequestRemoved(payoutRequestId));
+export const denyPayoutRequest = (cxid: string) => {
+  store.dispatch(payoutSlice.actions.payoutRemoved(cxid));
 }
 
 // arbiter prefixed functions require calls to the arbiter service
 export const arbiterSignContract = (contract: Contract) => {
 // TODO: validation
   store.dispatch(contractSlice.actions.contractUpdated({
-    id: contract.id,
+    id: contract.cxid,
     changes: { arbiterSig: true },
   }));
 }
 
-export const arbiterSignPayoutRequest = (payoutRequest: PayoutRequest) => {
-  if (payoutRequest.payoutToken) {
-    store.dispatch(payoutRequestSlice.actions.payoutRequestUpdated({
-      id: payoutRequest.id,
+export const arbiterSignPayoutRequest = (payout: Payout) => {
+  if (payout.payoutToken) {
+    store.dispatch(payoutSlice.actions.payoutUpdated({
+      id: payout.cxid,
       changes: { arbiterSig: true },
     }));
   }

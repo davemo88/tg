@@ -3,7 +3,7 @@ import { Text, Button, View, } from 'react-native';
 
 import { styles } from '../../styles';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, } from '../../redux';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, } from '../../redux';
 import { Player, Contract, ContractStatus } from '../../datatypes'
 import { dismissContract } from '../../mock';
 
@@ -14,11 +14,11 @@ import { Arbiter } from '../arbiter';
 import { Currency } from '../currency';
 
 export const ContractDetails = ({ route, navigation }) => {
-  const { contractId } = route.params;
-  const contract = contractSelectors.selectById(store.getState(), contractId);
-  const selectedPlayer: Player = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerId);
-  const playerOne = playerSelectors.selectById(store.getState(), contract.playerOneId);
-  const playerTwo = playerSelectors.selectById(store.getState(), contract.playerTwoId);
+  const { cxid } = route.params;
+  const contract = contractSelectors.selectById(store.getState(), cxid);
+  const selectedPlayer: Player = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerName);
+  const playerOne = playerSelectors.selectById(store.getState(), contract.playerOneName);
+  const playerTwo = playerSelectors.selectById(store.getState(), contract.playerTwoName);
 
   return (
     <View style={styles.container}>
@@ -45,7 +45,7 @@ export const ContractDetails = ({ route, navigation }) => {
           <Button 
             title="Dismiss Contract" 
             onPress={() => {
-              dismissContract(contract.id);
+              dismissContract(contract.cxid);
               navigation.reset({ index:0, routes: [{ name: 'Home', },] });
             } }
           />

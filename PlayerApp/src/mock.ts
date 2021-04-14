@@ -1,5 +1,5 @@
 import { nanoid } from '@reduxjs/toolkit';
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutRequestSelectors, payoutRequestSlice, selectedPlayerIdSlice, } from './redux.ts';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutRequestSelectors, payoutRequestSlice, selectedPlayerNameSlice, } from './redux.ts';
 import { Player, Url, Contract, PayoutRequest, } from './datatypes.ts';
 
 // probably still s3 somewhere
@@ -15,12 +15,12 @@ export const PASSPHRASE_MIN_LENGTH = 12;
 export const NETWORK: string = 'Test';
 
 // delete some local data? set flag in db more likely
-export const declineContract = (contractId: ContractId) => {
-  store.dispatch(contractSlice.actions.contractRemoved(contractId));
+export const declineContract = (cxid: ContractId) => {
+  store.dispatch(contractSlice.actions.contractRemoved(cxid));
 }
 
-export const dismissContract = (contractId: ContractId) => {
-  store.dispatch(contractSlice.actions.contractRemoved(contractId));
+export const dismissContract = (cxid: ContractId) => {
+  store.dispatch(contractSlice.actions.contractRemoved(cxid));
 }
 
 export const denyPayoutRequest = (payoutRequestId: PayoutRequestId) => {
@@ -62,25 +62,25 @@ export const createPayoutRequest = (contract: Contract) => {
 }
 
 export const signContract = (contract: Contract) => {
-  const selectedPlayerId = store.getState().selectedPlayerId;
+  const selectedPlayerName = store.getState().selectedPlayerName;
   let action = {id: contract.id, changes: {}};
-  if (contract.playerOneId === selectedPlayerId) {
+  if (contract.playerOneName === selectedPlayerName) {
     action.changes.playerOneSig = true;
   }
-  else if (contract.playerTwoId === selectedPlayerId) {
+  else if (contract.playerTwoName === selectedPlayerName) {
     action.changes.playerTwoSig = true;
   }
   store.dispatch(contractSlice.actions.contractUpdated(action));
 }
 
 export const signPayoutRequest = (payoutRequest: PayoutRequest) => {
-  const selectedPlayerId = store.getState().selectedPlayerId;
-  const contract = contractSelectors.selectById(store.getState(), payoutRequest.contractId);
+  const selectedPlayerName = store.getState().selectedPlayerName;
+  const contract = contractSelectors.selectById(store.getState(), payoutRequest.cxid);
   let action = {id: payoutRequest.id, changes: {}};
-  if (contract.playerOneId === selectedPlayerId) {
+  if (contract.playerOneName === selectedPlayerName) {
     action.changes.playerOneSig = true;
   }
-  else if (contract.playerTwoId === selectedPlayerId) {
+  else if (contract.playerTwoName === selectedPlayerName) {
     action.changes.playerTwoSig = true;
   }
   store.dispatch(payoutRequestSlice.actions.payoutRequestUpdated(action));

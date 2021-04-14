@@ -5,7 +5,7 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 
 import { styles } from '../../styles';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, } from '../../redux';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, } from '../../redux';
 import { Player, Contract, ContractStatus} from '../../datatypes';
 import { getContractStatus } from '../../dump';
 
@@ -15,12 +15,12 @@ import { ContractListItem } from '../contract-list-item';
 
 
 export const Home = ({ navigation }) => {
-  const selectedPlayer = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerId);
+  const selectedPlayer = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerName);
 
   const contracts = contractSelectors.selectAll(store.getState())
   .filter((contract, i, a) =>{ return (
 // TODO: these ID's aren't persisted; they only exist in redux. need to filter on the names instead
-    (contract.playerOneId === selectedPlayer.id || contract.playerTwoId === selectedPlayer.id) 
+    (contract.playerOneName === selectedPlayer.name || contract.playerTwoName === selectedPlayer.name) 
     && 
     (getContractStatus(contract) != ContractStatus.Resolved)
   )})

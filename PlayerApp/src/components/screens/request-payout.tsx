@@ -6,7 +6,7 @@ import Slider from '@react-native-community/slider';
 import { styles } from '../../styles';
 import { Secret } from '../../secret';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, payoutRequestSlice, } from '../../redux';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, payoutSlice, } from '../../redux';
 import { Player, Contract, PayoutRequest, ContractStatus } from '../../datatypes';
 
 import { Arbiter } from '../arbiter';
@@ -15,11 +15,11 @@ import { PlayerPortrait } from '../player-portrait';
 import { PasswordEntry } from '../password-entry';
 
 export const RequestPayout = ({ route, navigation }) => {
-  const { contractId } = route.params;
-  const contract = contractSelectors.selectById(store.getState(), contractId);
-  const playerOne = playerSelectors.selectById(store.getState(), contract.playerOneId)
-  const playerTwo = playerSelectors.selectById(store.getState(), contract.playerTwoId)
-  const selectedPlayer = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerId);
+  const { cxid } = route.params;
+  const contract = contractSelectors.selectById(store.getState(), cxid);
+  const playerOne = playerSelectors.selectById(store.getState(), contract.playerOneName)
+  const playerTwo = playerSelectors.selectById(store.getState(), contract.playerTwoName)
+  const selectedPlayer = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerName);
   const [playerOnePayout, setPlayerOnePayout] = React.useState(contract.pot);
   const [playerTwoPayout, setPlayerTwoPayout] = React.useState(0);
   const [isArbitratedPayout, setIsArbitratedPayout] = React.useState(false);
@@ -94,18 +94,17 @@ export const RequestPayout = ({ route, navigation }) => {
             disabled={!valid()}
             title="Send" 
             onPress={() => {
-              store.dispatch(payoutRequestSlice.actions.payoutRequestAdded({
-                id: nanoid(),
-                contractId: contract.id,
+              store.dispatch(payoutSlice.actions.payoutAdded({
+                cxid: contract.cxid,
                 payoutTx: false,
-                playerOneSig: (contract.playerOneId === selectedPlayer.id),
-                playerTwoSig: (contract.playerTwoId === selectedPlayer.id),
+                playerOneSig: (contract.playerOneName === selectedPlayer.name),
+                playerTwoSig: (contract.playerTwoName === selectedPlayer.name),
                 arbiterSig: isArbitratedPayout ? true : false,
                 payoutScriptSig: isArbitratedPayout ? true : false,
                 playerOneAmount: playerOnePayout,
                 playerTwoAmount: playerTwoPayout,
               }))
-              navigation.reset({ index:0, routes: [{ name: 'Home' }, { name: 'Contract Details', params: {contractId: contract.id } }] });
+              navigation.reset({ index:0, routes: [{ name: 'Home' }, { name: 'Contract Details', params: {cxid: contract.cxid } }] });
             } }
           />
         </View>

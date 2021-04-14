@@ -2,19 +2,19 @@ import React from 'react';
 import { nanoid } from '@reduxjs/toolkit'
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
-import { getOtherPlayerId } from '../dump.ts';
-import { styles } from '../styles.ts';
+import { getOtherPlayerName } from '../dump';
+import { styles } from '../styles';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, } from '../redux.ts';
-import { Player, Contract, ContractStatus, getContractStatus } from '../datatypes.ts';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, } from '../redux';
+import { Player, Contract, ContractStatus, getContractStatus } from '../datatypes';
 
-import { Currency } from './currency.tsx';
-import { PlayerPortrait } from './player-portrait.tsx';
-import { ContractSummary } from './contract-summary.tsx';
+import { Currency } from './currency';
+import { PlayerPortrait } from './player-portrait';
+import { ContractSummary } from './contract-summary';
 
 export const ContractListItem = (props) => {
-  const selectedPlayer: Player = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerId);
-  const otherPlayer = playerSelectors.selectById(store.getState(), getOtherPlayerId(selectedPlayer.id, props.contract));
+  const selectedPlayer: Player = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerName);
+  const otherPlayer = playerSelectors.selectById(store.getState(), getOtherPlayerName(selectedPlayer.id, props.contract));
 
   return (
     <View style={{ flexDirection: 'row', backgroundColor: 'slategrey', margin: 2, padding: 2 }}>
@@ -28,7 +28,7 @@ export const ContractListItem = (props) => {
         <Button 
           title="Details" 
           onPress={() => 
-            props.navigation.push('Contract Details', { contractId: props.contract.id })
+            props.navigation.push('Contract Details', { cxid: props.contract.id })
           }
         />
       </View>

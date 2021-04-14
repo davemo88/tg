@@ -1,6 +1,6 @@
-import { store, contractSelectors, payoutRequestSelectors } from './redux.ts';
+import { store, contractSelectors, payoutRequestSelectors } from './redux';
 
-import { Player, Contract, ContractStatus, PayoutRequest, PayoutRequestStatus, } from './datatypes.ts';
+import { Player, Contract, ContractStatus, PayoutRequest, PayoutRequestStatus, } from './datatypes';
 
 
 // TODO: this function checks the blockchain for the expected payout transactions for the contract
@@ -8,14 +8,14 @@ import { Player, Contract, ContractStatus, PayoutRequest, PayoutRequestStatus, }
 // TODO: can only tell if contract is resolved by looking for txs that spend from fundingTx appropriately. suppose there are inappapropriate ones - then we refuse all payout requests?
 // TODO: S is whatever the store type is, idk how to get it atm
 export const getContractStatus = (contract: Contract ): ContractStatus => {
-  const selectedPlayerId = store.getState().selectedPlayerId;
+  const selectedPlayerName = store.getState().selectedPlayerName;
 
   const allSigned: bool = (contract.playerOneSig && contract.playerTwoSig && contract.arbiterSig);
 
   if (allSigned && contract.fundingTx) {
 
     const payoutRequest = payoutRequestSelectors.selectAll(store.getState())
-      .filter((pr, i, a) => pr.contractId === contract.id ).pop();
+      .filter((pr, i, a) => pr.cxid === contract.cxid ).pop();
 
     if (payoutRequest) {
       const payoutRequestStatus = getPayoutRequestStatus(payoutRequest);
@@ -45,7 +45,7 @@ export const getContractStatus = (contract: Contract ): ContractStatus => {
     return ContractStatus.Accepted;
   }
   else if ((contract.playerOneSig || contract.playerTwoSig) && !contract.arbiterSig) {
-    return isContractSignedBy(contract, selectedPlayerId) ? ContractStatus.Issued : ContractStatus.Received;
+    return isContractSignedBy(contract, selectedPlayerName) ? ContractStatus.Issued : ContractStatus.Received;
   }
   else {
     return isUnsigned(contract) ? ContractStatus.Unsigned : ContractStatus.Invalid;
@@ -53,8 +53,8 @@ export const getContractStatus = (contract: Contract ): ContractStatus => {
 }
 
 export const getPayoutRequestStatus = (payoutRequest: PayoutRequest ): PayoutRequestStatus => {
-  const selectedPlayerId = store.getState().selectedPlayerId;
-  const contract = contractSelectors.selectById(store.getState(), payoutRequest.contractId);
+  const selectedPlayerName = store.getState().selectedPlayerName;
+  const contract = contractSelectors.selectById(store.getState(), payout.cxid);
   if (payoutRequest.payoutTx) {
     return PayoutRequestStatus.Resolved;
   }
@@ -65,10 +65,10 @@ export const getPayoutRequestStatus = (payoutRequest: PayoutRequest ): PayoutReq
   ) {
     return PayoutRequestStatus.Live;
   }
-  else if (isPayoutRequestSignedBy(payoutRequest, selectedPlayerId)) {
+  else if (isPayoutRequestSignedBy(payoutRequest, selectedPlayerName)) {
     return PayoutRequestStatus.SelectedPlayerSigned; 
   }
-  else if (isPayoutRequestSignedBy(payoutRequest, getOtherPlayerId(selectedPlayerId, contract))) {
+  else if (isPayoutRequestSignedBy(payoutRequest, getOtherPlayerName(selectedPlayerName, contract))) {
     return PayoutRequestStatus.OtherPlayerSigned; 
   }
   else {
@@ -76,20 +76,20 @@ export const getPayoutRequestStatus = (payoutRequest: PayoutRequest ): PayoutReq
   }
 }
 
-export const isContractSignedBy = (contract: Contract | PayoutRequest, playerId: PlayerId): bool => {
+export const isContractSignedBy = (contract: Contract | PayoutRequest, playerName: PlayerName): bool => {
   return (
-    ((contract.playerOneId === playerId) && contract.playerOneSig)
+    ((contract.playerOneName === playerName) && contract.playerOneSig)
     ||
-    ((contract.playerTwoId === playerId) && contract.playerTwoSig)
+    ((contract.playerTwoName === playerName) && contract.playerTwoSig)
   )
 }
 
-export const isPayoutRequestSignedBy = (payoutRequest:  PayoutRequest, playerId: PlayerId): bool => {
-  const contract = contractSelectors.selectById(store.getState(), payoutRequest.contractId);
+export const isPayoutRequestSignedBy = (payoutRequest:  PayoutRequest, playerName: PlayerName): bool => {
+  const contract = contractSelectors.selectById(store.getState(), payout.cxid);
   return (
-    ((contract.playerOneId === playerId) && payoutRequest.playerOneSig)
+    ((contract.playerOneName === playerName) && payoutRequest.playerOneSig)
     ||
-    ((contract.playerTwoId === playerId) && payoutRequest.playerTwoSig)
+    ((contract.playerTwoName === playerName) && payoutRequest.playerTwoSig)
   )
 }
 
@@ -97,11 +97,11 @@ export const isUnsigned = (signable: Contract | PayoutRequest): bool => {
   return !(signable.playerOneSig || signable.playerTwoSig || signable.arbiterSig)
 }
 
-export const getOtherPlayerId = (playerId: PlayerId, contract: Contract): PlayerId | undefined => {
-  if (contract.playerOneId === playerId) {
-    return contract.playerTwoId;
+export const getOtherPlayerName = (playerName: PlayerName, contract: Contract): PlayerName | undefined => {
+  if (contract.playerOneName === playerName) {
+    return contract.playerTwoName;
   }
-  else if (contract.playerTwoId === playerId) {
-    return contract.playerOneId;
+  else if (contract.playerTwoName === playerName) {
+    return contract.playerOneName;
   }
 }

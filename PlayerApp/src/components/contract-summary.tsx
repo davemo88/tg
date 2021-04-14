@@ -1,20 +1,20 @@
 import React from 'react';
 import { Text, View, } from 'react-native';
 
-import { styles } from '../styles.ts';
+import { styles } from '../styles';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerIdSlice, } from '../redux.ts';
-import { Player, Contract, ContractStatus, } from '../datatypes.ts'
-import { getContractStatus } from '../dump.ts';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, } from '../redux';
+import { Player, Contract, ContractStatus, } from '../datatypes'
+import { getContractStatus } from '../dump';
 
-import { Currency } from './currency.tsx';
-import { SigPortrait } from './sig-portrait.tsx';
-import { ARBITER_NAME, ARBITER_PICTURE_URL } from './arbiter.tsx';
+import { Currency } from './currency';
+import { SigPortrait } from './sig-portrait';
+import { ARBITER_NAME, ARBITER_PICTURE_URL } from './arbiter';
 
 export const ContractSummary = (props) => {
-  const selectedPlayer: Player = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerId);
-  const playerOne = playerSelectors.selectById(store.getState(), props.contract.playerOneId);
-  const playerTwo = playerSelectors.selectById(store.getState(), props.contract.playerTwoId);
+  const selectedPlayer: Player = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerName);
+  const playerOne = playerSelectors.selectById(store.getState(), props.contract.playerOneName);
+  const playerTwo = playerSelectors.selectById(store.getState(), props.contract.playerTwoName);
 
   return(
     <View style={{ flex: 1 }}>

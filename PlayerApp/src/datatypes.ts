@@ -1,17 +1,12 @@
-// for redux toolkit entity adapter
-export type EntityId = string;
-
 export interface Player {
-  id:               EntityId;
   name:             string;
   mine:             boolean;
 }
 
 export interface Contract {
-    id:                 EntityId;
-    playerOneId:        EntityId;
-    PlayerTwoId:        EntityId;
     cxid:               string;
+    playerOneName:      string;
+    PlayerTwoName:      string;
     amount:             number;
     desc:               string; 
     playerOneSig:       boolean;
@@ -21,8 +16,8 @@ export interface Contract {
     payoutTx:           boolean;
 }
 
-export interface PayoutRequest {
-  id:               EntityId;
+export interface Payout {
+// TODO: https://redux-toolkit.js.org/api/createEntityAdapter#selectid
   cxid:             string;
   payoutTx:         boolean;
   playerOneSig:     boolean;
@@ -43,24 +38,24 @@ export enum ContractStatus {
   Certified,
 // arbiter signed and funding tx is in chain
   Live,
-// selected player submitted signed payout request
-  PayoutRequestIssued,
-// opponent submitted signed payout request
-  PayoutRequestReceived,
-// both players signed payout request
-  PayoutRequestLive,
-// payout request broadcast
+// selected player submitted signed payout
+  PayoutIssued,
+// opponent submitted signed payout
+  PayoutReceived,
+// both players signed payout
+  PayoutLive,
+// payout broadcast
   Resolved,
   Invalid,
 }
 
-export enum PayoutRequestStatus {
+export enum PayoutStatus {
 // the following assume the payout tx has not been mined
   Unsigned,
   SelectedPlayerSigned,
   OtherPlayerSigned,
 // 2/3 sigs provided
-// the payout request only requires 2/3 sigs instead of 3/3 like a contract
+// the payout only requires 2/3 sigs instead of 3/3 like a contract
   Live,
 // payout tx mined
   Resolved,
