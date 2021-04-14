@@ -63,14 +63,18 @@ async fn register_name_handler(body: RegisterNameBody, nmc_rpc: NamecoinRpcClien
 // need 12 blocks on top of the name_new
             let _r = nmc_rpc.generate_to_address(13, new_address.clone()).await;
 //            let _name_firstupdate_txid = nmc_rpc.name_firstupdate(&name, &rand, &name_new_txid, Some("hello world"), &name_address).await.unwrap();
-            match nmc_rpc.name_firstupdate(&name, &rand, &name_new_txid, Some("firstupdate"), &name_address).await {
+//            match nmc_rpc.name_firstupdate(&name, &rand, &name_new_txid, Some("firstupdate"), &name_address).await {
+            match nmc_rpc.name_firstupdate(&name, &rand, &name_new_txid, Some("firstupdate")).await {
                 Ok(_txid) => (),
                 Err(e) => return Ok(e.to_string())
             }
             let _r = nmc_rpc.generate_to_address(1, new_address.clone()).await;
-            match nmc_rpc.name_update(&name, "update").await {
+            match nmc_rpc.name_update(&name, "update", &name_address).await {
                 Ok(_txid) => (),
-                Err(e) => return Ok(e.to_string())
+                Err(e) => {
+                    println!("{}", e.to_string());
+                    return Ok(e.to_string())
+                }
             }
 // i think first update only keeps the name around for a small number of blocks
 // need to do an actual update to keep it for longer

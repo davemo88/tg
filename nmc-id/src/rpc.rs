@@ -108,13 +108,15 @@ impl NamecoinRpcClient {
         }
     }
 
-    pub async fn name_firstupdate(&self, name: &str, rand: &str, txid: &str, value: Option<&str>, dest_address: &str) -> RpcResult<String> {
-        let params = format!("{}, {}, {}, {}, {{\"destAddress\":{}, \"nameEncoding\":{}, \"valueEncoding\":{}}}",
+    pub async fn name_firstupdate(&self, name: &str, rand: &str, txid: &str, value: Option<&str>) -> RpcResult<String> {
+//    pub async fn name_firstupdate(&self, name: &str, rand: &str, txid: &str, value: Option<&str>, dest_address: &str) -> RpcResult<String> {
+//        let params = format!("{}, {}, {}, {}, {{\"destAddress\":{}, \"nameEncoding\":{}, \"valueEncoding\":{}}}",
+        let params = format!("{}, {}, {}, {}, {{\"nameEncoding\":{}, \"valueEncoding\":{}}}",
             serde_json::to_string(name).unwrap(),
             serde_json::to_string(rand).unwrap(),
             serde_json::to_string(txid).unwrap(),
             serde_json::to_string(value.unwrap_or_default()).unwrap(),
-            serde_json::to_string(dest_address).unwrap(),
+//            serde_json::to_string(dest_address).unwrap(),
             serde_json::to_string(STRING_ENCODING).unwrap(),
             serde_json::to_string(STRING_ENCODING).unwrap(),
         );
@@ -131,20 +133,22 @@ impl NamecoinRpcClient {
         }
     }
 
-    pub async fn name_update(&self, name: &str, value: &str) -> RpcResult<String> {
-        let params = format!("{}, {}, {{\"nameEncoding\":{}, \"valueEncoding\":{}}}",
+    pub async fn name_update(&self, name: &str, value: &str, dest_address: &str) -> RpcResult<String> {
+//        let params = format!("{}, {}, {{\"nameEncoding\":{}, \"valueEncoding\":{}}}",
+        let params = format!("{}, {}, {{\"destAddress\":{}, \"nameEncoding\":{}, \"valueEncoding\":{}}}",
             serde_json::to_string(name).unwrap(),
             serde_json::to_string(value).unwrap(),
+            serde_json::to_string(dest_address).unwrap(),
             serde_json::to_string(STRING_ENCODING).unwrap(),
             serde_json::to_string(STRING_ENCODING).unwrap(),
         );
-        let body = self.build_request_body("name_firstupdate", &params);
+        let body = self.build_request_body("name_update", &params);
         match self.post(body).await {
             Ok(r) => {
                 let r = r.json::<RpcResponse>().await.unwrap();
                 match r.result {
                     Some(txid) => Ok(txid),
-                    None => Err(format!("{:?}",r)),
+                    None => Err(format!("name_update error: {:?}",r)),
                 }
             },
             Err(e) => Err(e.to_string()),
