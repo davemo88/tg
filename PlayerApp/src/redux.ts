@@ -182,6 +182,7 @@ export const selectedPlayerNameSlice = createSlice({
 export const getBalance = () => {
     return async (dispatch) => {
         try {
+//TODO: this crashes when electrs is down
             let output = await PlayerWalletModule.call_cli("balance");
             let balance = +output;
             return dispatch(balanceSlice.actions.setBalance(balance));

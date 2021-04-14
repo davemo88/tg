@@ -66,7 +66,7 @@ use crate::{
 // basic crypto wallet
 pub trait WalletUI {
     fn deposit(&self) -> Address;
-    fn balance(&self) -> Amount;
+    fn balance(&self) -> Result<Amount>;
 //    fn withdraw(&self, address: Address, amount: Amount) -> Transaction;
     fn fund(&self) -> Result<Txid>;
 }
@@ -127,11 +127,11 @@ pub enum SignDocumentParams {
 
 impl WalletUI for PlayerWallet {
     fn deposit(&self) -> Address {
-        self.wallet().get_new_address().unwrap()
+        self.offline_wallet().get_new_address().unwrap()
     }
 
-    fn balance(&self) -> Amount {
-        Amount::from_sat(self.wallet().get_balance().unwrap())
+    fn balance(&self) -> Result<Amount> {
+        Ok(Amount::from_sat(self.wallet()?.get_balance()?))
     }
 
 //    fn withdraw(&self, address: Address, amount: Amount) -> Transaction {
@@ -139,7 +139,7 @@ impl WalletUI for PlayerWallet {
 //    }
 
     fn fund(&self) -> Result<Txid> {
-        let txid = self.arbiter_client().fund_address(self.wallet().get_new_address().unwrap())?;
+        let txid = self.arbiter_client().fund_address(self.offline_wallet().get_new_address().unwrap())?;
         Ok(txid)
     }
 }
@@ -190,7 +190,7 @@ impl PlayerUI for PlayerWallet {
     fn post(&self, name: PlayerName, amount: Amount, pw: Secret<String>) -> Result<()> {
         let mut utxos = vec!();
         let mut total: u64 = 0;
-        let wallet = self.wallet();
+        let wallet = self.offline_wallet();
         for utxo in wallet.list_unspent().unwrap() {
             if total >= amount.as_sat() {
                 break
@@ -363,7 +363,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
     fn broadcast(&self, cxid: &str) -> Result<()> {
         if let Some(cr) = self.db().get_contract(&cxid) {
             let contract = Contract::from_bytes(hex::decode(cr.hex.clone()).unwrap()).unwrap();
-            let _r = self.wallet().broadcast(contract.funding_tx.extract_tx());
+            let _r = self.wallet()?.broadcast(contract.funding_tx.extract_tx());
             Ok(())
         } else {
             Err(Error::Adhoc("unknown contract").into())
@@ -488,7 +488,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
     fn broadcast(&self, cxid: &str) -> Result<()> {
          if let Some(pr) = self.db().get_payout(&cxid) {
              let tx: PartiallySignedTransaction = consensus::deserialize(&hex::decode(pr.psbt).unwrap()).unwrap();
-             let _r = self.wallet().broadcast(tx.extract_tx());
+             let _r = self.wallet()?.broadcast(tx.extract_tx());
              Ok(())
          }
          else {

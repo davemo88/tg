@@ -139,7 +139,10 @@ pub fn cli(line: String, conf: Conf) -> String {
 
             let wallet = PlayerWallet::new(wallet_dir, NETWORK, conf.electrum_url, conf.name_url, conf.arbiter_url);
             match c {
-                "balance" => format!("{}", wallet.balance().as_sat()),
+                "balance" => match wallet.balance() {
+                    Ok(balance) => format!("{}", balance.as_sat()),
+                    Err(e) => return format!("{:?}", e),
+                }
                 "deposit" => format!("{}", wallet.deposit()),
                 "fund" => format!("{}", wallet.fund().unwrap()),
                 "player" => player_subcommand(a.subcommand(), &wallet),

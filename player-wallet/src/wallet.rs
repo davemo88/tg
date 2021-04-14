@@ -106,7 +106,7 @@ impl PlayerWallet {
         Ok(seed)
     }
 
-    pub fn wallet(&self) -> Wallet<ElectrumBlockchain, sled::Tree> {
+    pub fn wallet(&self) -> Result<Wallet<ElectrumBlockchain, sled::Tree>> {
         let saved_seed = self.saved_seed().unwrap();
         let descriptor_key = format!("[{}/{}]{}", saved_seed.fingerprint, BITCOIN_ACCOUNT_PATH, saved_seed.xpubkey);
 
@@ -115,9 +115,22 @@ impl PlayerWallet {
             Some(&self.internal_descriptor(&descriptor_key)),
             self.network,
             self.wallet_db(),
-            ElectrumBlockchain::from(ElectrumClient::new(&self.electrum_url).unwrap())
+            ElectrumBlockchain::from(ElectrumClient::new(&self.electrum_url)?)
         ).unwrap();
         w.sync(noop_progress(), None).unwrap();
+        Ok(w)
+    }
+
+    pub fn offline_wallet(&self) -> Wallet<(), sled::Tree> {
+        let saved_seed = self.saved_seed().unwrap();
+        let descriptor_key = format!("[{}/{}]{}", saved_seed.fingerprint, BITCOIN_ACCOUNT_PATH, saved_seed.xpubkey);
+
+        let w = Wallet::new_offline(
+            &self.external_descriptor(&descriptor_key),
+            Some(&self.internal_descriptor(&descriptor_key)),
+            self.network,
+            self.wallet_db(),
+        ).unwrap();
         w
     }
 
@@ -207,7 +220,7 @@ impl PlayerWallet {
             return Err(Error::Adhoc("p2 has insufficient funds"))
         }
         let p2_change = total - sats_per_player;
-        let wallet = self.wallet();
+        let wallet = self.wallet()?;
         assert!(wallet.sync(noop_progress(), None).is_ok());
         for utxo in wallet.list_unspent().unwrap() {
             if total > 2 * sats_per_player + p2_change {

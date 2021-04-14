@@ -22,6 +22,7 @@ pub enum Error {
     Io(Arc<std::io::Error>),
     Reqwest(Arc<reqwest::Error>),
     Tglib(Arc<tglib::Error>),
+    ElectrumClient(Arc<tglib::bdk::electrum_client::Error>),
 }
 
 impl fmt::Display for Error {
@@ -32,6 +33,7 @@ impl fmt::Display for Error {
             Error::Io(error) => write!(f, "Io({})", error),
             Error::Reqwest(error) => write!(f, "Reqwest({})", error),
             Error::Tglib(error) => write!(f, "Tglib({})", error),
+            Error::ElectrumClient(error) => write!(f, "ElectrumClient({})", error),
         }
     }
 }
@@ -44,6 +46,7 @@ impl std::error::Error for Error {
             Error::Io(error) => Some(error.as_ref()),
             Error::Reqwest(error) => Some(error.as_ref()),
             Error::Tglib(error) => Some(error.as_ref()),
+            Error::ElectrumClient(error) => Some(error.as_ref()),
         }
     }
 }
@@ -69,6 +72,12 @@ impl From<reqwest::Error> for Error {
 impl From<tglib::Error> for Error {
     fn from(error: tglib::Error) -> Self {
         Error::Tglib(Arc::new(error))
+    }
+}
+
+impl From<tglib::bdk::electrum_client::Error> for Error {
+    fn from(error: tglib::bdk::electrum_client::Error) -> Self {
+        Error::ElectrumClient(Arc::new(error))
     }
 }
 
