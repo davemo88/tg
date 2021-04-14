@@ -131,6 +131,26 @@ impl NamecoinRpcClient {
         }
     }
 
+    pub async fn name_update(&self, name: &str, value: &str) -> RpcResult<String> {
+        let params = format!("{}, {}, {{\"nameEncoding\":{}, \"valueEncoding\":{}}}",
+            serde_json::to_string(name).unwrap(),
+            serde_json::to_string(value).unwrap(),
+            serde_json::to_string(STRING_ENCODING).unwrap(),
+            serde_json::to_string(STRING_ENCODING).unwrap(),
+        );
+        let body = self.build_request_body("name_firstupdate", &params);
+        match self.post(body).await {
+            Ok(r) => {
+                let r = r.json::<RpcResponse>().await.unwrap();
+                match r.result {
+                    Some(txid) => Ok(txid),
+                    None => Err(format!("{:?}",r)),
+                }
+            },
+            Err(e) => Err(e.to_string()),
+        }
+    }
+
     pub async fn _name_list(&self, name: Option<&str>) -> RpcResult<Vec<NameStatus>> {
         let params = serde_json::to_string(&name).unwrap();
         let body = self.build_request_body("name_list", &params);
