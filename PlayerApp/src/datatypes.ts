@@ -31,15 +31,18 @@ export interface Payout {
 export enum ContractStatus {
 // following, funding tx may or may not be mined and only players signing
   Unsigned,
-  Issued,
+// player one signed and is controlled locally
+  Signed,
+// player one signed and is not controlled locally
   Received,
-  Accepted,
-// arbiter signed and funding tx not in chain
+// signed by both players
+  PlayersSigned,
+// all signed and funding tx not in chain
   Certified,
 // arbiter signed and funding tx is in chain
   Live,
 // selected player submitted signed payout
-  PayoutIssued,
+  PayoutSent,
 // opponent submitted signed payout
   PayoutReceived,
 // both players signed payout
@@ -49,7 +52,7 @@ export enum ContractStatus {
   Invalid,
 }
 
-export enum PayoutStatus {
+export enum PayoutRequestStatus {
 // the following assume the payout tx has not been mined
   Unsigned,
   SelectedPlayerSigned,

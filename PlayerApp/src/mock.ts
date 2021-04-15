@@ -30,7 +30,7 @@ export const denyPayout = (payoutId: string) => {
 export const arbiterSignContract = (contract: Contract) => {
 // TODO: validation
   store.dispatch(contractSlice.actions.contractUpdated({
-    id: contract.id,
+    id: contract.cxid,
     changes: { arbiterSig: true },
   }));
 }
@@ -62,7 +62,7 @@ export const createPayout = (contract: Contract) => {
 
 export const signContract = (contract: Contract) => {
   const selectedPlayerName = store.getState().selectedPlayerName;
-  let action = {id: contract.id, changes: {}};
+  let action = {id: contract.cxid, changes: {}};
   if (contract.playerOneName === selectedPlayerName) {
     action.changes.playerOneSig = true;
   }
@@ -87,7 +87,7 @@ export const signPayout = (payout: Payout) => {
 
 export const broadcastFundingTx = (contract: Contract) => {
   store.dispatch(contractSlice.actions.contractUpdated({
-    id: contract.id,
+    id: contract.cxid,
     changes: {
       fundingTx: true,
     }

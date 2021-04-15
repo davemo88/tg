@@ -19,12 +19,12 @@ export const ContractAction = (props) => {
     {
       {
         [ContractStatus.Unsigned]: <ActionUnsigned navigation={props.navigation} />,
-        [ContractStatus.Issued]: <ActionIssued />,
+        [ContractStatus.Signed]: <ActionIssued />,
         [ContractStatus.Received]: <ActionReceived navigation={props.navigation} contract={props.contract}/>,
-        [ContractStatus.Accepted]: <ActionAccepted navigation={props.navigation} contract={props.contract} />,
+        [ContractStatus.PlayersSigned]: <ActionAccepted navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Certified]: <ActionCertified navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Live]: <ActionLive navigation={props.navigation} contract={props.contract} />,
-        [ContractStatus.PayoutIssued]: <ActionPayoutIssued navigation={props.navigation} contract={props.contract} />,
+        [ContractStatus.PayoutSent]: <ActionPayoutIssued navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.PayoutReceived]: <ActionPayoutReceived navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.PayoutLive]: <ActionPayoutLive navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Resolved]: <ActionResolved navigation={props.navigation} contract={props.contract} />,
@@ -42,7 +42,7 @@ const ActionUnsigned = (props) => {
     <View>
       <PasswordEntry password={password} setPassword={setPassword} />
       <Button 
-        title="Issue Contract" 
+        title="Sign Contract" 
         onPress={() => {
           signContract(props.contract);
           resetDetails(props.navigation, props.contract.cxid);
