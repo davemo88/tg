@@ -47,7 +47,6 @@ export const newPlayer = (name: string, password: Secret<string>) => {
             let cli_response: string = await PlayerWalletModule.call_cli_with_password(`player register "${name}"`, password.expose_secret()); 
             if (cli_response === "registered player") {
                 return dispatch(playerSlice.actions.playerAdded({
-                    id: name, 
                     name: name,
                     mine: true,
 // TODO: set portrait based on player name hash
@@ -68,7 +67,6 @@ export const addPlayer = (name: string) => {
             let cli_response = await PlayerWalletModule.call_cli(`player add "${name}"`);
             if (cli_response === "added player") {
                 return dispatch(playerSlice.actions.playerAdded({
-                    id: name,
                     name: name,
                     mine: false,
 // TODO: set portrait based on player name hash

@@ -28,27 +28,35 @@ export const initWallet = async (password: Secret<string>) => {
     }
 }
 
-export const createContract = (contract: Contract) => {
-  store.dispatch
+export const postContractInfo = async (password: Secret<string>) {
+    const name = store.getState().selectedPlayerName;
+    let cli_response = await PlayerWalletModule.call_cli_with_password(`player post "${name}`, password.expose_secret());
+}
+
+export const signContract = (contract: Contract, password: Secret<string>) => {
+    return async (dispatch) => {
+        try {
+            const selectedPlayerName = store.getState().selectedPlayerName;
+            let cli_response = await PlayerWalletModule.call_cli_with_password(`contract sign ${contract.cxid}`, password.expose_secret());
+            let action = {id: contract.cxid, changes: {}};
+            if (contract.playerOneName === selectedPlayerName) {
+                action.changes.playerOneSig = true;
+            }
+            else if (contract.playerTwoName === selectedPlayerName) {
+                action.changes.playerTwoSig = true;
+            }
+            store.dispatch(contractSlice.actions.contractUpdated(action));
+        } catch (error) {
+            return Promise.reject(error);
+        }
+    }
 }
 
 export const createPayout = (contract: Contract) => {
   store.dispatch
 }
 
-export const signContract = (contract: Contract) => {
-  const selectedPlayerName = store.getState().selectedPlayerName;
-  let action = {id: contract.cxid, changes: {}};
-  if (contract.playerOneName === selectedPlayerName) {
-    action.changes.playerOneSig = true;
-  }
-  else if (contract.playerTwoName === selectedPlayerName) {
-    action.changes.playerTwoSig = true;
-  }
-  store.dispatch(contractSlice.actions.contractUpdated(action));
-}
-
-export const signPayout = (payout: Payout) => {
+export const signPayout = (payout: Payout, password: Secret<string>) => {
   const selectedPlayerName = store.getState().selectedPlayerName;
   const contract = contractSelectors.selectById(store.getState(), payout.cxid);
   let action = {id: payout.cxid, changes: {}};

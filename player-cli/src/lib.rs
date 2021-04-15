@@ -4,6 +4,7 @@ use std::{
     io::Write,
     path::PathBuf,
 };
+use serde::{Deserialize, Serialize};
 use clap::{App, Arg, ArgMatches, SubCommand, AppSettings};
 use serde_json;
 use shell_words;
@@ -39,6 +40,37 @@ use player_wallet::{
     },
     wallet::PlayerWallet,
 };
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum Status {
+    Success,
+    Error,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct JsonResponse<T: Serialize> {
+    status: Status,
+    data: Option<T>,
+    message: Option<String>,
+}
+
+impl<T: Serialize> JsonResponse<T> {
+    fn success(data: Option<T>) -> Self {
+        JsonResponse {
+            status: Status::Success,
+            data,
+            message: None,
+        }
+    }
+    
+    fn error(data: Option<T>, message: Option<String>) -> Self {
+        JsonResponse {
+            status: Status::Error,
+            data,
+            message,
+        }
+    }
+}
 
 fn player_cli<'a, 'b>() -> App<'a, 'b> {
     App::new("player-cli")
@@ -227,15 +259,15 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 Err(e) => format!("{}", e),
             }
             "list" => if a.is_present("json-output") {
-                    serde_json::to_string(&PlayerUI::list(wallet)).unwrap()
-                } else {
-                    PlayerUI::list(wallet).iter().map(|pr| pr.name.clone().0 ).collect::<Vec<String>>().join("\n")
-                }
+                serde_json::to_string(&JsonResponse::success(Some(PlayerUI::list(wallet)))).unwrap()
+            } else {
+                PlayerUI::list(wallet).iter().map(|pr| pr.name.clone().0 ).collect::<Vec<String>>().join("\n")
+            }
             "mine" => if a.is_present("json-output") {
-                    serde_json::to_string(&wallet.mine()).unwrap()
-                } else {
-                    wallet.mine().iter().map(|p| p.clone().0).collect::<Vec<String>>().join("\n")
-                },
+                serde_json::to_string(&JsonResponse::success(Some(wallet.mine()))).unwrap()
+            } else {
+                wallet.mine().iter().map(|p| p.clone().0).collect::<Vec<String>>().join("\n")
+            },
             "post" => match wallet.post(PlayerName(a.value_of("name").unwrap().to_string()), Amount::from_sat(a.value_of("amount").unwrap().parse::<u64>().unwrap()), Secret::new(a.value_of("password").unwrap().to_owned())) {
                 Ok(_) => format!("posted contract info"),
                 Err(e) => format!("{}", e),
@@ -373,7 +405,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                     } 
                 }) {
                 Ok(contract_record) => if a.is_present("json-output") {
-                    serde_json::to_string(&contract_record).unwrap()
+                    serde_json::to_string(&JsonResponse::success(Some(contract_record))).unwrap()
                 } else {
                     format!("contract {} created", contract_record.cxid)
                 }
@@ -426,10 +458,10 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 Err(e) => format!("{}", e),
             }
             "list" => if a.is_present("json-output") {
-                    serde_json::to_string(&DocumentUI::<ContractRecord>::list(wallet)).unwrap()
-                } else {
-                    DocumentUI::<ContractRecord>::list(wallet).iter().map(|cr| format!("{:?}", cr)).collect::<Vec<String>>().join("\n")
-                }
+                serde_json::to_string(&JsonResponse::success(Some(DocumentUI::<ContractRecord>::list(wallet)))).unwrap()
+            } else {
+                DocumentUI::<ContractRecord>::list(wallet).iter().map(|cr| format!("{:?}", cr)).collect::<Vec<String>>().join("\n")
+            }
             _ => {
                 format!("command '{}' is not implemented", c)
             }
@@ -551,7 +583,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                     amount: Amount::from_sat(a.value_of("amount").unwrap().parse::<u64>().unwrap()),
                 }) {
                 Ok(payout_record) => if a.is_present("json-output") {
-                    serde_json::to_string(&payout_record).unwrap()
+                    serde_json::to_string(&JsonResponse::success(Some(payout_record))).unwrap()
                 } else {
                     format!("payout created for contract {}", payout_record.cxid)
                 }
@@ -607,10 +639,10 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 Err(e) => format!("{}", e),
             }
             "list" => if a.is_present("json-output") {
-                    serde_json::to_string(&DocumentUI::<PayoutRecord>::list(wallet)).unwrap()
-                } else {
-                    DocumentUI::<PayoutRecord>::list(wallet).iter().map(|pr| format!("{:?}", pr)).collect::<Vec<String>>().join("\n")
-                }
+                serde_json::to_string(&JsonResponse::success(Some(DocumentUI::<PayoutRecord>::list(wallet)))).unwrap()
+            } else {
+                DocumentUI::<PayoutRecord>::list(wallet).iter().map(|pr| format!("{:?}", pr)).collect::<Vec<String>>().join("\n")
+            }
             _ => format!("command '{}' is not implemented", c)
         }            
     }

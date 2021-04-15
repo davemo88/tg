@@ -5,8 +5,9 @@ import { styles } from '../styles';
 
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, payoutSlice, selectedPlayerNameSlice, } from '../redux';
 import { Player, Contract, ContractStatus, } from '../datatypes';
+import { signContract } from '../wallet';
 import { getContractStatus } from '../dump';
-import { broadcastFundingTx, broadcastPayoutTx, signPayout, signContract, arbiterSignContract, declineContract, dismissContract, denyPayout, } from '../mock';
+import { broadcastFundingTx, broadcastPayoutTx, signPayout, arbiterSignContract, declineContract, dismissContract, denyPayout, } from '../mock';
 
 import { Secret } from '../secret';
 import { Currency } from './currency';
@@ -21,7 +22,7 @@ export const ContractAction = (props) => {
         [ContractStatus.Unsigned]: <ActionUnsigned navigation={props.navigation} />,
         [ContractStatus.Signed]: <ActionIssued />,
         [ContractStatus.Received]: <ActionReceived navigation={props.navigation} contract={props.contract}/>,
-        [ContractStatus.PlayersSigned]: <ActionAccepted navigation={props.navigation} contract={props.contract} />,
+        [ContractStatus.Accepted]: <ActionAccepted navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Certified]: <ActionCertified navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Live]: <ActionLive navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.PayoutSent]: <ActionPayoutIssued navigation={props.navigation} contract={props.contract} />,

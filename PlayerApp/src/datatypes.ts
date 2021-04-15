@@ -36,7 +36,7 @@ export enum ContractStatus {
 // player one signed and is not controlled locally
   Received,
 // signed by both players
-  PlayersSigned,
+  Accepted,
 // all signed and funding tx not in chain
   Certified,
 // arbiter signed and funding tx is in chain
@@ -55,10 +55,9 @@ export enum ContractStatus {
 export enum PayoutRequestStatus {
 // the following assume the payout tx has not been mined
   Unsigned,
-  SelectedPlayerSigned,
-  OtherPlayerSigned,
+  Signed,
 // 2/3 sigs provided
-// the payout only requires 2/3 sigs instead of 3/3 like a contract
+// the payout only requires 2/3 sigs instead of 3/3 like the contract
   Live,
 // payout tx mined
   Resolved,
