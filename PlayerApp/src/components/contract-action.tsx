@@ -45,7 +45,7 @@ const ActionUnsigned = (props) => {
       <Button 
         title="Sign Contract" 
         onPress={() => {
-          signContract(props.contract);
+          signContract(props.contract, password);
           resetDetails(props.navigation, props.contract.cxid);
         } }
       />

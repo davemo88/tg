@@ -134,19 +134,20 @@ impl PlayerWallet {
         w
     }
 
-    fn signing_wallet(&self, pw: Secret<String>) -> Wallet<ElectrumBlockchain, sled::Tree> {
+    fn signing_wallet(&self, pw: Secret<String>) -> TgResult<Wallet<ElectrumBlockchain, sled::Tree>> {
         let saved_seed = self.saved_seed().unwrap();
-        let seed = saved_seed.get_seed(pw).unwrap();
+// can fail due to incorrect password
+        let seed = saved_seed.get_seed(pw)?;
         let account_key = derive_account_xprivkey(seed, self.network);
         let descriptor_key = format!("[{}/{}]{}", saved_seed.fingerprint, BITCOIN_ACCOUNT_PATH, account_key);
 
-        Wallet::new(
+        Ok(Wallet::new(
             &self.external_descriptor(&descriptor_key),
             Some(&self.internal_descriptor(&descriptor_key)),
             self.network,
             self.wallet_db(),
             ElectrumBlockchain::from(ElectrumClient::new(&self.electrum_url).unwrap())
-        ).unwrap()
+        ).unwrap())
     }
 
     fn wallet_db(&self) -> sled::Tree {
@@ -320,9 +321,9 @@ impl EscrowWallet for PlayerWallet {
 impl SigningWallet for PlayerWallet {
 
     fn sign_tx(&self, psbt: PartiallySignedTransaction, path: Option<DerivationPath>, pw: Secret<String>) -> TgResult<PartiallySignedTransaction> {
-        let seed = self.saved_seed().unwrap().get_seed(pw.clone())?;
         match path {
             Some(path) => {
+                let seed = self.saved_seed().unwrap().get_seed(pw.clone())?;
                 let account_key = derive_account_xprivkey(seed, self.network);
                 let secp = Secp256k1::new();
                 let signing_key = account_key.derive_priv(&secp, &path).unwrap();
@@ -338,11 +339,10 @@ impl SigningWallet for PlayerWallet {
                 }
             }
             None => {
-                let signing_wallet = self.signing_wallet(pw);
+                let signing_wallet = self.signing_wallet(pw)?;
                 signing_wallet.sync(noop_progress(), None).unwrap();
                 let (signed_psbt, _finished) = signing_wallet.sign(psbt.clone(), None).unwrap();
 
-//                assert_ne!(signed_psbt, psbt);
                 Ok(signed_psbt)
             },
         }
