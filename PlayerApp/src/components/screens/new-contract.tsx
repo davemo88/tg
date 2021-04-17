@@ -34,6 +34,7 @@ export const NewContract = ({ navigation }) => {
     }
 
     useEffect(() => {
+//TODO: could cache these to limit unneccesary network calls
         if (selectedPlayer) {
             getPosted(playerTwoName)
                 .then(

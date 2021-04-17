@@ -9,7 +9,6 @@ export const LIVE_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'live.png';
 
 export const PASSPHRASE_MIN_LENGTH = 12;
 
-
 // this is appdata
 export const NETWORK: string = 'Test';
 
@@ -58,18 +57,6 @@ export const createContract = (contract: Contract) => {
 
 export const createPayout = (contract: Contract) => {
   store.dispatch
-}
-
-export const signContract = (contract: Contract) => {
-  const selectedPlayerName = store.getState().selectedPlayerName;
-  let action = {id: contract.cxid, changes: {}};
-  if (contract.playerOneName === selectedPlayerName) {
-    action.changes.playerOneSig = true;
-  }
-  else if (contract.playerTwoName === selectedPlayerName) {
-    action.changes.playerTwoSig = true;
-  }
-  store.dispatch(contractSlice.actions.contractUpdated(action));
 }
 
 export const signPayout = (payout: Payout) => {

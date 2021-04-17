@@ -5,12 +5,12 @@ export interface Player {
 
 export interface Contract {
     cxid:               string;
-    playerOneName:      string;
-    playerTwoName:      string;
+    p1Name:             string;
+    p2Name:             string;
     amount:             number;
     desc:               string; 
-    playerOneSig:       boolean;
-    playerTwoSig:       boolean;
+    p1Sig:              boolean;
+    p2Sig:              boolean;
     arbiterSig:         boolean;
     fundingTx:          boolean;
     payoutTx:           boolean;
@@ -19,8 +19,8 @@ export interface Contract {
 export interface Payout {
   cxid:             string;
   payoutTx:         boolean;
-  playerOneSig:     boolean;
-  playerTwoSig:     boolean;
+  p1Sig:            boolean;
+  p2Sig:            boolean;
   arbiterSig:       boolean;
   payoutToken:      string;
   playerOneAmount:  number;
@@ -30,18 +30,20 @@ export interface Payout {
 export enum ContractStatus {
 // following, funding tx may or may not be mined and only players signing
   Unsigned,
-// player one signed and is controlled locally
+// local player one signed
   Signed,
-// player one signed and is not controlled locally
+// non-local player one signed
   Received,
 // signed by both players
-  Accepted,
+  PlayersSigned,
 // all signed and funding tx not in chain
   Certified,
 // arbiter signed and funding tx is in chain
   Live,
-// selected player submitted signed payout
-  PayoutSent,
+// payout unsigned
+  PayoutUnsigned,
+// payout signed by one player
+  PayoutSigned,
 // opponent submitted signed payout
   PayoutReceived,
 // both players signed payout
@@ -51,10 +53,11 @@ export enum ContractStatus {
   Invalid,
 }
 
-export enum PayoutRequestStatus {
+export enum PayoutStatus {
 // the following assume the payout tx has not been mined
   Unsigned,
-  Signed,
+  WeSigned,
+  TheySigned,
 // 2/3 sigs provided
 // the payout only requires 2/3 sigs instead of 3/3 like the contract
   Live,

@@ -21,10 +21,10 @@ export const Home = ({ navigation }) => {
     const selectedPlayer = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerName);
     const [balance, setBalance] = useState(store.getState().balance);
     const [posted, setPosted] = useState(store.getState().posted);
+// should use effect for this
     const contracts = contractSelectors.selectAll(store.getState())
     .filter((contract, i, a) =>{ return (
-//   TODO: these ID's aren't persisted; they only exist in redux. need to filter on the names instead
-      (contract.playerOneName === selectedPlayer.name || contract.playerTwoName === selectedPlayer.name) 
+      (contract.p1Name === selectedPlayer.name || contract.p2Name === selectedPlayer.name) 
       && 
       (getContractStatus(contract) != ContractStatus.Resolved)
     )})
@@ -82,6 +82,7 @@ export const Home = ({ navigation }) => {
               <FlatList
                 data={contracts}
                 renderItem={({item}) => <ContractListItem navigation={navigation} contract={item} />}
+                keyExtractor={(item) => item.cxid}
               />
             </View>
           </View>

@@ -50,7 +50,6 @@ export const getPosted = async (name: string) => {
             throw(response.message);
         }
         const posted = +response.data;
-        console.debug(`player ${name} posted: ${posted}`);
         return Promise.resolve(posted)
     } catch (error) {
         return Promise.reject(error)
@@ -61,18 +60,34 @@ export const signContract = (contract: Contract, password: Secret<string>) => {
     return async (dispatch) => {
         try {
             const selectedPlayerName = store.getState().selectedPlayerName;
-            let cli_response = await PlayerWalletModule.call_cli_with_password(`contract sign ${contract.cxid}`, password.expose_secret());
+            let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`contract sign ${contract.cxid}`, password.expose_secret()));
+            if (response.status === "error") {
+                throw(response.message);
+            }
             let action = {id: contract.cxid, changes: {}};
-            if (contract.playerOneName === selectedPlayerName) {
-                action.changes.playerOneSig = true;
+            if (contract.p1Name === selectedPlayerName) {
+                action.changes.p1Sig = true;
             }
-            else if (contract.playerTwoName === selectedPlayerName) {
-                action.changes.playerTwoSig = true;
+            else if (contract.p2Name === selectedPlayerName) {
+                action.changes.p2Sig = true;
             }
-            store.dispatch(contractSlice.actions.contractUpdated(action));
+            return dispatch(contractSlice.actions.contractUpdated(action))
         } catch (error) {
-            return Promise.reject(error);
+            return Promise.reject(error)
         }
+    }
+}
+
+export const sendContract = async (contract: Contract) => {
+    try {
+        const cli_output = await PlayerWalletModule.call_cli(`contract send ${contract.cxid}`);
+        let response: JsonResponse = JSON.parse(cli_output);
+        if (response.status === "error") {
+            throw(response.message);
+        }
+        return Promise.resolve(null)
+    } catch (error) {
+        return Promise.reject(error)
     }
 }
 

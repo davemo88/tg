@@ -1,11 +1,12 @@
 import React from 'react';
+import { useDispatch, } from 'react-redux';
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
 import { styles } from '../styles';
 
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, payoutSlice, selectedPlayerNameSlice, } from '../redux';
 import { Player, Contract, ContractStatus, } from '../datatypes';
-import { signContract } from '../wallet';
+import { sendContract, signContract } from '../wallet';
 import { getContractStatus } from '../dump';
 import { broadcastFundingTx, broadcastPayoutTx, signPayout, arbiterSignContract, declineContract, dismissContract, denyPayout, } from '../mock';
 
@@ -19,13 +20,14 @@ export const ContractAction = (props) => {
     <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
     {
       {
-        [ContractStatus.Unsigned]: <ActionUnsigned navigation={props.navigation} />,
-        [ContractStatus.Signed]: <ActionIssued />,
+        [ContractStatus.Unsigned]: <ActionUnsigned navigation={props.navigation} contract={props.contract} />,
+        [ContractStatus.Signed]: <ActionSigned navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Received]: <ActionReceived navigation={props.navigation} contract={props.contract}/>,
-        [ContractStatus.Accepted]: <ActionAccepted navigation={props.navigation} contract={props.contract} />,
+        [ContractStatus.PlayersSigned]: <ActionPlayersSigned navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Certified]: <ActionCertified navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Live]: <ActionLive navigation={props.navigation} contract={props.contract} />,
-        [ContractStatus.PayoutSent]: <ActionPayoutIssued navigation={props.navigation} contract={props.contract} />,
+        [ContractStatus.PayoutUnsigned]: <ActionPayoutUnsigned navigation={props.navigation} contract={props.contract} />,
+        [ContractStatus.PayoutSigned]: <ActionPayoutSigned navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.PayoutReceived]: <ActionPayoutReceived navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.PayoutLive]: <ActionPayoutLive navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Resolved]: <ActionResolved navigation={props.navigation} contract={props.contract} />,
@@ -37,28 +39,48 @@ export const ContractAction = (props) => {
 }
 
 const ActionUnsigned = (props) => {
-  const [password, setPassword] = React.useState(new Secret(""));
+    let dispatch = useDispatch();
+    let [signing, setSigning] = React.useState(false);
+    const [password, setPassword] = React.useState(new Secret(""));
 
-  return (
-    <View>
-      <PasswordEntry password={password} setPassword={setPassword} />
-      <Button 
-        title="Sign Contract" 
-        onPress={() => {
-          signContract(props.contract, password);
-          resetDetails(props.navigation, props.contract.cxid);
-        } }
-      />
-    </View>
-  )
+    return (
+      <View>
+        <PasswordEntry password={password} setPassword={setPassword} />
+        <Button 
+          title="Sign Contract" 
+          onPress={() => {
+            setSigning(true);
+            dispatch(signContract(props.contract, password))
+              .then(
+                  success => resetDetails(props.navigation, props.contract.cxid),
+                  failure => console.error(failure),
+              )
+              .finally(setSigning(false));
+          } }
+        />
+      </View>
+    )
 }
 
-const ActionIssued = (props) => {
-  return (
-    <View>
-      <Text>Waiting for Opponent</Text>
-    </View>
-  )
+const ActionSigned = (props) => {
+    let [sending, setSending] = React.useState(false);
+    return (
+      <View>
+          <Text>Waiting for other player's siganture</Text>
+          <Button 
+            title="Send Contract" 
+            onPress={() => {
+              setSending(true);
+              sendContract(props.contract)
+                .then(
+                    success => resetDetails(props.navigation, props.contract.cxid),
+                    failure => console.error(failure),
+                )
+                .finally(() => setSending(false));
+            } }
+          />
+      </View>
+    )
 }
 
 const ActionReceived = (props) => {
@@ -70,7 +92,7 @@ const ActionReceived = (props) => {
       <Button 
         title="Accept Contract" 
         onPress={() => {
-          signContract(props.contract);
+//          signContract(props.contract);
           resetDetails(props.navigation, props.contract.cxid);
         } }
       />
@@ -85,7 +107,7 @@ const ActionReceived = (props) => {
   )
 }
 
-const ActionAccepted = (props) => {
+const ActionPlayersSigned = (props) => {
   return (
     <View>
       <Button 
@@ -124,6 +146,30 @@ const ActionLive = (props) => {
   )
 }
 
+const ActionPayoutUnsigned = (props) => {
+    let dispatch = useDispatch();
+    let [signing, setSigning] = React.useState(false);
+    const [password, setPassword] = React.useState(new Secret(""));
+
+    return (
+      <View>
+        <PasswordEntry password={password} setPassword={setPassword} />
+        <Button 
+          title="Sign Payout" 
+          onPress={() => {
+            setSigning(true);
+            dispatch(signPayout(props.contract, password))
+              .then(
+                  success => resetDetails(props.navigation, props.contract.cxid),
+                  failure => console.error(failure),
+              )
+              .finally(setSigning(false));
+          } }
+        />
+      </View>
+    )
+}
+
 // TODO: arbitrated payout request how
 // 3bools:
 // mine or other
@@ -131,12 +177,25 @@ const ActionLive = (props) => {
 // arbiter or not
 // then signature state
 // pretty big state
-const ActionPayoutIssued = (props) => {
-  return (
-    <View>
-      <Text>Payout Issued</Text>
-    </View>
-  )
+const ActionPayoutSigned = (props) => {
+    const [sending, setSending] = React.useState(false);
+    return (
+      <View>
+          <Text>Waiting for other player's siganture</Text>
+          <Button 
+            title="Send Contract" 
+            onPress={() => {
+              setSending(true);
+              sendContract(props.contract)
+                .then(
+                    success => resetDetails(props.navigation, props.contract.cxid),
+                    failure => console.error(failure),
+                )
+                .finally(setSending(false));
+            } }
+          />
+      </View>
+    )
 }
 
 const ActionPayoutReceived = (props) => {

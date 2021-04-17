@@ -256,34 +256,6 @@ pub struct ContractRecord {
     pub desc:           String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContractSummary {
-    pub cxid:           String,
-    pub p1_name:        PlayerName,
-    pub p2_name:        PlayerName,
-    pub amount:         u64,
-    pub desc:           String,
-    pub p1_sig:         bool,
-    pub p2_sig:         bool,
-    pub arbiter_sig:    bool,
-}
-
-impl From<ContractRecord> for ContractSummary {
-    fn from(cr: ContractRecord) -> Self {
-        let contract = Contract::from_bytes(hex::decode(cr.hex).unwrap()).unwrap();
-        ContractSummary {
-            cxid: cr.cxid,
-            p1_name: cr.p1_name,
-            p2_name: cr.p2_name,
-            amount: contract.amount().unwrap().as_sat(),
-            desc: cr.desc,
-            p1_sig: contract.sigs.len() > 0,
-            p2_sig: contract.sigs.len() > 1,
-            arbiter_sig: contract.sigs.len() > 2,
-        }
-    }
-}
-
 #[derive(Debug, PartialEq)]
 pub enum ContractState {
     Unsigned,

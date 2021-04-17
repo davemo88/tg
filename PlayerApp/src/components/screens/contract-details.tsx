@@ -17,8 +17,8 @@ export const ContractDetails = ({ route, navigation }) => {
   const { cxid } = route.params;
   const contract = contractSelectors.selectById(store.getState(), cxid);
   const selectedPlayer: Player = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerName);
-  const playerOne = playerSelectors.selectById(store.getState(), contract.playerOneName);
-  const playerTwo = playerSelectors.selectById(store.getState(), contract.playerTwoName);
+  const playerOne = playerSelectors.selectById(store.getState(), contract.p1Name);
+  const playerTwo = playerSelectors.selectById(store.getState(), contract.p2Name);
 
   return (
     <View style={styles.container}>
