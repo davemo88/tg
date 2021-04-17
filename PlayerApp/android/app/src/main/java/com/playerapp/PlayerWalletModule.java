@@ -26,24 +26,28 @@ public class PlayerWalletModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void call_cli(String command, Promise promise) {
-        String command_with_wallet_dir = add_wallet_dir(command);
-        Log.d("PlayerWalletModule", "command: " + command_with_wallet_dir);
-        String cli_output = PlayerWalletModule.cli(command_with_wallet_dir);
+        String command_with_options = set_json_output(set_wallet_dir(command));
+        Log.d("PlayerWalletModule", "command: " + command_with_options);
+        String cli_output = PlayerWalletModule.cli(command_with_options);
         Log.d("PlayerWalletModule", "cli output: " + cli_output);
         promise.resolve(cli_output);
     }
 
     @ReactMethod
     public void call_cli_with_password(String command, String password, Promise promise) {
-        String command_with_wallet_dir = add_wallet_dir(command);
-        Log.d("PlayerWalletModule", "command: " + command_with_wallet_dir + " --password");
-        String cli_output = PlayerWalletModule.cli(command_with_wallet_dir + " --password " + password);
+        String command_with_options = set_json_output(set_wallet_dir(command));
+        Log.d("PlayerWalletModule", "command: " + command_with_options + " --password");
+        String cli_output = PlayerWalletModule.cli(command_with_options + " --password " + password);
         Log.d("PlayerWalletModule", "cli output: " + cli_output);
         promise.resolve(cli_output);
     }
 
-    private String add_wallet_dir(String command) {
+    private String set_wallet_dir(String command) {
         return command + " --wallet-dir " + getReactApplicationContext().getFilesDir().toString();
+    }
+
+    private String set_json_output(String command) {
+        return command + " --json-output" ;
     }
 
 }

@@ -6,7 +6,7 @@ export interface Player {
 export interface Contract {
     cxid:               string;
     playerOneName:      string;
-    PlayerTwoName:      string;
+    playerTwoName:      string;
     amount:             number;
     desc:               string; 
     playerOneSig:       boolean;
@@ -17,7 +17,6 @@ export interface Contract {
 }
 
 export interface Payout {
-// TODO: https://redux-toolkit.js.org/api/createEntityAdapter#selectid
   cxid:             string;
   payoutTx:         boolean;
   playerOneSig:     boolean;
@@ -63,4 +62,10 @@ export enum PayoutRequestStatus {
   Resolved,
 // if only the arbiter has signed, invalid
   Invalid,
+}
+
+export interface JsonResponse {
+    status: "success"|"error";
+    data?: any;
+    message?: string;
 }

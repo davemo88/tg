@@ -1,7 +1,7 @@
 import { LogBox } from 'react-native';
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, payoutSlice, selectedPlayerNameSlice, } from './redux';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, payoutSlice, selectedPlayerNameSlice, postedSlice, } from './redux';
 import { Secret } from './secret';
-import { Player, Contract, Payout, } from './datatypes';
+import { JsonResponse, Player, Contract, Payout, } from './datatypes';
 
 import PlayerWalletModule from './PlayerWallet';
 
@@ -24,13 +24,22 @@ export const initWallet = async (password: Secret<string>) => {
         cli_response = await PlayerWalletModule.call_cli("fund");
         console.debug(cli_response);
     } catch(error) {
-        return Promise.reject(error);
+        return Promise.reject(error)
     }
 }
 
-export const postContractInfo = async (password: Secret<string>) {
-    const name = store.getState().selectedPlayerName;
-    let cli_response = await PlayerWalletModule.call_cli_with_password(`player post "${name}`, password.expose_secret());
+export const postContractInfo = (name: string, amount: number, password: Secret<string>) => {
+    return async (dispatch) => {
+        try {
+            const response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`player post "${name}" ${amount}`, password.expose_secret()));
+            if (response.status === "error") {
+                throw(response.message)
+            }
+            return dispatch(postedSlice.actions.setPosted(response.data))
+        } catch(error) {
+            return Promise.reject(error)
+        }
+    }
 }
 
 export const signContract = (contract: Contract, password: Secret<string>) => {

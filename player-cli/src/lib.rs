@@ -42,6 +42,7 @@ use player_wallet::{
 };
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Status {
     Success,
     Error,
@@ -63,11 +64,11 @@ impl<T: Serialize> JsonResponse<T> {
         }
     }
     
-    fn error(data: Option<T>, message: Option<String>) -> Self {
+    fn error(message: String, data: Option<T>) -> Self {
         JsonResponse {
             status: Status::Error,
             data,
-            message,
+            message: Some(message),
         }
     }
 }
@@ -247,8 +248,17 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
     if let (c, Some(a)) = subcommand {
         match c {
             "register" => match wallet.register(PlayerName(a.value_of("name").unwrap().to_string()), Secret::new(a.value_of("password").unwrap().to_owned())) {
-                Ok(()) => format!("registered player"),
-                Err(e) => format!("{}", e),
+                Ok(()) => if a.is_present("json-output") {
+// TODO: if not returning data, need to specify a dummy type
+                    serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
+                } else {
+                    format!("registered player")
+                }
+                Err(e) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
+                } else {
+                    format!("{:?}", e)
+                }
             }
             "add" => match wallet.add(PlayerName(a.value_of("name").unwrap().to_string())) {
                 Ok(()) => format!("added player"),
@@ -269,13 +279,34 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 wallet.mine().iter().map(|p| p.clone().0).collect::<Vec<String>>().join("\n")
             },
             "post" => match wallet.post(PlayerName(a.value_of("name").unwrap().to_string()), Amount::from_sat(a.value_of("amount").unwrap().parse::<u64>().unwrap()), Secret::new(a.value_of("password").unwrap().to_owned())) {
-                Ok(_) => format!("posted contract info"),
-                Err(e) => format!("{}", e),
+                Ok(_) => if a.is_present("json-output") {
+// TODO: if not returning data, need to specify a dummy type
+                    serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
+                } else {
+                    format!("posted contract info")
+                }
+                Err(e) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
+                } else {
+                    format!("{:?}", e)
+                }
             }
             "posted" => match wallet.arbiter_client().get_contract_info(PlayerName(a.value_of("name").unwrap().to_string())) {
-                Ok(Some(info)) => format!("{} has posted {} worth of utxos", info.name.0, info.utxos.iter().map(|(_, sats, _)| sats).sum::<u64>()),
-                Ok(None) => format!("no info posted"),
-                Err(e) => format!("{}", e),
+                Ok(Some(info)) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::success(Some(info.utxos.iter().map(|(_, sats, _)| sats).sum::<u64>()))).unwrap()
+                } else {
+                    format!("{} has posted {} worth of utxos", info.name.0, info.utxos.iter().map(|(_, sats, _)| sats).sum::<u64>())
+                }
+                Ok(None) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::success(Some(0))).unwrap()
+                } else {
+                    format!("no info posted")
+                }
+                Err(e) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
+                } else {
+                    format!("{:?}", e)
+                }
             }
             _ => format!("command '{}' is not implemented", c),
         }

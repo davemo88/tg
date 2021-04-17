@@ -41,10 +41,10 @@ export const PlayerSelect = ({ navigation }) => {
                             <Button 
                               title="Ok" 
                               onPress={() => {
-                                const selectedPlayer = players.find(p => p.name === selectedPlayerName);
-                                dispatch(selectedPlayerNameSlice.actions.setSelectedPlayerName(selectedPlayer.name));
-                                navigation.reset({ index:0,   routes: [{ name: 'Home' }] })
-                              } }
+                                  const selectedPlayer = players.find(p => p.name === selectedPlayerName);
+                                  dispatch(selectedPlayerNameSlice.actions.setSelectedPlayerName(selectedPlayer.name));
+                                  navigation.reset({ index:0,   routes: [{ name: 'Home' }] })
+                              }   }
                             />
                         </View>
                     </View>

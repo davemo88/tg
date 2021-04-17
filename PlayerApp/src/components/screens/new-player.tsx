@@ -1,12 +1,13 @@
 import React, { useState, } from 'react';
 import { Switch, FlatList, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
-import { store, playerSlice, newPlayer } from '../../redux';
 import { useDispatch } from 'react-redux';
 
 import PlayerWalletModule from './../../PlayerWallet';
 
 import { styles } from '../../styles';
 import { Player, Contract, ContractStatus } from '../../datatypes';
+import { store, playerSlice, newPlayer } from '../../redux';
+import { postContractInfo, } from '../../wallet';
 import { Secret } from '../../secret';
 import { PasswordEntry } from '../password-entry';
 import { PlayerPortrait } from '../player-portrait';

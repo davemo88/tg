@@ -1,7 +1,7 @@
 import { createStore } from 'redux';
 import { createEntityAdapter, createSlice, createReducer, createAction, configureStore, createAsyncThunk } from '@reduxjs/toolkit';
 import { Secret, } from './secret';
-import { Player, Contract, Payout, } from './datatypes';
+import { JsonResponse, Status, Player, Contract, Payout, } from './datatypes';
 
 import PlayerWalletModule from './PlayerWallet';
 
@@ -22,10 +22,16 @@ export const playerSlice = createSlice({
 export const loadPlayers = () => {
     return async (dispatch) => {
         try {
-            let output = await PlayerWalletModule.call_cli("player list --json-output");
-            let players = JSON.parse(output);
-            output = await PlayerWalletModule.call_cli("player mine --json-output");
-            const my_players = JSON.parse(output);
+            let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli("player list"));
+            if (response.status === "error") {
+                throw(response.message);
+            }
+            let players: [Player] = response.data;
+            response = JSON.parse(await PlayerWalletModule.call_cli("player mine"));
+            if (response.status === "error") {
+                throw(response.message);
+            }
+            const my_players: [string] = response.data;
             players.forEach(function (p) { 
                 p.pictureUrl = "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0";
                 p.mine = my_players.some(mp => mp === p.name);
@@ -115,8 +121,11 @@ export const contractSlice = createSlice({
 export const loadContracts = () => {
     return async (dispatch) => {
         try {
-            let cli_response = await PlayerWalletModule.call_cli("contract list --json-output");
-            let contracts = JSON.parse(cli_response);
+            let response = JSON.parse(await PlayerWalletModule.call_cli("contract list"));
+            if (response.status === "error") {
+                throw(response.message);
+            }
+            let contracts = response.data;
             console.debug("loaded contracts:", contracts);
             return dispatch(contractSlice.actions.contractAddedMany(contracts));
         } catch (error) {
@@ -131,7 +140,7 @@ export const newContract = (p1Name: string, p2Name: string, sats: number) => {
         try {
             let p1 = playerSelectors.selectById(getState(), p1Name);
             let p2 = playerSelectors.selectById(getState(), p2Name);
-            let cli_response = await PlayerWalletModule.call_cli(`contract new "${p1.name}" "${p2.name}" ${sats} --json-output`); 
+            let cli_response = await PlayerWalletModule.call_cli(`contract new "${p1.name}" "${p2.name}" ${sats}`); 
             let contract_record = JSON.parse(cli_response);
             console.log("contract_record", contract_record);
             if (contract_record !== null) {
@@ -177,10 +186,17 @@ export const selectedPlayerNameSlice = createSlice({
   }
 })
 
+export const balanceSlice = createSlice({
+  name: 'balance',
+  initialState: 0,
+  reducers: {
+    setBalance:  (state, action) => action.payload
+  }
+})
+
 export const getBalance = () => {
     return async (dispatch) => {
         try {
-//TODO: this crashes when electrs is down
             let output = await PlayerWalletModule.call_cli("balance");
             let balance = +output;
             return dispatch(balanceSlice.actions.setBalance(balance));
@@ -190,13 +206,28 @@ export const getBalance = () => {
     }
 }
 
-export const balanceSlice = createSlice({
-  name: 'balance',
+export const postedSlice = createSlice({
+  name: 'posted',
   initialState: 0,
   reducers: {
-    setBalance:  (state, action) => action.payload
+    setPosted:  (state, action) => action.payload
   }
 })
+
+export const getPosted = (name: string) => {
+    return async (dispatch) => {
+        try {
+            const cli_output = await PlayerWalletModule.call_cli(`player posted "${name}"`);
+            let response: JsonResponse = JSON.parse(cli_output);
+            console.debug("posted response:", response);
+            let posted = +response.data
+//            return Promise.resolve(posted);
+            return dispatch(postedSlice.actions.setPosted(posted));
+        } catch (error) {
+            return Promise.reject(error);
+        }
+    }
+}
 
 export const store = configureStore({
   reducer: {
@@ -205,6 +236,7 @@ export const store = configureStore({
     payouts: payoutSlice.reducer,
     selectedPlayerName: selectedPlayerNameSlice.reducer,
     balance: balanceSlice.reducer,
+    posted: postedSlice.reducer,
   }
 })
 
