@@ -47,20 +47,19 @@ export const loadPlayers = () => {
 
 // might want to actually use createAsyncThunk for this one
 export const newPlayer = (name: string, password: Secret<string>) => {
-    return async (dispatch) => {
+    return async (dispatch, getState) => {
         try {
 // confusing because of native module. what should its signature in typescript be?
-            let cli_response: string = await PlayerWalletModule.call_cli_with_password(`player register "${name}"`, password.expose_secret()); 
-            if (cli_response === "registered player") {
-                return dispatch(playerSlice.actions.playerAdded({
-                    name: name,
-                    mine: true,
-// TODO: set portrait based on player name hash
-                    pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0",
-                }));
-            } else {
-                throw(cli_response);
+            let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`player register "${name}"`, password.expose_secret())); 
+            if (response.status === "error") {
+                throw(response.message);
             }
+            return dispatch(playerSlice.actions.playerAdded({
+                name: name,
+                mine: true,
+// TODO: set portrait based on player name hash
+                pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0",
+            }));
         } catch (error) {
             return Promise.reject(error);
         }
@@ -219,9 +218,8 @@ export const getPosted = (name: string) => {
         try {
             const cli_output = await PlayerWalletModule.call_cli(`player posted "${name}"`);
             let response: JsonResponse = JSON.parse(cli_output);
-            console.debug("posted response:", response);
             let posted = +response.data
-//            return Promise.resolve(posted);
+            console.debug("posted:", posted);
             return dispatch(postedSlice.actions.setPosted(posted));
         } catch (error) {
             return Promise.reject(error);

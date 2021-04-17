@@ -34,7 +34,7 @@ export const Home = ({ navigation }) => {
             console.log("using effect");
             dispatch(getPosted(selectedPlayer.name))
                 .then(
-                    success => {},
+                    success => setPosted(store.getState().posted),
                     failure => console.error(failure),
                 );
         }

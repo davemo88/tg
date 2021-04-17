@@ -50,11 +50,15 @@ export const NewPlayer = ({ navigation }) => {
                 dispatch(newPlayer(playerName, password))
                     .then(
                         success => {
-                            setRegisteringPlayer(false);
-                            navigation.reset({ index:0, routes: [{ name: 'Player Select' }] });
+                            dispatch(postContractInfo(playerName, store.getState().balance, password))
+                                .then(
+                                    success => {},
+                                    failure => console.error(failure),
+                                )
+                                .finally(() => navigation.reset({ index:0, routes: [{ name: 'Player Select' }] }));
                         },
 // show reason   f  or failure, e.g. name already taken
-                        failure => console.log(failure),
+                        failure => console.error(failure),
                     )
                     .finally(() => setRegisteringPlayer(false));
             } }
