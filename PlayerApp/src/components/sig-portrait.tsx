@@ -1,12 +1,12 @@
 import React from 'react';
 import { Text, Image, View, } from 'react-native';
 
-import { styles } from '../styles.ts';
+import { styles } from '../styles';
 
 export interface SigPortraitProps {
   name: string;
   pictureUrl: string;
-  isSigned: bool;
+  isSigned: boolean;
 }
 
 export const SigPortrait: React.FC<SigPortraitProps> = (props) => {
