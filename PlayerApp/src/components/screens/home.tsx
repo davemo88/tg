@@ -5,7 +5,7 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 
 import { styles } from '../../styles';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, getPosted} from '../../redux';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, setSelectedPlayerPosted} from '../../redux';
 import { Player, Contract, ContractStatus} from '../../datatypes';
 import { getContractStatus } from '../../dump';
 import { postContractInfo } from '../../wallet';
@@ -31,8 +31,7 @@ export const Home = ({ navigation }) => {
 
     useEffect(() => {
         if (selectedPlayer) {
-            console.log("using effect");
-            dispatch(getPosted(selectedPlayer.name))
+            dispatch(setSelectedPlayerPosted(selectedPlayer.name))
                 .then(
                     success => setPosted(store.getState().posted),
                     failure => console.error(failure),
@@ -59,7 +58,7 @@ export const Home = ({ navigation }) => {
               <View style={{ alignItems: 'center' }}>
                 <Text>Wallet Balance</Text>
                 <Currency amount={balance} />
-                <Text>Posted Balance</Text>
+                <Text>Posted Player Balance</Text>
                 <Currency amount={posted} />
               </View>
             </View> 

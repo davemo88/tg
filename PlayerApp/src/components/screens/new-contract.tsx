@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState, } from 'react';
 import { useDispatch } from 'react-redux';
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
@@ -6,6 +6,7 @@ import { styles } from '../../styles';
 
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, balanceSlice, newContract, } from '../../redux';
 import { Player, Contract, ContractStatus } from '../../datatypes';
+import { getPosted } from '../../wallet';
 import { signContract } from '../../mock';
 
 import { Secret } from '../../secret';
@@ -21,8 +22,9 @@ export const NewContract = ({ navigation }) => {
         .selectAll(store.getState())
         .filter((player: Player, i, a) => !player.mine);
     const [contractAmount, onChangeContractAmount] = React.useState('0');
-    const [playerTwoName, setPlayerTwoName] = React.useState(playerTwos.length > 0 ? playerTwos[0].name : null);
-    const [creatingContract, setCreatingContract] = React.useState(false);
+    const [playerTwoName, setPlayerTwoName] = useState(playerTwos.length > 0 ? playerTwos[0].name : null);
+    const [playerTwoPosted, setPlayerTwoPosted] = useState(0);
+    const [creatingContract, setCreatingContract] = useState(false);
 
     const valid = () => {
         if (parseInt(contractAmount) > 0) {
@@ -31,6 +33,18 @@ export const NewContract = ({ navigation }) => {
         return false
     }
 
+    useEffect(() => {
+        if (selectedPlayer) {
+            getPosted(playerTwoName)
+                .then(
+                    (posted) => {
+                        setPlayerTwoPosted(posted);
+                    },
+                    failure => console.error(failure),
+                );
+        }
+    }, [playerTwoName]);
+
     return (
         <View style={styles.container}>
             <Text style={{ fontSize: 20 }}>Choose Player</Text>
@@ -38,6 +52,8 @@ export const NewContract = ({ navigation }) => {
                 <PlayerSelector selectedPlayerName={playerTwoName} setSelectedPlayerName={setPlayerTwoName} playerNames={playerTwos.map((p: Player) => p.name)} allowRemoval={true} />
                 : <Text>No Players</Text>
             }
+            <Text>Posted Player Balance</Text>
+            <Currency amount={playerTwoPosted} />
             <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
                 <Button 
                     title="Add Player" 

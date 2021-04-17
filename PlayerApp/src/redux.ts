@@ -1,8 +1,9 @@
 import { createStore } from 'redux';
 import { createEntityAdapter, createSlice, createReducer, createAction, configureStore, createAsyncThunk } from '@reduxjs/toolkit';
 import { Secret, } from './secret';
-import { JsonResponse, Status, Player, Contract, Payout, } from './datatypes';
+import { JsonResponse, Player, Contract, Payout, } from './datatypes';
 
+import { getPosted } from './wallet';
 import PlayerWalletModule from './PlayerWallet';
 
 const playerAdapter = createEntityAdapter<Player>({
@@ -213,16 +214,14 @@ export const postedSlice = createSlice({
   }
 })
 
-export const getPosted = (name: string) => {
-    return async (dispatch) => {
+export const setSelectedPlayerPosted = () => {
+    return async (dispatch, getState) => {
         try {
-            const cli_output = await PlayerWalletModule.call_cli(`player posted "${name}"`);
-            let response: JsonResponse = JSON.parse(cli_output);
-            let posted = +response.data
-            console.debug("posted:", posted);
-            return dispatch(postedSlice.actions.setPosted(posted));
+            let selectedPlayerName = getState().selectedPlayerName;
+            let posted = await getPosted(selectedPlayerName);
+            return dispatch(postedSlice.actions.setPosted(posted))
         } catch (error) {
-            return Promise.reject(error);
+            return Promise.reject(error)
         }
     }
 }

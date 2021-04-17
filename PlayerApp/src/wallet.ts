@@ -42,6 +42,21 @@ export const postContractInfo = (name: string, amount: number, password: Secret<
     }
 }
 
+export const getPosted = async (name: string) => {
+    try {
+        const cli_output = await PlayerWalletModule.call_cli(`player posted "${name}"`);
+        let response: JsonResponse = JSON.parse(cli_output);
+        if (response.status === "error") {
+            throw(response.message);
+        }
+        const posted = +response.data;
+        console.debug(`player ${name} posted: ${posted}`);
+        return Promise.resolve(posted)
+    } catch (error) {
+        return Promise.reject(error)
+    }
+}
+
 export const signContract = (contract: Contract, password: Secret<string>) => {
     return async (dispatch) => {
         try {
