@@ -92,15 +92,24 @@ export const sendContract = async (contract: Contract) => {
 export const receiveContract = (name: string, password: Secret<string>) => {
     return async (dispatch, getState) => {
         try {
-            const cli_output = await PlayerWalletModule.call_cli_with_password(`contract receive ${name}`, password.expose_secret());
-            const response: JsonResponse = JSON.parse(cli_output);
+            let cli_output = await PlayerWalletModule.call_cli_with_password(`contract receive ${name}`, password.expose_secret());
+            let response: JsonResponse = JSON.parse(cli_output);
             if (response.status === "error") {
                 throw(response.message);
             }
-            if (contractSelectors.selectById(getState(), contract.cxid)) {
-                return dispatch(contractSlice.actions.contractUpdated(contract))
-            } else {
-                return dispatch(contractSlice.actions.contractAdded(contract))
+            let cxid = response.data;
+            if (cxid) {
+                cli_output = await PlayerWalletModule.call_cli(`contract details ${cxid}`);
+                response = JSON.parse(cli_output);
+                if (response.status === "error") {
+                    throw(response.message);
+                }
+                let contract = response.data;
+                if (contractSelectors.selectById(getState(), cxid)) {
+                    return dispatch(contractSlice.actions.contractUpdated(contract))
+                } else {
+                    return dispatch(contractSlice.actions.contractAdded(contract))
+                }
             }
         } catch (error) {
             return Promise.reject(error)
@@ -113,16 +122,58 @@ export const createPayout = (contract: Contract) => {
 }
 
 export const signPayout = (payout: Payout, password: Secret<string>) => {
-  const selectedPlayerName = store.getState().selectedPlayerName;
-  const contract = contractSelectors.selectById(store.getState(), payout.cxid);
-  let action = {id: payout.cxid, changes: {}};
-  if (contract.playerOneName === selectedPlayerName) {
-    action.changes.playerOneSig = true;
-  }
-  else if (contract.playerTwoName === selectedPlayerName) {
-    action.changes.playerTwoSig = true;
-  }
-  store.dispatch(payoutSlice.actions.payoutUpdated(action));
+    return async (dispatch) => {
+        try {
+            const selectedPlayerName = store.getState().selectedPlayerName;
+            let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`payout sign ${payout.cxid}`, password.expose_secret()));
+            if (response.status === "error") {
+                throw(response.message);
+            }
+            const contract = contractSelectors.selectById(store.getState(), payout.cxid);
+            let action = {id: payout.cxid, changes: {}};
+            if (contract.p1Name === selectedPlayerName) {
+                action.changes.p1Sig = true;
+            }
+            else if (contract.p2Name === selectedPlayerName) {
+                action.changes.p2Sig = true;
+            }
+            return dispatch(payoutSlice.actions.payoutUpdated(action))
+        } catch (error) {
+            return Promise.reject(error)
+        }
+    }
+}
+
+export const sendPayout = async (payout: Payout) => {
+    try {
+        const cli_output = await PlayerWalletModule.call_cli(`payout send ${payout.cxid}`);
+        const response: JsonResponse = JSON.parse(cli_output);
+        if (response.status === "error") {
+            throw(response.message);
+        }
+        return Promise.resolve(null)
+    } catch (error) {
+        return Promise.reject(error)
+    }
+}
+
+export const receivePayout = (name: string, password: Secret<string>) => {
+    return async (dispatch, getState) => {
+        try {
+            const cli_output = await PlayerWalletModule.call_cli_with_password(`payout receive ${name}`, password.expose_secret());
+            const response: JsonResponse = JSON.parse(cli_output);
+            if (response.status === "error") {
+                throw(response.message);
+            }
+            if (payoutSelectors.selectById(getState(), payout.cxid)) {
+                return dispatch(payoutSlice.actions.payoutUpdated(payout))
+            } else {
+                return dispatch(payoutSlice.actions.payoutAdded(payout))
+            }
+        } catch (error) {
+            return Promise.reject(error)
+        }
+    }
 }
 
 export const broadcastFundingTx = (contract: Contract) => {

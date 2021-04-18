@@ -392,6 +392,12 @@ pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
                     .help("contract id")
                     .required(true)
                     .takes_value(true)),
+            SubCommand::with_name("summary").about("show contract summary")
+                .arg(Arg::with_name("cxid")
+                    .index(1)
+                    .help("contract id")
+                    .required(true)
+                    .takes_value(true)),
             SubCommand::with_name("sign").about("sign contract")
                 .arg(Arg::with_name("cxid")
                     .index(1)
@@ -487,6 +493,18 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
             "details" => match DocumentUI::<ContractRecord>::get(wallet, a.value_of("cxid").unwrap()) {
                 Some(cr) => format!("{:?}\n{:?}", cr, Contract::from_bytes(hex::decode(&cr.hex).unwrap()).unwrap()),
                 None => format!("no such contract"),
+            }
+            "summary" => match DocumentUI::<ContractRecord>::get(wallet, a.value_of("cxid").unwrap()) {
+                Some(cr) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::success(Some(ContractSummary::from(&cr)))).unwrap()
+                } else {
+                    format!("{:?}", ContractSummary::from(&cr))
+                }
+                None => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
+                } else {
+                    format!("no such contract")
+                }
             }
             "sign" => match DocumentUI::<ContractRecord>::sign(
                     wallet,
@@ -602,7 +620,6 @@ pub fn payout_ui<'a, 'b>() -> App<'a, 'b> {
             SubCommand::with_name("details").about("show payout details")
                 .arg(Arg::with_name("cxid")
                     .index(1)
-                    .value_name("CXID")
                     .help("contract id of payout")
                     .required(true)
                     .takes_value(true)),
