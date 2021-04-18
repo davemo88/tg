@@ -50,7 +50,7 @@ impl DB {
 
     pub fn insert_player(&self, player: PlayerRecord) -> Result<usize> {
          self.conn.execute(
-            "INSERT INTO player (name) VALUES (?1)",
+            "INSERT INTO player (name) VALUES (?1) ON CONFLICT DO NOTHING",
             params![player.name.0],
          )
     }

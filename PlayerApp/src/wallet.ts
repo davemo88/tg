@@ -17,12 +17,10 @@ export const NETWORK: string = 'Test';
 export const initWallet = async (password: Secret<string>) => {
     try {
         let cli_response = await PlayerWalletModule.call_cli_with_password("init", password.expose_secret());
-        console.debug(cli_response);
         if (cli_response !== "wallet initialized") {
             throw(cli_response);
         }
         cli_response = await PlayerWalletModule.call_cli("fund");
-        console.debug(cli_response);
     } catch(error) {
         return Promise.reject(error)
     }
@@ -81,13 +79,34 @@ export const signContract = (contract: Contract, password: Secret<string>) => {
 export const sendContract = async (contract: Contract) => {
     try {
         const cli_output = await PlayerWalletModule.call_cli(`contract send ${contract.cxid}`);
-        let response: JsonResponse = JSON.parse(cli_output);
+        const response: JsonResponse = JSON.parse(cli_output);
         if (response.status === "error") {
             throw(response.message);
         }
         return Promise.resolve(null)
     } catch (error) {
         return Promise.reject(error)
+    }
+}
+
+export const receiveContract = (name: string, password: Secret<string>) => {
+    return async (dispatch, getState) => {
+        try {
+            const cli_output = await PlayerWalletModule.call_cli_with_password(`contract receive ${name}`, password.expose_secret());
+            const response: JsonResponse = JSON.parse(cli_output);
+            if (response.status === "error") {
+                throw(response.message);
+            }
+            const contract = response.data;
+            console.log("retrieved contract:", contract);
+            if (contractSelectors.selectById(getState(), contract.cxid)) {
+                return dispatch(contractSlice.actions.contractUpdated(contract))
+            } else {
+                return dispatch(contractSlice.actions.contractAdded(contract))
+            }
+        } catch (error) {
+            return Promise.reject(error)
+        }
     }
 }
 
@@ -124,7 +143,6 @@ export const broadcastPayoutTx = (payout: Payout) => {
       payoutTx: true,
     }
   }));
-
 }
 
 // delete some local data? set flag in db more likely

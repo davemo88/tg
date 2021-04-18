@@ -1,12 +1,12 @@
 import React from 'react';
-import { useDispatch, } from 'react-redux';
+import { useDispatch, useStore } from 'react-redux';
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
 import { styles } from '../styles';
 
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, payoutSlice, selectedPlayerNameSlice, } from '../redux';
 import { Player, Contract, ContractStatus, } from '../datatypes';
-import { sendContract, signContract } from '../wallet';
+import { receiveContract, sendContract, signContract } from '../wallet';
 import { getContractStatus } from '../dump';
 import { broadcastFundingTx, broadcastPayoutTx, signPayout, arbiterSignContract, declineContract, dismissContract, denyPayout, } from '../mock';
 
@@ -63,22 +63,45 @@ const ActionUnsigned = (props) => {
 }
 
 const ActionSigned = (props) => {
-    let [sending, setSending] = React.useState(false);
+    const store = useStore();
+    const dispatch = useDispatch();
+    const [sending, setSending] = React.useState(false);
+    const [checking, setChecking] = React.useState(false);
+    const [password, setPassword] = React.useState(new Secret(""));
     return (
       <View>
           <Text>Waiting for other player's siganture</Text>
-          <Button 
-            title="Send Contract" 
-            onPress={() => {
-              setSending(true);
-              sendContract(props.contract)
-                .then(
-                    success => resetDetails(props.navigation, props.contract.cxid),
-                    failure => console.error(failure),
-                )
-                .finally(() => setSending(false));
-            } }
-          />
+          <View style={{ margin: 10 }}>
+            <Button 
+              title="Send Contract" 
+              disabled={sending}
+              onPress={() => {
+                setSending(true);
+                sendContract(props.contract)
+                  .then(
+                      success => resetDetails(props.navigation, props.contract.cxid),
+                      failure => console.error(failure),
+                  )
+                  .finally(() => setSending(false));
+              } }
+            />
+          </View>
+          <View style={{ margin: 10 }}>
+            <PasswordEntry password={password} setPassword={setPassword} />
+            <Button 
+              title="Check Mail" 
+              disabled={checking}
+              onPress={() => {
+                setChecking(true);
+                dispatch(receiveContract(store.getState().selectedPlayerName, password))
+                  .then(
+                      success => resetDetails(props.navigation, props.contract.cxid),
+                      failure => console.error(failure),
+                  )
+                  .finally(() => setChecking(false));
+              } }
+            />
+          </View>
       </View>
     )
 }

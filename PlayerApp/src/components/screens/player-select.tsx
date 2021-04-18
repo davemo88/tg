@@ -12,7 +12,8 @@ import { PlayerSelector } from '../player-selector';
 
 export const PlayerSelect = ({ navigation }) => {
     const dispatch = useDispatch();
-    const players = playerSelectors.selectAll(store.getState()).filter(p => p.mine);
+    let players = playerSelectors.selectAll(store.getState());
+    players = players.filter(p => p.mine);
     const [selectedPlayerName, setSelectedPlayerName] = React.useState(players.length > 0 ? players[0].name: null)
 
 //   TODO: move Test / Live images to navigation header

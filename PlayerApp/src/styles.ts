@@ -6,6 +6,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   arbitration: {
+    margin: 10,
     borderWidth: 1,
   },
   arbiter: {
@@ -31,9 +32,6 @@ export const styles = StyleSheet.create({
     margin: 30,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  arbitration: {
-    margin: 10,
   },
   tinyEmote: {
     width: 14,

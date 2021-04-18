@@ -341,7 +341,7 @@ impl SigningWallet for PlayerWallet {
             None => {
                 let signing_wallet = self.signing_wallet(pw)?;
                 signing_wallet.sync(noop_progress(), None).unwrap();
-                let (signed_psbt, _finished) = signing_wallet.sign(psbt.clone(), None).unwrap();
+                let (signed_psbt, _finished) = signing_wallet.sign(psbt.clone(), None)?;
 
                 Ok(signed_psbt)
             },
