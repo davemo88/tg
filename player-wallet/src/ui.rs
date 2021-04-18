@@ -156,6 +156,7 @@ impl PlayerUI for PlayerWallet {
         ).unwrap();
         match self.name_client().register_name(name.clone(), self.name_pubkey(), sig) {
             Ok(()) => PlayerUI::add(self, name),
+// TODO: better error message here
             Err(_) => Err(Error::Adhoc("register name failed").into()),
         }
     }

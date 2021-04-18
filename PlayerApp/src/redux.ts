@@ -16,6 +16,7 @@ export const playerSlice = createSlice({
     reducers: {
         playerAdded: playerAdapter.addOne,
         playerAddedMany: playerAdapter.addMany,
+        playerUpdated: playerAdapter.updateOne,
         playerRemoved: playerAdapter.removeOne,
     },
 })
@@ -27,12 +28,14 @@ export const loadPlayers = () => {
             if (response.status === "error") {
                 throw(response.message);
             }
-            let players: [Player] = response.data;
+            let players = response.data;
+            console.log("players:", players);
             response = JSON.parse(await PlayerWalletModule.call_cli("player mine"));
             if (response.status === "error") {
                 throw(response.message);
             }
-            const my_players: [string] = response.data;
+            const my_players = response.data;
+            console.log("my_players:", my_players);
             players.forEach(function (p) { 
                 p.pictureUrl = "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0";
                 p.mine = my_players.some(mp => mp === p.name);
@@ -55,12 +58,19 @@ export const newPlayer = (name: string, password: Secret<string>) => {
             if (response.status === "error") {
                 throw(response.message);
             }
-            return dispatch(playerSlice.actions.playerAdded({
-                name: name,
-                mine: true,
+            if (playerSelectors.selectById(getState(), name)) {
+                return dispatch(playerSlice.actions.playerUpdated({
+                    id: name,
+                    changes: { mine: true },
+                }));
+            } else {
+                return dispatch(playerSlice.actions.playerAdded({
+                    name: name,
+                    mine: true,
 // TODO: set portrait based on player name hash
-                pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0",
-            }));
+                    pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0",
+                }));
+            }
         } catch (error) {
             return Promise.reject(error);
         }
