@@ -97,8 +97,6 @@ export const receiveContract = (name: string, password: Secret<string>) => {
             if (response.status === "error") {
                 throw(response.message);
             }
-            const contract = response.data;
-            console.log("retrieved contract:", contract);
             if (contractSelectors.selectById(getState(), contract.cxid)) {
                 return dispatch(contractSlice.actions.contractUpdated(contract))
             } else {

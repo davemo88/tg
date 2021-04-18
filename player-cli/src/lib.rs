@@ -522,8 +522,20 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 wallet, 
                 PlayerName(a.value_of("player-name").unwrap().to_string()),
                 Secret::new(a.value_of("password").unwrap().to_owned())) {
-                Ok(()) => format!("contract received"),
-                Err(e) => format!("{}", e),
+                Ok(cxid) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::success(cxid)).unwrap()
+                } else {
+                    if cxid.is_some() {
+                        format!("contract received")
+                    } else {
+                        format!("no contract to receive")
+                    }
+                }
+                Err(e) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
+                } else {
+                    format!("{:?}", e)
+                }
             }
             "submit" => match DocumentUI::<ContractRecord>::submit(wallet, a.value_of("cxid").unwrap()) {
                 Ok(()) => format!("submission accepted"),
@@ -704,8 +716,20 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 wallet, 
                 PlayerName(a.value_of("player-name").unwrap().to_string()),
                 Secret::new(a.value_of("password").unwrap().to_owned())) {
-                Ok(()) => format!("payout received"),
-                Err(e) => format!("{}", e),
+                Ok(cxid) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::success(cxid)).unwrap()
+                } else {
+                    if cxid.is_some() {
+                        format!("payout received")
+                    } else {
+                        format!("no payout to receive")
+                    }
+                }
+                Err(e) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
+                } else {
+                    format!("{:?}", e)
+                }
             }
             "submit" => match DocumentUI::<PayoutRecord>::submit(wallet, a.value_of("cxid").unwrap()) {
                 Ok(()) => format!("submission accepted"),

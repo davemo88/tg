@@ -108,7 +108,7 @@ pub trait DocumentUI<T> {
     fn get(&self, cxid: &str) -> Option<T>;
     fn sign(&self, params: SignDocumentParams, pw: Secret<String>) -> Result<()>;
     fn send(&self, cxid: &str) -> Result<()>;
-    fn receive(&self, player_name: PlayerName, pw: Secret<String>) -> Result<()>;
+    fn receive(&self, player_name: PlayerName, pw: Secret<String>) -> Result<Option<String>>;
     fn submit(&self, cxid: &str) -> Result<()>;
     fn broadcast(&self, cxid: &str) -> Result<()>;
     fn list(&self) -> Vec<T>;
@@ -334,13 +334,15 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
         )?)
     }
 
-    fn receive(&self, player_name: PlayerName, pw: Secret<String>) -> Result<()> {
+    fn receive(&self, player_name: PlayerName, pw: Secret<String>) -> Result<Option<String>> {
         let auth = self.get_auth(&player_name, pw).unwrap();
         let received = self.arbiter_client().receive_contract(auth)?;
         if let Some(contract_record) = received {
-            let _changes = self.db().insert_contract(contract_record)?;
-        } 
-        Ok(())
+            let _changes = self.db().insert_contract(contract_record.clone())?;
+            Ok(Some(contract_record.cxid))
+        } else {
+            Ok(None)
+        }
     }
 
     fn submit(&self, cxid: &str) -> Result<()> {
@@ -456,13 +458,15 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
         )?)
     }
 
-    fn receive(&self, player_name: PlayerName, pw: Secret<String>) -> Result<()> {
+    fn receive(&self, player_name: PlayerName, pw: Secret<String>) -> Result<Option<String>> {
         let auth = self.get_auth(&player_name, pw).unwrap();
         let received = self.arbiter_client().receive_payout(auth)?;
         if let Some(payout_record) = received {
-            let _changes = self.db().insert_payout(payout_record)?;
-        } 
-        Ok(())
+            let _changes = self.db().insert_payout(payout_record.clone())?;
+            Ok(Some(payout_record.cxid))
+        } else {
+            Ok(None)
+        }
     }
 
     fn submit(&self, cxid: &str) -> Result<()> {
