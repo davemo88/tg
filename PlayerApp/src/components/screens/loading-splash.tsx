@@ -12,16 +12,10 @@ export const LoadingSplash = ({ navigation }) => {
 
     useEffect(() => {
         dispatch(loadAll())
-            .then(
-                success => {
+            .then(() => {
                     console.debug("loading complete");
                     navigation.reset({ index:0, routes: [{ name: 'Player Select' }] });
-                }, 
-                failure => {
-                    console.error("loading failed:", failure);
-                    navigation.reset({ index:0, routes: [{ name: 'Initialize Wallet' }] });
-                }
-            );
+                }).catch(error => console.erorr("loading failed:", error)); 
     }, []);
 
     return (

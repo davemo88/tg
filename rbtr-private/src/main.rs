@@ -7,6 +7,7 @@ use redis::{
     aio::Connection,
     AsyncCommands,
 };
+use simple_logger::SimpleLogger;
 use tglib::{
     bdk::bitcoin::{
        consensus,
@@ -14,7 +15,10 @@ use tglib::{
         util::psbt::PartiallySignedTransaction,
     },
     hex,
-    log::error,
+    log::{
+        LevelFilter,
+        error,
+    },
     secrecy::Secret,
     contract::Contract,
     payout::Payout,
@@ -71,6 +75,7 @@ async fn set_payout_psbt(con: &mut Connection, payout: Payout, psbt: PartiallySi
 
 #[tokio::main]
 async fn main() {
+    SimpleLogger::new().with_level(LevelFilter::Debug).init().unwrap();
     let redis_client = redis::Client::open(REDIS_SERVER).unwrap();
     let wallet = Wallet::new(Secret::new(ARBITER_PW.to_owned()));
     let mut waiting_time = Duration::from_secs(1);

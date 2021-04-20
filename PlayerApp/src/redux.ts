@@ -148,27 +148,25 @@ export const loadContracts = () => {
 export const newContract = (p1Name: string, p2Name: string, sats: number) => {
     return async (dispatch, getState) => {
         try {
-            let p1 = playerSelectors.selectById(getState(), p1Name);
-            let p2 = playerSelectors.selectById(getState(), p2Name);
-            let cli_response = await PlayerWalletModule.call_cli(`contract new "${p1.name}" "${p2.name}" ${sats}`); 
-            let contract_record = JSON.parse(cli_response);
-            console.log("contract_record", contract_record);
-            if (contract_record !== null) {
-                return dispatch(contractSlice.actions.contractAdded({
-                    cxid: contract_record.cxid,
-                    playerOneName: p1Name,
-                    playerTwoName: p2Name,
-                    amount: sats,
-                    fundingTx: false,
-                    playerOneSig: false,
-                    playerTwoSig: false,
-                    arbiterSig: false,
-                }));
-            } else {
-                throw(cli_response);
+            let output = await PlayerWalletModule.call_cli(`contract new "${p1Name}" "${p2Name}" ${sats}`); 
+            let response = JSON.parse(output);
+            if (response.status === "error") {
+                throw(response.message)
             }
+            let contract = response.data;
+            return dispatch(contractSlice.actions.contractAdded({
+                cxid: contract.cxid,
+                p1Name: contract.p1Name,
+                p2Name: contract.p2Name,
+                amount: contract.amount,
+                fundingTx: false,
+                p1Sig: false,
+                p2Sig: false,
+                arbiterSig: false,
+                desc: "",
+            }))
         } catch (error) {
-            return Promise.reject(error);
+            return Promise.reject(error)
         }
     }
 }

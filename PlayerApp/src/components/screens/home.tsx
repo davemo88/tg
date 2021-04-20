@@ -1,5 +1,5 @@
 import React, { useState, useEffect, } from 'react';
-import { useDispatch, } from 'react-redux';
+import { useDispatch, useSelector, } from 'react-redux';
 import { StackActions } from '@react-navigation/native'
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
@@ -31,11 +31,9 @@ export const Home = ({ navigation }) => {
 
     useEffect(() => {
         if (selectedPlayer) {
-            dispatch(setSelectedPlayerPosted(selectedPlayer.name))
-                .then(
-                    success => setPosted(store.getState().posted),
-                    failure => console.error(failure),
-                );
+            dispatch(setSelectedPlayerPosted())
+                .then(setPosted(store.getState().posted))
+                .catch(error => console.error(error));
         }
     }, []);
 

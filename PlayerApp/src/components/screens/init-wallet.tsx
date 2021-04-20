@@ -32,10 +32,8 @@ export const InitWallet = ({ navigation }) => {
                     onPress={() => {
                         setInitializing(true); 
                         initWallet(password)
-                            .then(
-                                success => navigation.reset({ index:0, routes: [{ name: 'Loading Splash' }] }),
-                                failure => console.log("failure:", failure),
-                            ) 
+                            .then(navigation.reset({ index:0, routes: [{ name: 'Loading Splash' }] })) 
+                            .catch(error => console.log(error))
                             .finally(() => setInitializing(false))
                     } }
                 />

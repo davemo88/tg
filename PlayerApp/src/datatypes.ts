@@ -13,7 +13,6 @@ export interface Contract {
     p2Sig:              boolean;
     arbiterSig:         boolean;
     fundingTx:          boolean;
-    payoutTx:           boolean;
 }
 
 export interface Payout {

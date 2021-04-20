@@ -48,18 +48,11 @@ export const NewPlayer = ({ navigation }) => {
             onPress={() => {
                 setRegisteringPlayer(true);
                 dispatch(newPlayer(playerName, password))
-                    .then(
-                        success => {
+                    .then(() => {
                             dispatch(postContractInfo(playerName, store.getState().balance, password))
-                                .then(
-                                    success => {},
-                                    failure => console.error(failure),
-                                )
                                 .finally(() => navigation.reset({ index:0, routes: [{ name: 'Player Select' }] }));
-                        },
-// show reason   f  or failure, e.g. name already taken
-                        failure => console.error(failure),
-                    )
+                        })
+                    .catch(error => console.error(error))
                     .finally(() => setRegisteringPlayer(false));
             } }
           />

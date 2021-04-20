@@ -36,10 +36,8 @@ export const AddPlayer = ({ navigation }) => {
                   onPress={() => {
                       setAddingPlayer(true);
                       dispatch(addPlayer(playerName))
-                          .then(
-                              success => navigation.reset({ index:0, routes: [{ name: 'Home' }, { name: 'New Contract' }] }),
-                              failure => console.error(failure),
-                          )
+                          .then(navigation.reset({ index:0, routes: [{ name: 'Home' }, { name: 'New Contract' }] }))
+                          .catch(error => console.error(error))
                           .finally(() => setAddingPlayer(false));
                   } }
               />

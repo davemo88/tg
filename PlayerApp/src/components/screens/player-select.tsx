@@ -14,7 +14,7 @@ export const PlayerSelect = ({ navigation }) => {
     const dispatch = useDispatch();
     const store = useStore();
     let players = playerSelectors.selectAll(store.getState());
-    console.log("player select players:", players);
+//    console.log("player select players:", players);
     players = players.filter(p => p.mine);
     const [selectedPlayerName, setSelectedPlayerName] = React.useState(players.length > 0 ? players[0].name: null)
 

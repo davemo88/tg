@@ -99,7 +99,7 @@ export const receiveContract = (name: string, password: Secret<string>) => {
             }
             let cxid = response.data;
             if (cxid) {
-                cli_output = await PlayerWalletModule.call_cli(`contract details ${cxid}`);
+                cli_output = await PlayerWalletModule.call_cli(`contract summary ${cxid}`);
                 response = JSON.parse(cli_output);
                 if (response.status === "error") {
                     throw(response.message);
@@ -111,6 +111,23 @@ export const receiveContract = (name: string, password: Secret<string>) => {
                     return dispatch(contractSlice.actions.contractAdded(contract))
                 }
             }
+        } catch (error) {
+            return Promise.reject(error)
+        }
+    }
+}
+
+export const submitContract = (contract: Contract) => {
+    return async (dispatch) => {
+        try {
+            let cli_output = await PlayerWalletModule.call_cli(`contract submit ${contract.cxid}`);
+            let response: JsonResponse = JSON.parse(cli_output);
+            if (response.status === "error") {
+                throw(response.message);
+            }
+            return dispatch(contractSlice.actions.contractUpdated({
+                id: contract.cxid, changes: { arbiterSig: true }
+            }))
         } catch (error) {
             return Promise.reject(error)
         }

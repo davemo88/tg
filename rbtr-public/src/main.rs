@@ -9,6 +9,7 @@ use redis::{
     RedisResult,
     aio::Connection,
 };
+use simple_logger::SimpleLogger;
 use warp::{
     Filter,
     Reply,
@@ -49,7 +50,11 @@ use tglib::{
         electrum_client::Client,
     },
     hex,
-    log::error,
+    log::{
+        debug,
+        error,
+        LevelFilter,
+    },
     rand::{self, Rng},
     Result,
     Error,
@@ -151,6 +156,7 @@ async fn check_auth_token_sig(player_name: PlayerName, auth: AuthTokenSig, con: 
 
 async fn submit_contract(con: &mut Connection, contract: &Contract) -> Result<Signature> {
     wallet().validate_contract(&contract)?;
+
     let cxid = push_contract(con, &hex::encode(contract.to_bytes())).await.unwrap();
     for _ in 1..15 as u32 {
         sleep(Duration::from_secs(1));
@@ -266,10 +272,12 @@ async fn receive_payout_handler(auth: AuthTokenSig, redis_client: redis::Client)
 async fn submit_contract_handler(body: SubmitContractBody, redis_client: redis::Client) -> WebResult<impl Reply> {
     let mut con = redis_client.get_async_connection().await.unwrap();
     let contract = Contract::from_bytes(hex::decode(body.contract_hex).unwrap()).unwrap();
-    if let Ok(sig) = submit_contract(&mut con, &contract).await {
-        Ok(hex::encode(sig.serialize_der()))
-    } else {
-        Err(warp::reject())
+    match submit_contract(&mut con, &contract).await {
+        Ok(sig) => Ok(hex::encode(sig.serialize_der())),
+        Err(e) => {
+            error!("{:?}", e);
+            Err(warp::reject())
+        }
     }
 }
 
@@ -315,6 +323,14 @@ fn redis_client() -> redis::Client {
 
 #[tokio::main]
 async fn main() {
+
+    SimpleLogger::new()
+        .with_level(LevelFilter::Debug)
+        .with_module_level("warp",LevelFilter::Warn)
+        .with_module_level("hyper",LevelFilter::Warn)
+        .with_module_level("reqwest",LevelFilter::Warn)
+        .init()
+        .unwrap();
     
     let escrow_pubkey = get_escrow_pubkey();
     let escrow_pubkey = warp::any().map(move || escrow_pubkey.clone());

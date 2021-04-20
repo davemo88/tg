@@ -35,14 +35,11 @@ export const NewContract = ({ navigation }) => {
 
     useEffect(() => {
 //TODO: could cache these to limit unneccesary network calls
-        if (selectedPlayer) {
+        if (selectedPlayer && playerTwoName) {
             getPosted(playerTwoName)
-                .then(
-                    (posted) => {
-                        setPlayerTwoPosted(posted);
-                    },
-                    failure => console.error(failure),
-                );
+                .then((posted) => setPlayerTwoPosted(posted),
+                )
+                .catch(error => console.error(error));
         }
     }, [playerTwoName]);
 
@@ -80,10 +77,8 @@ export const NewContract = ({ navigation }) => {
                         onPress={() => {
                             setCreatingContract(true);
                             dispatch(newContract(selectedPlayer.name, playerTwoName, parseInt(contractAmount)))
-                                .then(
-                                    success => navigation.reset({ index:0, routes: [{ name: 'Home' }] }),
-                                    failure => console.log(failure),
-                               )
+                                .then(navigation.reset({ index:0, routes: [{ name: 'Home' }] }))
+                                .catch(error => console.error(error))
                                 .finally(setCreatingContract(false));
                           } }
                     />

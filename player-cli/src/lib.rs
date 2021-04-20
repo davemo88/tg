@@ -471,7 +471,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                     } 
                 }) {
                 Ok(contract_record) => if a.is_present("json-output") {
-                    serde_json::to_string(&JsonResponse::success(Some(contract_record))).unwrap()
+                    serde_json::to_string(&JsonResponse::success(Some(ContractSummary::from(&contract_record)))).unwrap()
                 } else {
                     format!("contract {} created", contract_record.cxid)
                 }

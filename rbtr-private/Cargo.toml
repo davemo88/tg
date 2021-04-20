@@ -10,3 +10,4 @@ edition = "2018"
 tglib = { path = "../tglib" }
 tokio = { version = "1", features = ["full"] }
 redis = { version = "0.17", features = ["tokio-comp"] }
+simple_logger = "1.11.0"
