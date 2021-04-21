@@ -15,122 +15,94 @@ export const LIVE_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'live.png';
 export const NETWORK: string = 'Test';
 
 export const initWallet = async (password: Secret<string>) => {
-    try {
-        let cli_response = await PlayerWalletModule.call_cli_with_password("init", password.expose_secret());
-        if (cli_response !== "wallet initialized") {
-            throw(cli_response);
-        }
-        cli_response = await PlayerWalletModule.call_cli("fund");
-    } catch(error) {
-        return Promise.reject(error)
+    let cli_response = await PlayerWalletModule.call_cli_with_password("init", password.expose_secret());
+    if (cli_response !== "wallet initialized") {
+        throw(cli_response);
     }
+    cli_response = await PlayerWalletModule.call_cli("fund");
 }
 
 export const postContractInfo = (name: string, amount: number, password: Secret<string>) => {
     return async (dispatch) => {
-        try {
-            const response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`player post "${name}" ${amount}`, password.expose_secret()));
-            if (response.status === "error") {
-                throw(response.message)
-            }
-            return dispatch(postedSlice.actions.setPosted(response.data))
-        } catch(error) {
-            return Promise.reject(error)
+        const response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`player post "${name}" ${amount}`, password.expose_secret()));
+        if (response.status === "error") {
+            throw(response.message)
         }
+        return dispatch(postedSlice.actions.setPosted(response.data))
     }
 }
 
 export const getPosted = async (name: string) => {
-    try {
-        const cli_output = await PlayerWalletModule.call_cli(`player posted "${name}"`);
-        let response: JsonResponse = JSON.parse(cli_output);
-        if (response.status === "error") {
-            throw(response.message);
-        }
-        const posted = +response.data;
-        return Promise.resolve(posted)
-    } catch (error) {
-        return Promise.reject(error)
+    const cli_output = await PlayerWalletModule.call_cli(`player posted "${name}"`);
+    let response: JsonResponse = JSON.parse(cli_output);
+    if (response.status === "error") {
+        throw(response.message);
     }
+    const posted = +response.data;
+    return Promise.resolve(posted)
 }
 
 export const signContract = (contract: Contract, password: Secret<string>) => {
     return async (dispatch) => {
-        try {
-            const selectedPlayerName = store.getState().selectedPlayerName;
-            let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`contract sign ${contract.cxid}`, password.expose_secret()));
-            if (response.status === "error") {
-                throw(response.message);
-            }
-            let action = {id: contract.cxid, changes: {}};
-            if (contract.p1Name === selectedPlayerName) {
-                action.changes.p1Sig = true;
-            }
-            else if (contract.p2Name === selectedPlayerName) {
-                action.changes.p2Sig = true;
-            }
-            return dispatch(contractSlice.actions.contractUpdated(action))
-        } catch (error) {
-            return Promise.reject(error)
+        const selectedPlayerName = store.getState().selectedPlayerName;
+        let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`contract sign ${contract.cxid}`, password.expose_secret()));
+        if (response.status === "error") {
+            throw(response.message);
         }
+        let action = {id: contract.cxid, changes: {}};
+        if (contract.p1Name === selectedPlayerName) {
+            action.changes.p1Sig = true;
+        }
+        else if (contract.p2Name === selectedPlayerName) {
+            action.changes.p2Sig = true;
+        }
+        return dispatch(contractSlice.actions.contractUpdated(action))
     }
 }
 
 export const sendContract = async (contract: Contract) => {
-    try {
-        const cli_output = await PlayerWalletModule.call_cli(`contract send ${contract.cxid}`);
-        const response: JsonResponse = JSON.parse(cli_output);
-        if (response.status === "error") {
-            throw(response.message);
-        }
-        return Promise.resolve(null)
-    } catch (error) {
-        return Promise.reject(error)
+    const cli_output = await PlayerWalletModule.call_cli(`contract send ${contract.cxid}`);
+    const response: JsonResponse = JSON.parse(cli_output);
+    if (response.status === "error") {
+        throw(response.message);
     }
+    return Promise.resolve(null)
 }
 
 export const receiveContract = (name: string, password: Secret<string>) => {
     return async (dispatch, getState) => {
-        try {
-            let cli_output = await PlayerWalletModule.call_cli_with_password(`contract receive ${name}`, password.expose_secret());
-            let response: JsonResponse = JSON.parse(cli_output);
+        let cli_output = await PlayerWalletModule.call_cli_with_password(`contract receive ${name}`, password.expose_secret());
+        let response: JsonResponse = JSON.parse(cli_output);
+        if (response.status === "error") {
+            throw(response.message);
+        }
+        let cxid = response.data;
+        if (cxid) {
+            cli_output = await PlayerWalletModule.call_cli(`contract summary ${cxid}`);
+            response = JSON.parse(cli_output);
             if (response.status === "error") {
                 throw(response.message);
             }
-            let cxid = response.data;
-            if (cxid) {
-                cli_output = await PlayerWalletModule.call_cli(`contract summary ${cxid}`);
-                response = JSON.parse(cli_output);
-                if (response.status === "error") {
-                    throw(response.message);
-                }
-                let contract = response.data;
-                if (contractSelectors.selectById(getState(), cxid)) {
-                    return dispatch(contractSlice.actions.contractUpdated(contract))
-                } else {
-                    return dispatch(contractSlice.actions.contractAdded(contract))
-                }
+            let contract = response.data;
+            if (contractSelectors.selectById(getState(), cxid)) {
+                return dispatch(contractSlice.actions.contractUpdated(contract))
+            } else {
+                return dispatch(contractSlice.actions.contractAdded(contract))
             }
-        } catch (error) {
-            return Promise.reject(error)
         }
     }
 }
 
 export const submitContract = (contract: Contract) => {
     return async (dispatch) => {
-        try {
-            let cli_output = await PlayerWalletModule.call_cli(`contract submit ${contract.cxid}`);
-            let response: JsonResponse = JSON.parse(cli_output);
-            if (response.status === "error") {
-                throw(response.message);
-            }
-            return dispatch(contractSlice.actions.contractUpdated({
-                id: contract.cxid, changes: { arbiterSig: true }
-            }))
-        } catch (error) {
-            return Promise.reject(error)
+        let cli_output = await PlayerWalletModule.call_cli(`contract submit ${contract.cxid}`);
+        let response: JsonResponse = JSON.parse(cli_output);
+        if (response.status === "error") {
+            throw(response.message);
         }
+        return dispatch(contractSlice.actions.contractUpdated({
+            id: contract.cxid, changes: { arbiterSig: true }
+        }))
     }
 }
 
@@ -140,55 +112,43 @@ export const createPayout = (contract: Contract) => {
 
 export const signPayout = (payout: Payout, password: Secret<string>) => {
     return async (dispatch) => {
-        try {
-            const selectedPlayerName = store.getState().selectedPlayerName;
-            let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`payout sign ${payout.cxid}`, password.expose_secret()));
-            if (response.status === "error") {
-                throw(response.message);
-            }
-            const contract = contractSelectors.selectById(store.getState(), payout.cxid);
-            let action = {id: payout.cxid, changes: {}};
-            if (contract.p1Name === selectedPlayerName) {
-                action.changes.p1Sig = true;
-            }
-            else if (contract.p2Name === selectedPlayerName) {
-                action.changes.p2Sig = true;
-            }
-            return dispatch(payoutSlice.actions.payoutUpdated(action))
-        } catch (error) {
-            return Promise.reject(error)
+        const selectedPlayerName = store.getState().selectedPlayerName;
+        let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`payout sign ${payout.cxid}`, password.expose_secret()));
+        if (response.status === "error") {
+            throw(response.message);
         }
+        const contract = contractSelectors.selectById(store.getState(), payout.cxid);
+        let action = {id: payout.cxid, changes: {}};
+        if (contract.p1Name === selectedPlayerName) {
+            action.changes.p1Sig = true;
+        }
+        else if (contract.p2Name === selectedPlayerName) {
+            action.changes.p2Sig = true;
+        }
+        return dispatch(payoutSlice.actions.payoutUpdated(action))
     }
 }
 
 export const sendPayout = async (payout: Payout) => {
-    try {
-        const cli_output = await PlayerWalletModule.call_cli(`payout send ${payout.cxid}`);
-        const response: JsonResponse = JSON.parse(cli_output);
-        if (response.status === "error") {
-            throw(response.message);
-        }
-        return Promise.resolve(null)
-    } catch (error) {
-        return Promise.reject(error)
+    const cli_output = await PlayerWalletModule.call_cli(`payout send ${payout.cxid}`);
+    const response: JsonResponse = JSON.parse(cli_output);
+    if (response.status === "error") {
+        throw(response.message);
     }
+    return Promise.resolve(null)
 }
 
 export const receivePayout = (name: string, password: Secret<string>) => {
     return async (dispatch, getState) => {
-        try {
-            const cli_output = await PlayerWalletModule.call_cli_with_password(`payout receive ${name}`, password.expose_secret());
-            const response: JsonResponse = JSON.parse(cli_output);
-            if (response.status === "error") {
-                throw(response.message);
-            }
-            if (payoutSelectors.selectById(getState(), payout.cxid)) {
-                return dispatch(payoutSlice.actions.payoutUpdated(payout))
-            } else {
-                return dispatch(payoutSlice.actions.payoutAdded(payout))
-            }
-        } catch (error) {
-            return Promise.reject(error)
+        const cli_output = await PlayerWalletModule.call_cli_with_password(`payout receive ${name}`, password.expose_secret());
+        const response: JsonResponse = JSON.parse(cli_output);
+        if (response.status === "error") {
+            throw(response.message);
+        }
+        if (payoutSelectors.selectById(getState(), payout.cxid)) {
+            return dispatch(payoutSlice.actions.payoutUpdated(payout))
+        } else {
+            return dispatch(payoutSlice.actions.payoutAdded(payout))
         }
     }
 }

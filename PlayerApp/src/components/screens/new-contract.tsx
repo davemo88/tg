@@ -7,7 +7,6 @@ import { styles } from '../../styles';
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, balanceSlice, newContract, } from '../../redux';
 import { Player, Contract, ContractStatus } from '../../datatypes';
 import { getPosted } from '../../wallet';
-import { signContract } from '../../mock';
 
 import { Secret } from '../../secret';
 import { Currency } from '../currency';
@@ -77,9 +76,9 @@ export const NewContract = ({ navigation }) => {
                         onPress={() => {
                             setCreatingContract(true);
                             dispatch(newContract(selectedPlayer.name, playerTwoName, parseInt(contractAmount)))
-                                .then(navigation.reset({ index:0, routes: [{ name: 'Home' }] }))
+                                .then(() => navigation.reset({ index:0, routes: [{ name: 'Home' }] }))
                                 .catch(error => console.error(error))
-                                .finally(setCreatingContract(false));
+                                .finally(() => setCreatingContract(false));
                           } }
                     />
                 </View>

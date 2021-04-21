@@ -32,7 +32,7 @@ export const InitWallet = ({ navigation }) => {
                     onPress={() => {
                         setInitializing(true); 
                         initWallet(password)
-                            .then(navigation.reset({ index:0, routes: [{ name: 'Loading Splash' }] })) 
+                            .then(() => navigation.reset({ index:0, routes: [{ name: 'Loading Splash' }] })) 
                             .catch(error => console.log(error))
                             .finally(() => setInitializing(false))
                     } }

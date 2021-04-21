@@ -556,8 +556,16 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 }
             }
             "submit" => match DocumentUI::<ContractRecord>::submit(wallet, a.value_of("cxid").unwrap()) {
-                Ok(()) => format!("submission accepted"),
-                Err(e) => format!("{}", e),
+                Ok(()) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
+                } else {
+                    format!("submission accepted")
+                }
+                Err(e) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
+                } else {
+                    format!("{:?}", e)
+                }
             }
             "broadcast" => match DocumentUI::<ContractRecord>::broadcast(wallet, a.value_of("cxid").unwrap()) {
                 Ok(()) => format!("funding tx broadcasted to network"),

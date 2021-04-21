@@ -51,9 +51,9 @@ const ActionUnsigned = (props) => {
           onPress={() => {
             setSigning(true);
             dispatch(signContract(props.contract, password))
-              .then(resetDetails(props.navigation, props.contract.cxid))
+              .then(() => resetDetails(props.navigation, props.contract.cxid))
               .catch(error => console.error(error))
-              .finally(setSigning(false));
+              .finally(() => setSigning(false));
           } }
         />
       </View>
@@ -68,7 +68,7 @@ const ActionSigned = (props) => {
     const [password, setPassword] = React.useState(new Secret(""));
     return (
       <View>
-          <Text>Waiting for other player's siganture</Text>
+          <Text>Waiting for other player's signature</Text>
           <View style={{ margin: 10 }}>
             <Button 
               title="Send Contract" 
@@ -76,7 +76,7 @@ const ActionSigned = (props) => {
               onPress={() => {
                 setSending(true);
                 sendContract(props.contract)
-                  .then(resetDetails(props.navigation, props.contract.cxid))
+                  .then(() => resetDetails(props.navigation, props.contract.cxid))
                   .catch(error => console.error(error))
                   .finally(() => setSending(false));
               } }
@@ -90,7 +90,7 @@ const ActionSigned = (props) => {
               onPress={() => {
                 setChecking(true);
                 dispatch(receiveContract(store.getState().selectedPlayerName, password))
-                  .then(resetDetails(props.navigation, props.contract.cxid))
+                  .then(() => resetDetails(props.navigation, props.contract.cxid))
                   .catch(error => console.error(error))
                   .finally(() => setChecking(false));
               } }
@@ -134,9 +134,9 @@ const ActionPlayersSigned = (props) => {
         onPress={() => {
           setSubmitting(true)
           dispatch(submitContract(props.contract))
-            .then(resetDetails(props.navigation, props.contract.cxid))
+            .then(() => resetDetails(props.navigation, props.contract.cxid))
             .catch(error => console.error(error))
-            .finally(setSubmitting(false))
+            .finally(() => setSubmitting(false))
         } }
       />
     </View>
@@ -181,9 +181,9 @@ const ActionPayoutUnsigned = (props) => {
           onPress={() => {
             setSigning(true);
             dispatch(signPayout(props.contract, password))
-              .then(resetDetails(props.navigation, props.contract.cxid))
+              .then(() => resetDetails(props.navigation, props.contract.cxid))
               .catch(error => console.error(error))
-              .finally(setSigning(false));
+              .finally(() => setSigning(false));
           } }
         />
       </View>
@@ -207,7 +207,7 @@ const ActionPayoutSigned = (props) => {
             onPress={() => {
               setSending(true);
               sendContract(props.contract)
-                .then(resetDetails(props.navigation, props.contract.cxid))
+                .then(() => resetDetails(props.navigation, props.contract.cxid))
                 .catch(error => console.error(error))
                 .finally(() => setSending(false));
             } }

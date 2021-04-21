@@ -32,7 +32,7 @@ export const Home = ({ navigation }) => {
     useEffect(() => {
         if (selectedPlayer) {
             dispatch(setSelectedPlayerPosted())
-                .then(setPosted(store.getState().posted))
+                .then(() => setPosted(store.getState().posted))
                 .catch(error => console.error(error));
         }
     }, []);
