@@ -87,27 +87,25 @@ const ActionSigned = (props) => {
 }
 
 const ActionReceived = (props) => {
-  const [password, setPassword] = React.useState(new Secret(""));
+    let dispatch = useDispatch();
+    let [signing, setSigning] = React.useState(false);
+    const [password, setPassword] = React.useState(new Secret(""));
 
-  return (
-    <View>
-      <PasswordEntry password={password} setPassword={setPassword} />
-      <Button 
-        title="Sign Contract" 
-        onPress={() => {
-          signContract(props.contract, password);
-          resetDetails(props.navigation, props.contract.cxid);
-        } }
-      />
-      <Button 
-        title="Decline Contract" 
-        onPress={() => {
-          declineContract(props.contract.cxid);
-          props.navigation.reset({ index:0, routes: [{ name: 'Home', },] });
-        } }
-      />
-    </View>
-  )
+    return (
+      <View>
+        <PasswordEntry password={password} setPassword={setPassword} />
+        <Button 
+          title="Sign Contract" 
+          onPress={() => {
+            setSigning(true);
+            dispatch(signContract(props.contract, password))
+              .then(() => resetDetails(props.navigation, props.contract.cxid))
+              .catch(error => console.error(error))
+              .finally(() => setSigning(false));
+          } }
+        />
+      </View>
+    )
 }
 
 const ActionPlayersSigned = (props) => {

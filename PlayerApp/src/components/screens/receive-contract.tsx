@@ -30,7 +30,6 @@ export const ReceiveContract = ({ navigation }) => {
               onPress={() => {
                 setChecking(true);
                 dispatch(receiveContract(store.getState().selectedPlayerName, password))
-                  .then(() => resetDetails(props.navigation, props.contract.cxid))
                   .catch(error => console.error(error))
                   .finally(() => setChecking(false));
               } }
