@@ -22,7 +22,7 @@ export const Home = ({ navigation }) => {
     const [balance, setBalance] = useState(store.getState().balance);
     const [posted, setPosted] = useState(store.getState().posted);
 // should use effect for this
-    const contracts = contractSelectors.selectAll(store.getState())
+    const contracts = useSelector(contractSelectors.selectAll)
     .filter((contract, i, a) =>{ return (
       (contract.p1Name === selectedPlayer.name || contract.p2Name === selectedPlayer.name) 
       && 

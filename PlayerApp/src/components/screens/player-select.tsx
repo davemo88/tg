@@ -14,7 +14,6 @@ export const PlayerSelect = ({ navigation }) => {
     const dispatch = useDispatch();
     const store = useStore();
     let players = playerSelectors.selectAll(store.getState());
-//    console.log("player select players:", players);
     players = players.filter(p => p.mine);
     const [selectedPlayerName, setSelectedPlayerName] = React.useState(players.length > 0 ? players[0].name: null)
 
@@ -31,21 +30,21 @@ export const PlayerSelect = ({ navigation }) => {
                       <Image style={{ width: 133, height: 45 }} source={{uri: LIVE_IMAGE_SOURCE}} />
                     }
                 </View>
-                { selectedPlayerName !== null ? 
+                { selectedPlayerName ? 
                     <View style = {{ flex: 2, alignItems: 'center' }}>
                         <View style = {{ flex: 1, justifyContent: 'flex-end' }}>
                             <PlayerSelector 
                               selectedPlayerName={selectedPlayerName}
                               setSelectedPlayerName={setSelectedPlayerName}
                               playerNames={players.map(p => p.name)}
+                              allowRemoval={false}
                             />
                         </View>
                         <View style={{ flex: 1, width: 60 }}>
                             <Button 
                               title="Ok" 
                               onPress={() => {
-                                  const selectedPlayer = players.find(p => p.name === selectedPlayerName);
-                                  dispatch(selectedPlayerNameSlice.actions.setSelectedPlayerName(selectedPlayer.name));
+                                  dispatch(selectedPlayerNameSlice.actions.setSelectedPlayerName(selectedPlayerName));
                                   navigation.reset({ index:0,   routes: [{ name: 'Home' }] })
                               }   }
                             />

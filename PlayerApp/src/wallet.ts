@@ -77,6 +77,7 @@ export const receiveContract = (name: string, password: Secret<string>) => {
             throw(response.message);
         }
         let cxid = response.data;
+        console.info("received contract:", cxid);
         if (cxid) {
             cli_output = await PlayerWalletModule.call_cli(`contract summary ${cxid}`);
             response = JSON.parse(cli_output);
@@ -84,8 +85,13 @@ export const receiveContract = (name: string, password: Secret<string>) => {
                 throw(response.message);
             }
             let contract = response.data;
+            console.info("received contract:", contract);
             if (contractSelectors.selectById(getState(), cxid)) {
-                return dispatch(contractSlice.actions.contractUpdated(contract))
+                let action = {id: contract.cxid, changes: {}};
+                action.changes.p1Sig = contract.p1Sig;
+                action.changes.p2Sig = contract.p2Sig;
+                action.changes.arbiterSig = contract.arbiterSig;
+                return dispatch(contractSlice.actions.contractUpdated(action))
             } else {
                 return dispatch(contractSlice.actions.contractAdded(contract))
             }
