@@ -6,6 +6,7 @@ import { styles } from '../../styles';
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, } from '../../redux';
 import { Player, Contract, ContractStatus } from '../../datatypes'
 import { dismissContract } from '../../mock';
+import { sendContract } from '../../wallet';
 
 import { ContractSummary } from '../contract-summary';
 import { ContractAction } from '../contract-action';
@@ -19,6 +20,7 @@ export const ContractDetails = ({ route, navigation }) => {
   const selectedPlayer: Player = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerName);
   const playerOne = playerSelectors.selectById(store.getState(), contract.p1Name);
   const playerTwo = playerSelectors.selectById(store.getState(), contract.p2Name);
+  const [sending, setSending] = React.useState(false);
 
   return (
     <View style={styles.container}>
@@ -41,6 +43,18 @@ export const ContractDetails = ({ route, navigation }) => {
         <View style={{ flex: 3, }}>
           <ContractAction contract={contract} navigation={navigation} />
         </View>
+        <View style={{ margin: 10 }}>
+          <Button 
+            title="Send Contract" 
+            disabled={sending}
+            onPress={() => {
+              setSending(true);
+              sendContract(contract)
+                .catch(error => console.error(error))
+                .finally(() => setSending(false));
+            } }
+          />
+          </View>
         <View style={{ flex: 1, justifyContent: 'center', }}>
           <Button 
             title="Dismiss Contract" 

@@ -67,7 +67,13 @@ export const Home = ({ navigation }) => {
               <View>
                 <Text style={{ fontSize: 20, }}>Contracts</Text>
               </View>
-              <View>
+              <View style={{ flexDirection: 'row' }}>
+                <Button 
+                  title="Receive"
+                  onPress={() => 
+                    navigation.push('Receive Contract')
+                  }
+                />
                 <Button 
                   title="New"
                   onPress={() => 

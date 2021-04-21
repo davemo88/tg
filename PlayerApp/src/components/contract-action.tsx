@@ -63,25 +63,11 @@ const ActionUnsigned = (props) => {
 const ActionSigned = (props) => {
     const store = useStore();
     const dispatch = useDispatch();
-    const [sending, setSending] = React.useState(false);
     const [checking, setChecking] = React.useState(false);
     const [password, setPassword] = React.useState(new Secret(""));
     return (
       <View>
           <Text>Waiting for other player's signature</Text>
-          <View style={{ margin: 10 }}>
-            <Button 
-              title="Send Contract" 
-              disabled={sending}
-              onPress={() => {
-                setSending(true);
-                sendContract(props.contract)
-                  .then(() => resetDetails(props.navigation, props.contract.cxid))
-                  .catch(error => console.error(error))
-                  .finally(() => setSending(false));
-              } }
-            />
-          </View>
           <View style={{ margin: 10 }}>
             <PasswordEntry password={password} setPassword={setPassword} />
             <Button 
