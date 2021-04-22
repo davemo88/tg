@@ -11,18 +11,22 @@ use tglib::{
             Amount,
             Network,
             PublicKey,
+            Script,
+            Transaction,
+            TxIn,
+            TxOut,
+            blockdata::transaction::OutPoint,
             secp256k1::{
                 Message,
                 Secp256k1,
                 Signature,
             },
-            Script,
-            Transaction,
-            TxIn,
-            TxOut,
             util::{
                 bip32::DerivationPath,
-                psbt::PartiallySignedTransaction,
+                psbt::{
+                    Input,
+                    PartiallySignedTransaction,
+                },
             },
         },
         blockchain::{
@@ -42,9 +46,11 @@ use tglib::{
         ContractRecord,
         PlayerContractInfo,
     },
+    payout::Payout,
     player::PlayerName,
     wallet::{
         create_escrow_address,
+        create_escrow_script,
         create_payout_script,
         derive_account_xprivkey,
         EscrowWallet,
@@ -59,6 +65,7 @@ use tglib::{
         DB_NAME,
         ESCROW_SUBACCOUNT,
         ESCROW_KIX,
+        NETWORK,
         SEED_NAME,
         WALLET_DB_NAME,
         WALLET_TREE_NAME,
@@ -284,6 +291,38 @@ impl PlayerWallet {
         } else {
             Err(Error::Adhoc("not party to this contract"))
         }
+    }
+
+    // TODO: refactor this to take p1_amount instead of payout address
+    // and p2 gets the difference between p1_amount and the contract amount
+    pub fn create_payout(&self, contract: &Contract, p1_amount: Amount, p2_amount: Amount) -> Result<Payout> {
+        let contract_amount = contract.amount()?;
+        if p1_amount + p2_amount != contract_amount {
+            return Err(Error::Adhoc("payout amounts don't sum to contract amount"));
+        }
+        let escrow_address = create_escrow_address(
+            &contract.p1_pubkey,
+            &contract.p2_pubkey,
+            &contract.arbiter_pubkey,
+            NETWORK,
+            ).unwrap();
+        let funding_tx = contract.clone().funding_tx.extract_tx();
+        let (escrow_vout, escrow_txout) = funding_tx.output.iter().enumerate().filter(|(_vout, txout)| txout.script_pubkey == escrow_address.script_pubkey()).next().unwrap();
+        let wallet = self.offline_wallet();
+        let mut builder = wallet.build_tx();
+        let mut psbt_input = Input::default();
+        psbt_input.witness_utxo = Some(escrow_txout.clone());
+        psbt_input.witness_script = Some(create_escrow_script(&contract.p1_pubkey, &contract.p2_pubkey, &contract.arbiter_pubkey));
+// TODO: set satisfaction weight correctly and include tx fee
+        builder.add_foreign_utxo(OutPoint { vout: escrow_vout as u32, txid: funding_tx.txid()}, psbt_input, 100).unwrap();
+        if p1_amount.as_sat() != 0 {
+            builder.add_recipient(Address::p2wpkh(&contract.p1_pubkey, NETWORK).unwrap().script_pubkey(), p1_amount.as_sat());
+        }
+        if p2_amount.as_sat() != 0 {
+            builder.add_recipient(Address::p2wpkh(&contract.p2_pubkey, NETWORK).unwrap().script_pubkey(), p2_amount.as_sat());
+        }
+        let (psbt, _details) = builder.finish().unwrap();
+        Ok(Payout::new(contract.clone(), psbt))
     }
 }
 

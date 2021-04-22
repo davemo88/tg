@@ -51,7 +51,6 @@ use tglib::{
     },
     hex,
     log::{
-        debug,
         error,
         LevelFilter,
     },

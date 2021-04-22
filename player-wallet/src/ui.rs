@@ -42,7 +42,6 @@ use tglib::{
         PlayerNameService,
     },
     wallet::{
-        create_payout,
         sign_contract,
         sign_payout_psbt,
         EscrowWallet,
@@ -51,10 +50,7 @@ use tglib::{
         NAME_SUBACCOUNT,
         NAME_KIX,
     },
-    mock::{
-        NETWORK,
-        PAYOUT_VERSION,
-    },
+    mock::PAYOUT_VERSION,
 };
 use crate::{
 //    Result as PwResult,
@@ -117,7 +113,7 @@ pub trait DocumentUI<T> {
 
 pub enum NewDocumentParams {
     NewContractParams { p1_name: PlayerName, p2_name: PlayerName, amount: Amount, desc: Option<String> },
-    NewPayoutParams { cxid: String, name: PlayerName, amount: Amount },
+    NewPayoutParams { cxid: String, p1_amount: Amount, p2_amount: Amount },
 }
 
 pub enum SignDocumentParams {
@@ -387,14 +383,13 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
 
 impl DocumentUI<PayoutRecord> for PlayerWallet {
     fn new(&self, params: NewDocumentParams) -> Result<PayoutRecord> {
-        let (cxid, _name, _amount): (String, PlayerName, Amount) = match params {
-            NewDocumentParams::NewPayoutParams { cxid, name, amount } => (cxid, name, amount),
+        let (cxid, p1_amount, p2_amount): (String, Amount, Amount) = match params {
+            NewDocumentParams::NewPayoutParams { cxid, p1_amount, p2_amount } => (cxid, p1_amount, p2_amount),
             _ => return Err(Error::Adhoc("invalid params").into()),
         };
         let contract_record = self.db().get_contract(&cxid).unwrap();
         let contract = Contract::from_bytes(hex::decode(contract_record.hex).unwrap()).unwrap();
-        let escrow_pubkey = self.get_escrow_pubkey();
-        let payout = create_payout(&contract, &Address::p2wpkh(&escrow_pubkey, NETWORK).unwrap());
+        let payout = self.create_payout(&contract, p1_amount, p2_amount)?;
         let payout_record = PayoutRecord::from(payout);
         let _r = self.db().insert_payout(payout_record.clone());
         Ok(payout_record)

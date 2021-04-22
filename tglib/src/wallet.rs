@@ -234,7 +234,7 @@ pub fn create_escrow_address(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbit
     Ok(escrow_address)
 }
 
-fn create_escrow_script(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pubkey: &PublicKey) -> Script {
+pub fn create_escrow_script(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pubkey: &PublicKey) -> Script {
 // standard multisig transaction script
 // https://en.bitcoin.it/wiki/BIP_0011
     let b = Builder::new()
@@ -247,6 +247,8 @@ fn create_escrow_script(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pu
     b.into_script()
 }
 
+// TODO: refactor this to take p1_amount instead of payout address
+// and p2 gets the difference between p1_amount and the contract amount
 pub fn create_payout(contract: &Contract, payout_address: &Address) -> Payout {
     let escrow_address = create_escrow_address(
         &contract.p1_pubkey,

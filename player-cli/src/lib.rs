@@ -11,6 +11,7 @@ use shell_words;
 use tglib::{
     bdk::bitcoin::{
         consensus,
+        Address,
         Amount,
         secp256k1::Signature,
         util::psbt::PartiallySignedTransaction,
@@ -24,7 +25,10 @@ use tglib::{
     },
     payout::PayoutRecord,
     player::PlayerName,
-    wallet::SavedSeed,
+    wallet::{
+        EscrowWallet,
+        SavedSeed,
+    },
     mock::{
         NETWORK,
         SEED_NAME,
@@ -111,22 +115,36 @@ pub struct PayoutSummary {
     pub arbiter_sig:    bool,
     pub p1_amount:      u64,
     pub p2_amount:      u64,
-    pub payoutToken:    String,
+    pub payout_token:   String,
 }
 
-impl From<&PayoutRecord> for PayoutSummary {
-    fn from(cr: &PayoutRecord) -> Self {
-// harder because need to look at the psbt and check for appropriate sigs
-        PayoutSummary {
-            cxid: pr.cxid,
-            p1_sig: false,
-            p2_sig: false,
-            arbiter_sig: false,
-            p1_amount: 0,
-            p2_amount: 0,
+impl PayoutSummary {
+        fn get(player_wallet: &PlayerWallet, pr: &PayoutRecord) -> Option<PayoutSummary> {
+            let psbt: PartiallySignedTransaction = consensus::deserialize(&hex::decode(&pr.psbt).unwrap()).unwrap();
+            let cr = DocumentUI::<ContractRecord>::get(player_wallet, &pr.cxid)?; 
+            let contract = Contract::from_bytes(hex::decode(cr.hex).unwrap()).unwrap();
+            let my_script_pubkey = Address::p2wpkh(&player_wallet.get_escrow_pubkey(), NETWORK).unwrap().script_pubkey();
+            let my_amount: u64 = psbt.global.unsigned_tx.output.iter().filter_map(|txout| if txout.script_pubkey == my_script_pubkey { Some(txout.value) } else { None}).sum();
+            let contract_amount = contract.amount().ok()?.as_sat();
+            let p1_amount = if contract.p1_pubkey == player_wallet.get_escrow_pubkey() {
+                my_amount    
+            } else {
+                contract_amount - my_amount
+            };
+            let p2_amount = contract_amount - p1_amount;
+
+            Some(PayoutSummary {
+                cxid: pr.cxid.clone(),
+                p1_sig: psbt.inputs.iter().any(|input| input.partial_sigs.get(&contract.p1_pubkey).is_some()),
+                p2_sig: psbt.inputs.iter().any(|input| input.partial_sigs.get(&contract.p2_pubkey).is_some()),
+                arbiter_sig: psbt.inputs.iter().any(|input| input.partial_sigs.get(&contract.arbiter_pubkey).is_some()),
+                payout_token: pr.sig.clone(),
+                p1_amount,
+                p2_amount,
+            })
         }
     }
-}
+
 
 fn player_cli<'a, 'b>() -> App<'a, 'b> {
     App::new("player-cli")
@@ -629,14 +647,14 @@ pub fn payout_ui<'a, 'b>() -> App<'a, 'b> {
                     .help("which contract to pay out")
                     .required(true)
                     .takes_value(true))
-                .arg(Arg::with_name("player")
+                .arg(Arg::with_name("p1_amount")
                     .index(2)
-                    .help("which player to pay")
+                    .help("how much to pay player one")
                     .required(true)
                     .takes_value(true))
-                .arg(Arg::with_name("amount")
+                .arg(Arg::with_name("p2_amount")
                     .index(3)
-                    .help("how much to pay the specified player. remainder goes to other player")
+                    .help("how much to pay player two")
                     .required(true)
                     .takes_value(true)),
             SubCommand::with_name("import").about("import payout")
@@ -729,8 +747,8 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 wallet,
                 NewDocumentParams::NewPayoutParams {
                     cxid: a.value_of("cxid").unwrap().to_string(),
-                    name: PlayerName(a.value_of("player").unwrap().to_string()),
-                    amount: Amount::from_sat(a.value_of("amount").unwrap().parse::<u64>().unwrap()),
+                    p1_amount: Amount::from_sat(a.value_of("p1_amount").unwrap().parse::<u64>().unwrap()),
+                    p2_amount: Amount::from_sat(a.value_of("p2_amount").unwrap().parse::<u64>().unwrap()),
                 }) {
                 Ok(payout_record) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::success(Some(payout_record))).unwrap()
@@ -754,9 +772,9 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
             }
             "summary" => match DocumentUI::<PayoutRecord>::get(wallet, a.value_of("cxid").unwrap()) {
                 Some(pr) => if a.is_present("json-output") {
-                    serde_json::to_string(&JsonResponse::success(Some(PayoutSummary::from(&pr)))).unwrap()
+                    serde_json::to_string(&JsonResponse::success(Some(PayoutSummary::get(wallet, &pr)))).unwrap()
                 } else {
-                    format!("{:?}", PayoutSummary::from(&pr))
+                    format!("{:?}", PayoutSummary::get(wallet, &pr))
                 }
                 None => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
