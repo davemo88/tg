@@ -161,16 +161,18 @@ export const receivePayout = (name: string, password: Secret<string>) => {
             console.info("received payout:", payout);
             if (payoutSelectors.selectById(getState(), cxid)) {
                 let action = {id: cxid, changes: {
+                    p1Amount: payout.p2Amount,
+                    p2Amount: payout.p1Amount,
                     p1Sig: payout.p1Sig,
                     p2Sig: payout.p2Sig,
                     arbiterSig: payout.arbiterSig,
-                    playerOneAmount: payout.playerOneAmount,
-                    playerTwoAmount: payout.playerTwoAmount,
+                    payoutToken: payout.payoutToken,
                 }};
                 return dispatch(payoutSlice.actions.payoutUpdated(action))
             } else {
                 return dispatch(payoutSlice.actions.payoutAdded(payout))
             }
+        }
     }
 }
 
@@ -187,7 +189,7 @@ export const broadcastPayoutTx = (payout: Payout) => {
   store.dispatch(payoutSlice.actions.payoutUpdated({
     id: payout.cxid,
     changes: {
-      payoutTx: true,
+      tx: true,
     }
   }));
 }

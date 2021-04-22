@@ -21,7 +21,7 @@ export const getContractStatus = (contract: Contract ): ContractStatus => {
       const payoutStatus = getPayoutStatus(payout);
       switch (+payoutStatus) {
         case PayoutStatus.Unsigned:
-          break;
+          return ContractStatus.PayoutUnsigned;
         case PayoutStatus.WeSigned:
           return ContractStatus.PayoutSigned;
         case PayoutStatus.TheySigned:

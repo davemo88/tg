@@ -51,6 +51,7 @@ use tglib::{
     },
     hex,
     log::{
+        info,
         error,
         LevelFilter,
     },
@@ -247,10 +248,14 @@ async fn receive_contract_handler(auth: AuthTokenSig, redis_client: redis::Clien
 
 async fn send_payout_handler(body: SendPayoutBody, redis_client: redis::Client) -> WebResult<impl Reply> {
     let mut con = redis_client.get_async_connection().await.unwrap();
-    let r: RedisResult<String> = con.rpush(&format!("{}/payouts", body.player_name), serde_json::to_string(&body.payout).unwrap()).await;
+    info!("payout {:?} sent to {}", body.payout, body.player_name);
+    let r: RedisResult<String> = con.rpush(&format!("{}/payouts", body.player_name.0), serde_json::to_string(&body.payout).unwrap()).await;
     match r {
         Ok(_string) => Ok("sent payout".to_string()),
-        Err(_) => Err(warp::reject()),
+        Err(e) => {
+            error!("couldn't push to payout list: {:?}", e);
+            Err(warp::reject())
+        }
     }
 }
 
@@ -258,13 +263,23 @@ async fn receive_payout_handler(auth: AuthTokenSig, redis_client: redis::Client)
     let mut con = redis_client.get_async_connection().await.unwrap();
     match check_auth_token_sig(auth.player_name.clone(), auth.clone(), &mut con).await {
         Ok(true) => (),
-        _ => return Err(warp::reject()),
+        Ok(false) => {
+            error!("check auth token failed: invalid credentials");
+            return Err(warp::reject())
+        },
+        Err(e) => {
+            error!("check auth token failed: {:?}", e);
+            return Err(warp::reject())
+        }
     }
 
     let r: RedisResult<String> = con.lpop(&format!("{}/payouts", auth.player_name.0)).await;
     match r {
         Ok(payout_json) => Ok(payout_json),
-        Err(_) => Err(warp::reject()),
+        Err(e) => {
+            error!("couldn't pop from payout list: {:?}", e);
+            Err(warp::reject())
+        }
     }
 }
 

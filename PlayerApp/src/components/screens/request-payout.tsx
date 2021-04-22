@@ -1,37 +1,35 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
+import { useDispatch } from 'react-redux';
 import Slider from '@react-native-community/slider';
 
 import { styles } from '../../styles';
 import { Secret } from '../../secret';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, payoutSlice, } from '../../redux';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, payoutSlice, newPayout, } from '../../redux';
 import { Player, Contract, Payout, ContractStatus } from '../../datatypes';
 
 import { Arbiter } from '../arbiter';
 import { Currency } from '../currency';
 import { PlayerPortrait } from '../player-portrait';
-import { PasswordEntry } from '../password-entry';
 
 export const RequestPayout = ({ route, navigation }) => {
+  const dispatch = useDispatch();
   const { cxid } = route.params;
   const contract = contractSelectors.selectById(store.getState(), cxid);
   const playerOne = playerSelectors.selectById(store.getState(), contract.p1Name)
   const playerTwo = playerSelectors.selectById(store.getState(), contract.p2Name)
   const selectedPlayer = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerName);
   const selectedPlayerName = store.getState().selectedPlayerName;
-  const [playerOnePayout, setPlayerOnePayout] = React.useState(contract.amount);
-  const [playerTwoPayout, setPlayerTwoPayout] = React.useState(0);
+  const [p1Amount, setPlayerOnePayout] = React.useState(contract.amount);
+  const [p2Amount, setPlayerTwoPayout] = React.useState(0);
   const [isArbitratedPayout, setIsArbitratedPayout] = React.useState(false);
   const toggleArbitration = () => setIsArbitratedPayout(previousState => !previousState);
   const [arbitrationToken, setArbitrationToken] = React.useState('');
-  const [password, setPassword] = React.useState(new Secret(""));
+  const [creatingPayout, setCreatingPayout] = useState(false);
 
   const valid = () => {
-    if (password !== null && (!isArbitratedPayout || (arbitrationToken != ''))) {
-      return true;
-    }
-    return false
+    return (!creatingPayout && (!isArbitratedPayout || (arbitrationToken != '')))
   }
 
   return (
@@ -48,11 +46,11 @@ export const RequestPayout = ({ route, navigation }) => {
           <View style={{ flexDirection: 'row', justifyContent: 'flex-start', padding: 10 }}>
             <View style={{ alignItems: 'center', padding: 5 }}>
               <PlayerPortrait name={playerOne.name} pictureUrl={playerOne.pictureUrl} />
-              <Currency amount={ playerOnePayout } />
+              <Currency amount={ p1Amount } />
             </View>
             <View style={{ alignItems: 'center', padding: 5 }}>
               <PlayerPortrait name={playerTwo.name} pictureUrl={playerTwo.pictureUrl} />
-              <Currency amount={ playerTwoPayout } />
+              <Currency amount={ p2Amount } />
             </View>
           </View>
           <Slider
@@ -88,23 +86,16 @@ export const RequestPayout = ({ route, navigation }) => {
         </View>
       }
       <View style={{ flexDirection: 'row' }}>
-        <PasswordEntry password={password} setPassword={setPassword} />
         <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
           <Button 
             disabled={!valid()}
             title="Request" 
             onPress={() => {
-              store.dispatch(payoutSlice.actions.payoutAdded({
-                cxid: contract.cxid,
-                payoutTx: false,
-                p1Sig: (contract.p1Name === selectedPlayerName),
-                p2Sig: (contract.p2Name === selectedPlayerName),
-                arbiterSig: isArbitratedPayout ? true : false,
-                payoutScriptSig: isArbitratedPayout ? true : false,
-                playerOneAmount: playerOnePayout,
-                playerTwoAmount: playerTwoPayout,
-              }))
-              navigation.reset({ index:0, routes: [{ name: 'Home' }, { name: 'Contract Details', params: {cxid: contract.cxid } }] });
+              setCreatingPayout(true);
+              dispatch(newPayout(contract.cxid, p1Amount, p2Amount))
+                  .then(() => navigation.reset({ index:0, routes: [{ name: 'Home' }, { name: 'Contract Details', params: {cxid: contract.cxid } }] }))
+                  .catch(error => console.error(error))
+                  .finally(() => setCreatingPayout(false));
             } }
           />
         </View>

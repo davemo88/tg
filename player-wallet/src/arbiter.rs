@@ -125,7 +125,11 @@ impl ArbiterService for ArbiterClient {
 
     fn receive_payout(&self, auth: AuthTokenSig) -> Result<Option<PayoutRecord>> {
         let response = self.post("receive-payout", serde_json::to_string(&auth).unwrap())?;
-        let payout_record = serde_json::from_str::<PayoutRecord>(&response.text().unwrap())?;
+
+        let response_text = response.text().unwrap();
+        println!("received payout: {}",response_text);
+        let payout_record = serde_json::from_str::<PayoutRecord>(&response_text)?;
+//        let payout_record = serde_json::from_str::<PayoutRecord>(&response.text().unwrap())?;
         Ok(Some(payout_record))
     }
 

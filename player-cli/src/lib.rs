@@ -792,8 +792,16 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                         },
                     },
                     Secret::new(a.value_of("password").unwrap().to_owned())) {
-                Ok(()) => format!("payout signed"),
-                Err(e) => format!("{}", e),
+                Ok(()) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
+                } else {
+                    format!("payout signed")
+                }
+                Err(e) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
+                } else {
+                    format!("{:?}", e)
+                }
             }
             "send" => match DocumentUI::<PayoutRecord>::send(wallet, a.value_of("cxid").unwrap()) {
                 Ok(()) => format!("payout sent"),
@@ -831,7 +839,8 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 Err(e) => format!("{}", e),
             }
             "list" => if a.is_present("json-output") {
-                serde_json::to_string(&JsonResponse::success(Some(DocumentUI::<PayoutRecord>::list(wallet)))).unwrap()
+                let ps: Vec<PayoutSummary> = DocumentUI::<PayoutRecord>::list(wallet).iter().filter_map(|pr| PayoutSummary::get(&wallet, pr)).collect();
+                serde_json::to_string(&JsonResponse::success(Some(ps))).unwrap()
             } else {
                 DocumentUI::<PayoutRecord>::list(wallet).iter().map(|pr| format!("{:?}", pr)).collect::<Vec<String>>().join("\n")
             }

@@ -34,7 +34,6 @@ export const loadPlayers = () => {
             throw(response.message);
         }
         const my_players = response.data;
-        console.log("my_players:", my_players);
         players.forEach(function (p) { 
             p.pictureUrl = "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0";
             p.mine = my_players.some(mp => mp === p.name);
@@ -145,6 +144,38 @@ export const newContract = (p1Name: string, p2Name: string, sats: number) => {
     }
 }
 
+export const loadPayouts = () => {
+    return async (dispatch) => {
+        let response = JSON.parse(await PlayerWalletModule.call_cli("payout list"));
+        if (response.status === "error") {
+            throw(response.message);
+        }
+        let payouts = response.data;
+        console.debug("loaded payouts:", payouts);
+        return dispatch(payoutSlice.actions.payoutAddedMany(payouts));
+    }
+}
+
+export const newPayout = (cxid: string, p1Amount: number, p2Amount: number) => {
+    return async (dispatch, getState) => {
+        let output = await PlayerWalletModule.call_cli(`payout new ${cxid} ${p1Amount} ${p2Amount}`); 
+        let response = JSON.parse(output);
+        if (response.status === "error") {
+            throw(response.message)
+        }
+        return dispatch(payoutSlice.actions.payoutAdded({
+            cxid: cxid,
+            p1Amount,
+            p2Amount,
+            p1Sig: false,
+            p2Sig: false,
+            arbiterSig: false,
+            token: "",
+            tx: false,
+        }))
+    }
+}
+
 const payoutAdapter = createEntityAdapter<Payout>({
     selectId: (payout) => payout.cxid,
 });
@@ -154,6 +185,7 @@ export const payoutSlice = createSlice({
   initialState: payoutAdapter.getInitialState(),
   reducers: {
     payoutAdded: payoutAdapter.addOne,
+    payoutAddedMany: payoutAdapter.addMany,
     payoutUpdated: payoutAdapter.updateOne,
     payoutRemoved: payoutAdapter.removeOne,
   }
@@ -223,5 +255,6 @@ export const loadAll = () => {
             dispatch(getBalance()),
             dispatch(loadPlayers()),
             dispatch(loadContracts()),
+            dispatch(loadPayouts()),
         ]);
 }

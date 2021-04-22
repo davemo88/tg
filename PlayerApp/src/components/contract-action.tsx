@@ -6,9 +6,9 @@ import { styles } from '../styles';
 
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, payoutSlice, selectedPlayerNameSlice, } from '../redux';
 import { Player, Contract, ContractStatus, } from '../datatypes';
-import { receiveContract, sendContract, signContract, submitContract } from '../wallet';
+import { receiveContract, sendContract, signContract, submitContract, signPayout } from '../wallet';
 import { getContractStatus } from '../dump';
-import { broadcastFundingTx, broadcastPayoutTx, signPayout, declineContract, dismissContract, denyPayout, } from '../mock';
+import { broadcastFundingTx, broadcastPayoutTx, declineContract, dismissContract, denyPayout, } from '../mock';
 
 import { Secret } from '../secret';
 import { Currency } from './currency';
@@ -193,8 +193,8 @@ const ActionPayoutReceived = (props) => {
     <View>
       <Text>Payout Received</Text>
       <View>
-        <Text>Player One Payout: </Text><Currency amount={payout.playerOneAmount} />
-        <Text>Player Two Payout: </Text><Currency amount={payout.playerTwoAmount} />
+        <Text>Player One Payout: </Text><Currency amount={payout.p1Amount} />
+        <Text>Player Two Payout: </Text><Currency amount={payout.p2Amount} />
         <PasswordEntry password={password} setPassword={setPassword} />
         <Button 
           title='Sign Payout'
@@ -240,10 +240,10 @@ const ActionResolved = (props) => {
       <Text>Resolved Contract</Text>
       <View style={{ flexDirection: 'row' }}>
         <View>
-          <Text>Player One Payout: </Text><Currency amount={payout.playerOneAmount} />
+          <Text>Player One Payout: </Text><Currency amount={payout.p1Amount} />
         </View>
         <View>
-          <Text>Player Two Payout: </Text><Currency amount={payout.playerTwoAmount} />
+          <Text>Player Two Payout: </Text><Currency amount={payout.p2Amount} />
         </View>
       </View>
     </View>
