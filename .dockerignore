@@ -1,0 +1,10 @@
+tglib/target/
+rbtr-public/target/
+rbtr-private/target/
+player-wallet/target/
+player-cli/target/
+referee-signer/target/
+nmc-id/target/
+regtest/
+nmcd/
+PlayerApp/
