@@ -102,6 +102,32 @@ impl From<&ContractRecord> for ContractSummary {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PayoutSummary {
+    pub cxid:           String,
+    pub p1_sig:         bool,
+    pub p2_sig:         bool,
+    pub arbiter_sig:    bool,
+    pub p1_amount:      u64,
+    pub p2_amount:      u64,
+    pub payoutToken:    String,
+}
+
+impl From<&PayoutRecord> for PayoutSummary {
+    fn from(cr: &PayoutRecord) -> Self {
+// harder because need to look at the psbt and check for appropriate sigs
+        PayoutSummary {
+            cxid: pr.cxid,
+            p1_sig: false,
+            p2_sig: false,
+            arbiter_sig: false,
+            p1_amount: 0,
+            p2_amount: 0,
+        }
+    }
+}
+
 fn player_cli<'a, 'b>() -> App<'a, 'b> {
     App::new("player-cli")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or("unknown"))
@@ -631,6 +657,12 @@ pub fn payout_ui<'a, 'b>() -> App<'a, 'b> {
                     .help("contract id of payout")
                     .required(true)
                     .takes_value(true)),
+            SubCommand::with_name("summary").about("show payout summary")
+                .arg(Arg::with_name("cxid")
+                    .index(1)
+                    .help("contract id")
+                    .required(true)
+                    .takes_value(true)),
             SubCommand::with_name("sign").about("sign payout tx and optionally set script sig")
                 .arg(Arg::with_name("cxid")
                     .index(1)
@@ -719,6 +751,18 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
             "details" => match DocumentUI::<PayoutRecord>::get(wallet, a.value_of("cxid").unwrap()) {
                 Some(pr) => format!("{:?}\n{:?}", pr, consensus::deserialize::<PartiallySignedTransaction>(&hex::decode(pr.clone().psbt).unwrap()).unwrap()),
                 None => format!("no such payout"),
+            }
+            "summary" => match DocumentUI::<PayoutRecord>::get(wallet, a.value_of("cxid").unwrap()) {
+                Some(pr) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::success(Some(PayoutSummary::from(&pr)))).unwrap()
+                } else {
+                    format!("{:?}", PayoutSummary::from(&pr))
+                }
+                None => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
+                } else {
+                    format!("no such payout")
+                }
             }
             "sign" => match DocumentUI::<PayoutRecord>::sign(
                     wallet,

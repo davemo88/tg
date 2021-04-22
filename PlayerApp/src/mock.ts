@@ -1,8 +1,9 @@
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, payoutSlice, selectedPlayerNameSlice, } from './redux.ts';
-import { Player, Url, Contract, Payout, } from './datatypes.ts';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, payoutSlice, selectedPlayerNameSlice, } from './redux';
+import { Player, Url, Contract, Payout, } from './datatypes';
 
 // probably still s3 somewhere
 export const STATIC_CONTENT_HOST: string = 'https://whatchadoinhere.s3.amazonaws.com/';
+// yikes
 export const TITLE_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'cc.png'; 
 export const TEST_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'test.png'; 
 export const LIVE_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'live.png'; 

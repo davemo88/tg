@@ -77,7 +77,6 @@ export const receiveContract = (name: string, password: Secret<string>) => {
             throw(response.message);
         }
         let cxid = response.data;
-        console.info("received contract:", cxid);
         if (cxid) {
             cli_output = await PlayerWalletModule.call_cli(`contract summary ${cxid}`);
             response = JSON.parse(cli_output);
@@ -146,16 +145,32 @@ export const sendPayout = async (payout: Payout) => {
 
 export const receivePayout = (name: string, password: Secret<string>) => {
     return async (dispatch, getState) => {
-        const cli_output = await PlayerWalletModule.call_cli_with_password(`payout receive ${name}`, password.expose_secret());
-        const response: JsonResponse = JSON.parse(cli_output);
+        let cli_output = await PlayerWalletModule.call_cli_with_password(`payout receive ${name}`, password.expose_secret());
+        let response: JsonResponse = JSON.parse(cli_output);
         if (response.status === "error") {
             throw(response.message);
         }
-        if (payoutSelectors.selectById(getState(), payout.cxid)) {
-            return dispatch(payoutSlice.actions.payoutUpdated(payout))
-        } else {
-            return dispatch(payoutSlice.actions.payoutAdded(payout))
-        }
+        let cxid = response.data;
+        if (cxid) {
+            cli_output = await PlayerWalletModule.call_cli(`payout summary ${cxid}`);
+            response = JSON.parse(cli_output);
+            if (response.status === "error") {
+                throw(response.message);
+            }
+            let payout = response.data;
+            console.info("received payout:", payout);
+            if (payoutSelectors.selectById(getState(), cxid)) {
+                let action = {id: cxid, changes: {
+                    p1Sig: payout.p1Sig,
+                    p2Sig: payout.p2Sig,
+                    arbiterSig: payout.arbiterSig,
+                    playerOneAmount: payout.playerOneAmount,
+                    playerTwoAmount: payout.playerTwoAmount,
+                }};
+                return dispatch(payoutSlice.actions.payoutUpdated(action))
+            } else {
+                return dispatch(payoutSlice.actions.payoutAdded(payout))
+            }
     }
 }
 

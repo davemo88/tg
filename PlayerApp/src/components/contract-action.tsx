@@ -14,6 +14,7 @@ import { Secret } from '../secret';
 import { Currency } from './currency';
 import { PlayerPortrait } from './player-portrait';
 import { PasswordEntry } from './password-entry';
+import { CheckMail } from './check-mail';
 
 export const ContractAction = (props) => {
   return(
@@ -61,27 +62,10 @@ const ActionUnsigned = (props) => {
 }
 
 const ActionSigned = (props) => {
-    const store = useStore();
-    const dispatch = useDispatch();
-    const [checking, setChecking] = React.useState(false);
-    const [password, setPassword] = React.useState(new Secret(""));
     return (
       <View>
           <Text>Waiting for other player's signature</Text>
-          <View style={{ margin: 10 }}>
-            <PasswordEntry password={password} setPassword={setPassword} />
-            <Button 
-              title="Check Mail" 
-              disabled={checking}
-              onPress={() => {
-                setChecking(true);
-                dispatch(receiveContract(store.getState().selectedPlayerName, password))
-                  .then(() => resetDetails(props.navigation, props.contract.cxid))
-                  .catch(error => console.error(error))
-                  .finally(() => setChecking(false));
-              } }
-            />
-          </View>
+          <CheckMail then={() => resetDetails(props.navigation, props.contract.cxid) } />
       </View>
     )
 }
@@ -185,9 +169,10 @@ const ActionPayoutSigned = (props) => {
     const [sending, setSending] = React.useState(false);
     return (
       <View>
-          <Text>Waiting for other player's siganture</Text>
+          <Text>Waiting for other player's signature</Text>
+          <CheckMail then={() => resetDetails(props.navigation, props.contract.cxid) } />
           <Button 
-            title="Send Contract" 
+            title="Send Payout" 
             onPress={() => {
               setSending(true);
               sendContract(props.contract)
@@ -212,14 +197,14 @@ const ActionPayoutReceived = (props) => {
         <Text>Player Two Payout: </Text><Currency amount={payout.playerTwoAmount} />
         <PasswordEntry password={password} setPassword={setPassword} />
         <Button 
-          title='Accept Payout'
+          title='Sign Payout'
           onPress={() => {
             signPayout(payout)
             resetDetails(props.navigation, props.contract.cxid);
           } }
         />
         <Button
-          title='Deny Payout'
+          title='Reject Payout'
           onPress={() => {
             denyPayout(payout.cxid)
             resetDetails(props.navigation, props.contract.cxid);

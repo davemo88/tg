@@ -247,6 +247,7 @@ pub fn signature(input: &[u8]) -> IResult<&[u8], Signature> {
     Ok((input, sig))
 }
 
+// TODO: add version
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContractRecord {
     pub cxid:           String,

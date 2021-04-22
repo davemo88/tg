@@ -17,13 +17,13 @@ export interface Contract {
 
 export interface Payout {
   cxid:             string;
-  payoutTx:         boolean;
   p1Sig:            boolean;
   p2Sig:            boolean;
   arbiterSig:       boolean;
-  payoutToken:      string;
   playerOneAmount:  number;
   playerTwoAmount:  number;
+  payoutToken:      string;
+  payoutTx:         boolean;
 }
 
 export enum ContractStatus {

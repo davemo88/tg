@@ -16,15 +16,16 @@ import { PasswordEntry } from '../password-entry';
 export const RequestPayout = ({ route, navigation }) => {
   const { cxid } = route.params;
   const contract = contractSelectors.selectById(store.getState(), cxid);
-  const playerOne = playerSelectors.selectById(store.getState(), contract.playerOneName)
-  const playerTwo = playerSelectors.selectById(store.getState(), contract.playerTwoName)
+  const playerOne = playerSelectors.selectById(store.getState(), contract.p1Name)
+  const playerTwo = playerSelectors.selectById(store.getState(), contract.p2Name)
   const selectedPlayer = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerName);
+  const selectedPlayerName = store.getState().selectedPlayerName;
   const [playerOnePayout, setPlayerOnePayout] = React.useState(contract.amount);
   const [playerTwoPayout, setPlayerTwoPayout] = React.useState(0);
   const [isArbitratedPayout, setIsArbitratedPayout] = React.useState(false);
   const toggleArbitration = () => setIsArbitratedPayout(previousState => !previousState);
   const [arbitrationToken, setArbitrationToken] = React.useState('');
-  const [password, setPassword] = React.useState(null);
+  const [password, setPassword] = React.useState(new Secret(""));
 
   const valid = () => {
     if (password !== null && (!isArbitratedPayout || (arbitrationToken != ''))) {
@@ -56,11 +57,11 @@ export const RequestPayout = ({ route, navigation }) => {
           </View>
           <Slider
             style={{ width: 200, height: 40, padding: 5, margin: 5, }}
-            value="0"
             onValueChange={ (value) => {
-              const newPLayerOnePayout = Math.floor((1-value) * contract.amount);
-              setPlayerOnePayout(newPLayerOnePayout);
-              setPlayerTwoPayout(contract.amount - newPLayerOnePayout);
+              const newPlayerOnePayout = Math.floor((1-(+value)) * contract.amount);
+              const newPlayerTwoPayout = contract.amount - newPlayerOnePayout;
+              setPlayerOnePayout(newPlayerOnePayout);
+              setPlayerTwoPayout(newPlayerTwoPayout);
             }}
           />
         </View>
@@ -91,13 +92,13 @@ export const RequestPayout = ({ route, navigation }) => {
         <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
           <Button 
             disabled={!valid()}
-            title="Send" 
+            title="Request" 
             onPress={() => {
               store.dispatch(payoutSlice.actions.payoutAdded({
                 cxid: contract.cxid,
                 payoutTx: false,
-                playerOneSig: (contract.playerOneName === selectedPlayer.name),
-                playerTwoSig: (contract.playerTwoName === selectedPlayer.name),
+                p1Sig: (contract.p1Name === selectedPlayerName),
+                p2Sig: (contract.p2Name === selectedPlayerName),
                 arbiterSig: isArbitratedPayout ? true : false,
                 payoutScriptSig: isArbitratedPayout ? true : false,
                 playerOneAmount: playerOnePayout,
