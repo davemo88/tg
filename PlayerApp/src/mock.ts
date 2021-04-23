@@ -84,7 +84,7 @@ export const broadcastFundingTx = (contract: Contract) => {
 
 export const broadcastPayoutTx = (payout: Payout) => {
   store.dispatch(payoutSlice.actions.payoutUpdated({
-    id: payout.id,
+    id: payout.cxid,
     changes: {
       tx: true,
     }

@@ -55,7 +55,7 @@ export const getContractStatus = (contract: Contract ): ContractStatus => {
 export const getPayoutStatus = (payout: Payout ): PayoutStatus => {
   const selectedPlayerName = store.getState().selectedPlayerName;
   const contract = contractSelectors.selectById(store.getState(), payout.cxid);
-  if (payout.payoutTx) {
+  if (payout.tx) {
     return PayoutStatus.Resolved;
   }
   else if (
@@ -76,7 +76,7 @@ export const getPayoutStatus = (payout: Payout ): PayoutStatus => {
   }
 }
 
-export const isContractSignedBy = (contract: Contract | Payout, playerName: PlayerName): bool => {
+export const isContractSignedBy = (contract: Contract | Payout, playerName: string): bool => {
   return (
     ((contract.p1Name === playerName) && contract.p1Sig)
     ||
@@ -84,7 +84,7 @@ export const isContractSignedBy = (contract: Contract | Payout, playerName: Play
   )
 }
 
-export const isPayoutSignedBy = (payout:  Payout, playerName: PlayerName): bool => {
+export const isPayoutSignedBy = (payout:  Payout, playerName: string): bool => {
   const contract = contractSelectors.selectById(store.getState(), payout.cxid);
   return (
     ((contract.p1Name === playerName) && payout.p1Sig)
