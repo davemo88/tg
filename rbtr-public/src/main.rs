@@ -51,7 +51,6 @@ use tglib::{
     },
     hex,
     log::{
-        info,
         error,
         LevelFilter,
     },
@@ -229,7 +228,10 @@ async fn send_contract_handler(body: SendContractBody, redis_client: redis::Clie
     let r: RedisResult<String> = con.rpush(&format!("{}/contracts", body.player_name), serde_json::to_string(&body.contract).unwrap()).await;
     match r {
         Ok(_string) => Ok("sent contract".to_string()),
-        Err(_) => Err(warp::reject()),
+        Err(e) => {
+            error!("send contract redis error: {:?}", e);
+            Err(warp::reject())
+        }
     }
 }
 
@@ -248,12 +250,11 @@ async fn receive_contract_handler(auth: AuthTokenSig, redis_client: redis::Clien
 
 async fn send_payout_handler(body: SendPayoutBody, redis_client: redis::Client) -> WebResult<impl Reply> {
     let mut con = redis_client.get_async_connection().await.unwrap();
-    info!("payout {:?} sent to {}", body.payout, body.player_name);
     let r: RedisResult<String> = con.rpush(&format!("{}/payouts", body.player_name.0), serde_json::to_string(&body.payout).unwrap()).await;
     match r {
         Ok(_string) => Ok("sent payout".to_string()),
         Err(e) => {
-            error!("couldn't push to payout list: {:?}", e);
+            error!("send payout redis error {:?}", e);
             Err(warp::reject())
         }
     }

@@ -116,19 +116,12 @@ impl ArbiterService for ArbiterClient {
 
     fn receive_contract(&self, auth: AuthTokenSig) -> Result<Option<ContractRecord>> {
         let response = self.post("receive-contract", serde_json::to_string(&auth)?)?; 
-        let contract_record = match serde_json::from_str::<ContractRecord>(&response.text().unwrap()) {
-                Ok(contract_record) => Some(contract_record),
-                Err(_) => None,
-            };
-        Ok(contract_record)
+        Ok(serde_json::from_str::<ContractRecord>(&response.text()?).ok())
     }
 
     fn receive_payout(&self, auth: AuthTokenSig) -> Result<Option<PayoutRecord>> {
-        let response = self.post("receive-payout", serde_json::to_string(&auth).unwrap())?;
-
-        let response_text = response.text().unwrap();
-        let payout_record = serde_json::from_str::<PayoutRecord>(&response_text)?;
-        Ok(Some(payout_record))
+        let response = self.post("receive-payout", serde_json::to_string(&auth)?)?;
+        Ok(serde_json::from_str::<PayoutRecord>(&response.text()?).ok())
     }
 
     fn submit_contract(&self, contract: &Contract) -> Result<Signature> {

@@ -36,9 +36,9 @@ export const arbiterSignContract = (contract: Contract) => {
 }
 
 export const arbiterSignPayout = (payout: Payout) => {
-  if (payout.payoutToken) {
+  if (payout.token) {
     store.dispatch(payoutSlice.actions.payoutUpdated({
-      id: payout.id,
+      id: payout.cxid,
       changes: { arbiterSig: true },
     }));
   }
@@ -47,31 +47,6 @@ export const arbiterSignPayout = (payout: Payout) => {
 //
 // below functions need crypto wallet functions
 //
-
-export const newPlayer = (playerName: string, pictureUrl: Url) => {
-  store.dispatch(playerSlice.actions.playerAdded({ name: playerName, pictureUrl: pictureUrl }));
-}
-
-export const createContract = (contract: Contract) => {
-  store.dispatch
-}
-
-export const createPayout = (contract: Contract) => {
-  store.dispatch
-}
-
-export const signPayout = (payout: Payout) => {
-  const selectedPlayerName = store.getState().selectedPlayerName;
-  const contract = contractSelectors.selectById(store.getState(), payout.cxid);
-  let action = {id: payout.id, changes: {}};
-  if (contract.playerOneName === selectedPlayerName) {
-    action.changes.playerOneSig = true;
-  }
-  else if (contract.playerTwoName === selectedPlayerName) {
-    action.changes.playerTwoSig = true;
-  }
-  store.dispatch(payoutSlice.actions.payoutUpdated(action));
-}
 
 export const broadcastFundingTx = (contract: Contract) => {
   store.dispatch(contractSlice.actions.contractUpdated({
