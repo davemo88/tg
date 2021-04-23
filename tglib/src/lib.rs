@@ -60,3 +60,9 @@ impl From<bdk::Error> for Error {
         Error::Bdk(error)
     }
 }
+
+impl From<bdk::wallet::signer::SignerError> for Error {
+    fn from(error: bdk::wallet::signer::SignerError) -> Self {
+        Error::Bdk(error.into())
+    }
+}

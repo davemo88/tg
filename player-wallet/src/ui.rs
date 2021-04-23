@@ -427,8 +427,8 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
             _ => return Err(Error::Adhoc("invalid params").into()),
         };
         if let Some(pr) = self.db().get_payout(&cxid) {
-            let psbt: PartiallySignedTransaction = consensus::deserialize(&hex::decode(pr.psbt).unwrap()).unwrap();
-            let psbt = sign_payout_psbt(self, psbt, pw).unwrap();
+            let psbt: PartiallySignedTransaction = consensus::deserialize(&hex::decode(pr.psbt)?)?;
+            let psbt = sign_payout_psbt(self, psbt, pw)?;
             let psbt = hex::encode(consensus::serialize(&psbt));
             self.db().insert_payout(PayoutRecord {
                 cxid: pr.cxid, 

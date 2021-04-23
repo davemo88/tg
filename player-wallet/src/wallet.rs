@@ -367,15 +367,8 @@ impl SigningWallet for PlayerWallet {
                 let secp = Secp256k1::new();
                 let signing_key = account_key.derive_priv(&secp, &path).unwrap();
                 let mut maybe_signed = psbt.clone();
-                match &signing_key.private_key.sign_tx(&mut maybe_signed, &secp) {
-                    Ok(()) => {
-                        Ok(maybe_signed)
-                    }
-                    Err(e) => {
-                        println!("err: {:?}", e);
-                        Err(TgError::Adhoc("cannot sign transaction"))
-                    }
-                }
+                signing_key.private_key.sign_tx(&mut maybe_signed, &secp)?;
+                Ok(maybe_signed)
             }
             None => {
                 let signing_wallet = self.signing_wallet(pw)?;

@@ -86,7 +86,7 @@ export const broadcastPayoutTx = (payout: Payout) => {
   store.dispatch(payoutSlice.actions.payoutUpdated({
     id: payout.id,
     changes: {
-      payoutTx: true,
+      tx: true,
     }
   }));
 
