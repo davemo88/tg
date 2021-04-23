@@ -71,7 +71,7 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 impl PlayerWallet {
     fn get_auth(&self, player_name: &PlayerName, pw: Secret<String>) -> Result<AuthTokenSig> {
-        let token = self.arbiter_client().get_auth_token(&player_name).unwrap();
+        let token = self.arbiter_client().get_auth_token(&player_name)?;
         let sig = self.sign_message(
             Message::from_slice(&token).unwrap(), 
             DerivationPath::from_str(&format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX)).unwrap(),
@@ -188,12 +188,12 @@ impl PlayerUI for PlayerWallet {
         let mut utxos = vec!();
         let mut total: u64 = 0;
         let wallet = self.offline_wallet();
-        for utxo in wallet.list_unspent().unwrap() {
+        for utxo in wallet.list_unspent()? {
             if total >= amount.as_sat() {
                 break
             } else {
                 total += utxo.txout.value;
-                let psbt_input = wallet.get_psbt_input(utxo.clone(), None, false).unwrap();
+                let psbt_input = wallet.get_psbt_input(utxo.clone(), None, false)?;
                 utxos.push((utxo.outpoint, utxo.txout.value, psbt_input));
             }
         }
@@ -203,11 +203,11 @@ impl PlayerUI for PlayerWallet {
         let info = PlayerContractInfo {
             name,
             escrow_pubkey: self.get_escrow_pubkey(),
-            change_address: wallet.get_new_address().unwrap(),
+            change_address: wallet.get_new_address()?,
             utxos,
         };
 
-        let sig = self.sign_message(Message::from_slice(&info.hash()).unwrap(), DerivationPath::from_str(&format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX)).unwrap(), pw).unwrap();
+        let sig = self.sign_message(Message::from_slice(&info.hash()).unwrap(), DerivationPath::from_str(&format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX)).unwrap(), pw)?;
 
         let _r = self.arbiter_client().set_contract_info(info, self.name_pubkey(), sig);
         Ok(())
@@ -327,12 +327,12 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
         let contract_record = DocumentUI::<ContractRecord>::get(self, cxid).ok_or(Error::Adhoc("unknown contract"))?;
         Ok(self.arbiter_client().send_contract(
             contract_record.clone(),
-            self.get_other_player_name(&contract_record).unwrap(),
+            self.get_other_player_name(&contract_record)?,
         )?)
     }
 
     fn receive(&self, player_name: PlayerName, pw: Secret<String>) -> Result<Option<String>> {
-        let auth = self.get_auth(&player_name, pw).unwrap();
+        let auth = self.get_auth(&player_name, pw)?;
         let received = self.arbiter_client().receive_contract(auth)?;
         if let Some(contract_record) = received {
             let _changes = self.db().insert_contract(contract_record.clone())?;
@@ -344,7 +344,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
 
     fn submit(&self, cxid: &str) -> Result<()> {
         if let Some(cr) = self.db().get_contract(&cxid) {
-            let mut contract = Contract::from_bytes(hex::decode(cr.hex.clone()).unwrap()).unwrap();
+            let mut contract = Contract::from_bytes(hex::decode(cr.hex.clone())?)?;
             if let Ok(sig) = self.arbiter_client().submit_contract(&contract) {
                contract.sigs.push(sig);
                let _r = self.db().add_signature(cr.cxid, hex::encode(contract.to_bytes()));
@@ -361,7 +361,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
 
     fn broadcast(&self, cxid: &str) -> Result<()> {
         if let Some(cr) = self.db().get_contract(&cxid) {
-            let contract = Contract::from_bytes(hex::decode(cr.hex.clone()).unwrap()).unwrap();
+            let contract = Contract::from_bytes(hex::decode(cr.hex.clone())?)?;
             let _r = self.wallet()?.broadcast(contract.funding_tx.extract_tx());
             Ok(())
         } else {
@@ -437,7 +437,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
                     Some(sig) => hex::encode(sig.serialize_der()),
                     None => String::default(),
                 }
-            }).unwrap();
+            })?;
             Ok(())
         }
         else {
@@ -455,7 +455,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
     }
 
     fn receive(&self, player_name: PlayerName, pw: Secret<String>) -> Result<Option<String>> {
-        let auth = self.get_auth(&player_name, pw).unwrap();
+        let auth = self.get_auth(&player_name, pw)?;
         let received = self.arbiter_client().receive_payout(auth)?;
         if let Some(payout_record) = received {
             let _changes = self.db().insert_payout(payout_record.clone())?;
@@ -487,7 +487,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
 
     fn broadcast(&self, cxid: &str) -> Result<()> {
          if let Some(pr) = self.db().get_payout(&cxid) {
-             let tx: PartiallySignedTransaction = consensus::deserialize(&hex::decode(pr.psbt).unwrap()).unwrap();
+             let tx: PartiallySignedTransaction = consensus::deserialize(&hex::decode(pr.psbt)?)?;
              let _r = self.wallet()?.broadcast(tx.extract_tx());
              Ok(())
          }
