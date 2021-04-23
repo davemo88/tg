@@ -33,6 +33,7 @@ use tglib::{
         NETWORK,
         SEED_NAME,
     },
+    JsonResponse,
 };
 use player_wallet::{
     ui::{
@@ -44,38 +45,6 @@ use player_wallet::{
     },
     wallet::PlayerWallet,
 };
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Status {
-    Success,
-    Error,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-struct JsonResponse<T: Serialize> {
-    status: Status,
-    data: Option<T>,
-    message: Option<String>,
-}
-
-impl<T: Serialize> JsonResponse<T> {
-    fn success(data: Option<T>) -> Self {
-        JsonResponse {
-            status: Status::Success,
-            data,
-            message: None,
-        }
-    }
-    
-    fn error(message: String, data: Option<T>) -> Self {
-        JsonResponse {
-            status: Status::Error,
-            data,
-            message: Some(message),
-        }
-    }
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

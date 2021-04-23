@@ -112,7 +112,6 @@ pub struct SubmitPayoutBody {
     pub payout_hex: String,
 }
 
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuthTokenSig {
     pub player_name: PlayerName,

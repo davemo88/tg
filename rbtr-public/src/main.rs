@@ -120,19 +120,17 @@ async fn push_payout(con: &mut Connection, hex: &str) -> RedisResult<String> {
     Ok(String::from(hex))
 }
 
-async fn controls_name(pubkey: &PublicKey, player_name: &PlayerName) -> Result<bool> {
+async fn controls_name(pubkey: &PublicKey, player_name: &PlayerName) -> reqwest::Result<bool> {
     match reqwest::get(&format!("{}/{}/{}", NAME_SERVICE_URL, "get-name-address", hex::encode(player_name.0.as_bytes()))).await {
         Ok(response) => match response.text().await {
             Ok(name_address) => Ok(get_namecoin_address(pubkey, NETWORK) == name_address), 
-            Err(_) => {
-                let e = Error::Adhoc("controls name response failed to parse");
-                error!("{}", e);
+            Err(e) => {
+                error!("{:?}", e);
                 Err(e)
             },
         },
-        Err(_) => {
-            let e = Error::Adhoc("controls name request to name service failed");
-            error!("{}", e);
+        Err(e) => {
+            error!("{:?}", e);
             Err(e)
         }
     }
@@ -167,7 +165,7 @@ async fn submit_contract(con: &mut Connection, contract: &Contract) -> Result<Si
         }
     }
     let e = Error::InvalidContract("arbiter rejected contract");
-    error!("{}",e);
+    error!("{:?}", e);
     Err(e)
 }
 
@@ -184,7 +182,7 @@ async fn submit_payout(con: &mut Connection, payout: &Payout) -> Result<Partiall
         }
     }
     let e = Error::InvalidPayout("arbiter rejected payout");
-    error!("{}",e);
+    error!("{:?}", e);
     Err(e)
 }
 
@@ -193,9 +191,11 @@ async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redi
 //    controls_name(&body.pubkey, &body.contract_info.name).await?;
     match controls_name(&body.pubkey, &body.contract_info.name).await {
         Ok(true) => (),
-        _ => {
-            return Err(warp::reject());
-        },
+        Ok(false) => return Err(warp::reject()),
+        Err(e) => {
+            error!("{:?}", e);
+            return Err(warp::reject())
+        }
     }
  
     let secp = Secp256k1::new();
@@ -211,7 +211,10 @@ async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redi
         Ok(_string) => {
             Ok(format!("set contract info for {}", body.contract_info.name.0))
         },
-        Err(_) => Err(warp::reject()),
+        Err(e) => {
+            error!("{:?}", e);
+            Err(warp::reject())
+        }
     }
 }
 
@@ -220,7 +223,10 @@ async fn get_contract_info_handler(player_name: String, redis_client: redis::Cli
     let r: RedisResult<String> = con.get(&String::from_utf8(hex::decode(player_name).unwrap()).unwrap()).await;
     match r {
         Ok(info) => Ok(info),
-        Err(_) => Err(warp::reject()),
+        Err(e) => {
+            error!("{:?}", e);
+            Err(warp::reject())
+        }
     }
 }
 
@@ -248,7 +254,10 @@ async fn receive_contract_handler(auth: AuthTokenSig, redis_client: redis::Clien
     let r: RedisResult<String> = con.lpop(&format!("{}/contracts", auth.player_name.0)).await;
     match r {
         Ok(contract_json) => Ok(contract_json),
-        Err(_) => Err(warp::reject()),
+        Err(e) => {
+            error!("check auth token failed: {:?}", e);
+            Err(warp::reject())
+        }
     }
 }
 
@@ -304,10 +313,12 @@ async fn submit_contract_handler(body: SubmitContractBody, redis_client: redis::
 async fn submit_payout_handler(body: SubmitPayoutBody, redis_client: redis::Client) -> WebResult<impl Reply> {
     let mut con = redis_client.get_async_connection().await.unwrap();
     let payout = Payout::from_bytes(hex::decode(body.payout_hex).unwrap()).unwrap();
-    if let Ok(tx) = submit_payout(&mut con, &payout).await {
-        Ok(hex::encode(consensus::serialize(&tx)))
-    } else {
-        Err(warp::reject())
+    match submit_payout(&mut con, &payout).await {
+        Ok(tx) => Ok(hex::encode(consensus::serialize(&tx))),
+        Err(e) => {
+            error!("{:?}", e);
+            Err(warp::reject())
+        }
     }
 }
 
@@ -327,7 +338,10 @@ async fn auth_token_handler(player_name: String, redis_client: redis::Client) ->
     let r: RedisResult<String> = con.set_ex(format!("{}/token", player_name), token.clone(), AUTH_TOKEN_LIFETIME).await;
     match r {
         Ok(_) => Ok(token),
-        Err(_) => Err(warp::reject()),
+        Err(e) => {
+            error!("{:?}", e);
+            Err(warp::reject())
+        }
     }
 }
 

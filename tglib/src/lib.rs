@@ -19,6 +19,10 @@ pub mod script;
 pub mod wallet;
 
 use std::fmt;
+use serde::{
+    Serialize,
+    Deserialize,
+};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -64,5 +68,37 @@ impl From<bdk::Error> for Error {
 impl From<bdk::wallet::signer::SignerError> for Error {
     fn from(error: bdk::wallet::signer::SignerError) -> Self {
         Error::Bdk(error.into())
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Status {
+    Success,
+    Error,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct JsonResponse<T: Serialize> {
+    status: Status,
+    data: Option<T>,
+    message: Option<String>,
+}
+
+impl<T: Serialize> JsonResponse<T> {
+    pub fn success(data: Option<T>) -> Self {
+        JsonResponse {
+            status: Status::Success,
+            data,
+            message: None,
+        }
+    }
+    
+    pub fn error(message: String, data: Option<T>) -> Self {
+        JsonResponse {
+            status: Status::Error,
+            data,
+            message: Some(message),
+        }
     }
 }
