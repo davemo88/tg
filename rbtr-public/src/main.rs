@@ -52,6 +52,7 @@ use tglib::{
     hex,
     log::{
         error,
+        info,
         LevelFilter,
     },
     rand::{self, Rng},
@@ -225,9 +226,12 @@ async fn get_contract_info_handler(player_name: String, redis_client: redis::Cli
 
 async fn send_contract_handler(body: SendContractBody, redis_client: redis::Client) -> WebResult<impl Reply> {
     let mut con = redis_client.get_async_connection().await.unwrap();
-    let r: RedisResult<String> = con.rpush(&format!("{}/contracts", body.player_name), serde_json::to_string(&body.contract).unwrap()).await;
+    let r: RedisResult<i64> = con.rpush(&format!("{}/contracts", body.player_name), serde_json::to_string(&body.contract).unwrap()).await;
     match r {
-        Ok(_string) => Ok("sent contract".to_string()),
+        Ok(_string) => {
+            info!("{}",_string);
+            Ok("sent contract".to_string())
+        }
         Err(e) => {
             error!("send contract redis error: {:?}", e);
             Err(warp::reject())
@@ -250,7 +254,7 @@ async fn receive_contract_handler(auth: AuthTokenSig, redis_client: redis::Clien
 
 async fn send_payout_handler(body: SendPayoutBody, redis_client: redis::Client) -> WebResult<impl Reply> {
     let mut con = redis_client.get_async_connection().await.unwrap();
-    let r: RedisResult<String> = con.rpush(&format!("{}/payouts", body.player_name.0), serde_json::to_string(&body.payout).unwrap()).await;
+    let r: RedisResult<i64> = con.rpush(&format!("{}/payouts", body.player_name.0), serde_json::to_string(&body.payout).unwrap()).await;
     match r {
         Ok(_string) => Ok("sent payout".to_string()),
         Err(e) => {
