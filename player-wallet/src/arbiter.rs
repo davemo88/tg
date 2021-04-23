@@ -127,9 +127,7 @@ impl ArbiterService for ArbiterClient {
         let response = self.post("receive-payout", serde_json::to_string(&auth).unwrap())?;
 
         let response_text = response.text().unwrap();
-        println!("received payout: {}",response_text);
         let payout_record = serde_json::from_str::<PayoutRecord>(&response_text)?;
-//        let payout_record = serde_json::from_str::<PayoutRecord>(&response.text().unwrap())?;
         Ok(Some(payout_record))
     }
 

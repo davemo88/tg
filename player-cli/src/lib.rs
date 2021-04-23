@@ -587,8 +587,8 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 Ok(cxid) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::success(cxid)).unwrap()
                 } else {
-                    if cxid.is_some() {
-                        format!("contract received")
+                    if let Some(cxid) = cxid {
+                        format!("contract {} received", cxid)
                     } else {
                         format!("no contract to receive")
                     }
@@ -804,8 +804,16 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 }
             }
             "send" => match DocumentUI::<PayoutRecord>::send(wallet, a.value_of("cxid").unwrap()) {
-                Ok(()) => format!("payout sent"),
-                Err(e) => format!("{}", e),
+                Ok(()) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
+                } else {
+                    format!("payout sent")
+                }
+                Err(e) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
+                } else {
+                    format!("{:?}", e)
+                }
             }
             "receive" => match DocumentUI::<PayoutRecord>::receive(
                 wallet, 
@@ -814,8 +822,8 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 Ok(cxid) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::success(cxid)).unwrap()
                 } else {
-                    if cxid.is_some() {
-                        format!("payout received")
+                    if let Some(cxid) = cxid {
+                        format!("payout {} received", cxid)
                     } else {
                         format!("no payout to receive")
                     }

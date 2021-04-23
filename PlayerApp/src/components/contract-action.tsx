@@ -6,7 +6,7 @@ import { styles } from '../styles';
 
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, payoutSlice, selectedPlayerNameSlice, } from '../redux';
 import { Player, Contract, ContractStatus, } from '../datatypes';
-import { receiveContract, sendContract, signContract, submitContract, signPayout } from '../wallet';
+import { receiveContract, sendContract, signContract, submitContract, sendPayout, signPayout, } from '../wallet';
 import { getContractStatus } from '../dump';
 import { broadcastFundingTx, broadcastPayoutTx, declineContract, dismissContract, denyPayout, } from '../mock';
 
@@ -175,7 +175,7 @@ const ActionPayoutSigned = (props) => {
             title="Send Payout" 
             onPress={() => {
               setSending(true);
-              sendContract(props.contract)
+              sendPayout(props.contract)
                 .then(() => resetDetails(props.navigation, props.contract.cxid))
                 .catch(error => console.error(error))
                 .finally(() => setSending(false));
