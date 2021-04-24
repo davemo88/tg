@@ -43,19 +43,16 @@ export const getPosted = async (name: string) => {
 }
 
 export const signContract = (contract: Contract, password: Secret<string>) => {
-    return async (dispatch) => {
-        const selectedPlayerName = store.getState().selectedPlayerName;
-        let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`contract sign ${contract.cxid}`, password.expose_secret()));
+    return async (dispatch, getState) => {
+        const selectedPlayerName = getState().selectedPlayerName;
+        let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`contract sign ${contract.cxid} --sign-funding-tx`, password.expose_secret()));
         if (response.status === "error") {
             throw(response.message);
         }
-        let action = {id: contract.cxid, changes: {}};
-        if (contract.p1Name === selectedPlayerName) {
-            action.changes.p1Sig = true;
-        }
-        else if (contract.p2Name === selectedPlayerName) {
-            action.changes.p2Sig = true;
-        }
+        let action = {id: contract.cxid, changes: {
+            p1Sig: selectedPlayerName === contract.p1Name,
+            p2Sig: selectedPlayerName === contract.p2Name,
+        }};
         return dispatch(contractSlice.actions.contractUpdated(action))
     }
 }
@@ -86,10 +83,11 @@ export const receiveContract = (name: string, password: Secret<string>) => {
             let contract = response.data;
             console.info("received contract:", contract);
             if (contractSelectors.selectById(getState(), cxid)) {
-                let action = {id: contract.cxid, changes: {}};
-                action.changes.p1Sig = contract.p1Sig;
-                action.changes.p2Sig = contract.p2Sig;
-                action.changes.arbiterSig = contract.arbiterSig;
+                let action = {id: contract.cxid, changes: {
+                    p1Sig: contract.p1Sig,
+                    p2Sig: contract.p2Sig,
+                    arbiterSig: contract.arbiterSig,
+                }};
                 return dispatch(contractSlice.actions.contractUpdated(action))
             } else {
                 return dispatch(contractSlice.actions.contractAdded(contract))
@@ -116,21 +114,20 @@ export const createPayout = (contract: Contract) => {
 }
 
 export const signPayout = (payout: Payout, password: Secret<string>) => {
-    return async (dispatch) => {
-        const selectedPlayerName = store.getState().selectedPlayerName;
+    return async (dispatch, getState) => {
+        const selectedPlayerName = getState().selectedPlayerName;
         let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`payout sign ${payout.cxid}`, password.expose_secret()));
         if (response.status === "error") {
             throw(response.message);
         }
-        const contract = contractSelectors.selectById(store.getState(), payout.cxid);
-        let action = {id: payout.cxid, changes: {}};
-        if (contract.p1Name === selectedPlayerName) {
-            action.changes.p1Sig = true;
+        const contract = contractSelectors.selectById(getState(), payout.cxid);
+        if (contract) {
+            let action = {id: payout.cxid, changes: {
+                p1Sig: selectedPlayerName === contract.p1Name,
+                p2Sig: selectedPlayerName === contract.p2Name,
+            }};
+            return dispatch(payoutSlice.actions.payoutUpdated(action))
         }
-        else if (contract.p2Name === selectedPlayerName) {
-            action.changes.p2Sig = true;
-        }
-        return dispatch(payoutSlice.actions.payoutUpdated(action))
     }
 }
 
