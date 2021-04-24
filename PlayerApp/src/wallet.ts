@@ -174,21 +174,21 @@ export const receivePayout = (name: string, password: Secret<string>) => {
 }
 
 export const broadcastFundingTx = (contract: Contract) => {
-  store.dispatch(contractSlice.actions.contractUpdated({
-    id: contract.cxid,
-    changes: {
-      fundingTx: true,
+    const cli_output = await PlayerWalletModule.call_cli(`contract broadcast ${contract.cxid}`);
+    const response: JsonResponse = JSON.parse(cli_output);
+    if (response.status === "error") {
+        throw(response.message);
     }
-  }));
+    return Promise.resolve(null)
 }
 
 export const broadcastPayoutTx = (payout: Payout) => {
-  store.dispatch(payoutSlice.actions.payoutUpdated({
-    id: payout.cxid,
-    changes: {
-      tx: true,
+    const cli_output = await PlayerWalletModule.call_cli(`payout broadcast ${payout.cxid}`);
+    const response: JsonResponse = JSON.parse(cli_output);
+    if (response.status === "error") {
+        throw(response.message);
     }
-  }));
+    return Promise.resolve(null)
 }
 
 // delete some local data? set flag in db more likely
