@@ -335,7 +335,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
         let auth = self.get_auth(&player_name, pw)?;
         let received = self.arbiter_client().receive_contract(auth)?;
         if let Some(contract_record) = received {
-            let _changes = self.db().insert_contract(contract_record.clone())?;
+            self.db().insert_contract(contract_record.clone())?;
             Ok(Some(contract_record.cxid))
         } else {
             Ok(None)
@@ -362,7 +362,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
     fn broadcast(&self, cxid: &str) -> Result<()> {
         if let Some(cr) = self.db().get_contract(&cxid) {
             let contract = Contract::from_bytes(hex::decode(cr.hex.clone())?)?;
-            let _r = self.wallet()?.broadcast(contract.funding_tx.extract_tx());
+            self.wallet()?.broadcast(contract.funding_tx.extract_tx())?;
             Ok(())
         } else {
             Err(Error::Adhoc("unknown contract").into())
@@ -488,7 +488,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
     fn broadcast(&self, cxid: &str) -> Result<()> {
          if let Some(pr) = self.db().get_payout(&cxid) {
              let tx: PartiallySignedTransaction = consensus::deserialize(&hex::decode(pr.psbt)?)?;
-             let _r = self.wallet()?.broadcast(tx.extract_tx());
+             self.wallet()?.broadcast(tx.extract_tx())?;
              Ok(())
          }
          else {
