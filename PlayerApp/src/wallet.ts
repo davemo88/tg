@@ -173,7 +173,7 @@ export const receivePayout = (name: string, password: Secret<string>) => {
     }
 }
 
-export const broadcastFundingTx = (contract: Contract) => {
+export const broadcastFundingTx = async (contract: Contract) => {
     const cli_output = await PlayerWalletModule.call_cli(`contract broadcast ${contract.cxid}`);
     const response: JsonResponse = JSON.parse(cli_output);
     if (response.status === "error") {
@@ -182,7 +182,7 @@ export const broadcastFundingTx = (contract: Contract) => {
     return Promise.resolve(null)
 }
 
-export const broadcastPayoutTx = (payout: Payout) => {
+export const broadcastPayoutTx = async (payout: Payout) => {
     const cli_output = await PlayerWalletModule.call_cli(`payout broadcast ${payout.cxid}`);
     const response: JsonResponse = JSON.parse(cli_output);
     if (response.status === "error") {
