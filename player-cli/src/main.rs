@@ -4,17 +4,13 @@ use std::{
 };
 use rustyline::Editor;
 use rustyline::error::ReadlineError;
-use tglib::{
-    bdk::Error,
-    mock::NETWORK,
-};
+use tglib::mock::NETWORK;
 
-use libcli;
-
-fn main() -> Result<(), Error> {
+fn main() {
 
     let work_dir: PathBuf = current_dir().unwrap();
-    let mut history_file = work_dir.clone();
+//    let mut history_file = work_dir.clone();
+    let mut history_file = work_dir;
     history_file.push(&NETWORK.to_string());
     history_file.push("history.txt");
     let history_file = history_file.as_path();
@@ -54,6 +50,4 @@ fn main() -> Result<(), Error> {
     rl.save_history(history_file).unwrap();
     println!("stopping");
     println!("stopped");
-
-    Ok(())
 }

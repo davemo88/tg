@@ -6,8 +6,6 @@ use std::{
 };
 use serde::{Deserialize, Serialize};
 use clap::{App, Arg, ArgMatches, SubCommand, AppSettings};
-use serde_json;
-use shell_words;
 use tglib::{
     bdk::bitcoin::{
         consensus,
@@ -68,7 +66,7 @@ impl From<&ContractRecord> for ContractSummary {
             p2_name: cr.p2_name.clone(),
             amount: contract.amount().unwrap().as_sat(),
             desc: cr.desc.clone(),
-            p1_sig: contract.sigs.len() > 0,
+            p1_sig: !contract.sigs.is_empty(),
             p2_sig: contract.sigs.len() > 1,
             arbiter_sig: contract.sigs.len() > 2,
         }
@@ -174,8 +172,8 @@ pub fn cli(line: String, conf: Conf) -> String {
         Err(e) => return format!("invalid command: {:?}", e),
     };
     let matches = player_cli().get_matches_from_safe(split_line);
-    if matches.is_ok() {
-        if let (c, Some(a)) = matches.unwrap().subcommand() {
+    if let Ok(matches) = matches {
+        if let (c, Some(a)) = matches.subcommand() {
 
             let wallet_dir = match a.value_of("wallet-dir") {
                 Some(p) => PathBuf::from(p),
@@ -186,7 +184,7 @@ pub fn cli(line: String, conf: Conf) -> String {
             seed_path.push(SEED_NAME);
             let _saved_seed: SavedSeed = match File::open(&seed_path) {
                 Ok(reader) => match c {
-                    "init" => return format!("cannot init, seed already exists"),
+                    "init" => return "cannot init, seed already exists".to_string(),
                     _ => serde_json::from_reader(reader).unwrap(),
                 }
                 Err(_) => match c {
@@ -206,9 +204,9 @@ pub fn cli(line: String, conf: Conf) -> String {
 //                            Ok(mut writer) => writer.write_all(serde_json::to_string(&new_seed).unwrap().as_bytes()).unwrap(),
                             Err(e) => return format!("{:?}", e),
                         };
-                        return format!("wallet initialized")
+                        return "wallet initialized".to_string()
                     }
-                    _ => return format!("no seed. initialize wallet first"),
+                    _ => return "no seed. initialize wallet first".to_string(),
                 }
             };
 
@@ -226,7 +224,7 @@ pub fn cli(line: String, conf: Conf) -> String {
                 _ => format!("command '{}' is not implemented", c),
             }
         } else { 
-            format!("invalid command") 
+            "invalid command".to_string()
         }
     } else {
         let err = matches.err().unwrap();
@@ -294,7 +292,7 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
 // TODO: if not returning data, need to specify a dummy type
                     serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
                 } else {
-                    format!("registered player")
+                    "registered player".to_string()
                 }
                 Err(e) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
@@ -303,11 +301,11 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 }
             }
             "add" => match wallet.add(PlayerName(a.value_of("name").unwrap().to_string())) {
-                Ok(()) => format!("added player"),
+                Ok(()) => "added player".to_string(),
                 Err(e) => format!("{}", e),
             }
             "remove" => match wallet.remove(PlayerName(a.value_of("name").unwrap().to_string())) {
-                Ok(()) => format!("removed player"),
+                Ok(()) => "removed player".to_string(),
                 Err(e) => format!("{}", e),
             }
             "list" => if a.is_present("json-output") {
@@ -325,7 +323,7 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
 // TODO: if not returning data, need to specify a dummy type
                     serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
                 } else {
-                    format!("posted contract info")
+                    "posted contract info".to_string()
                 }
                 Err(e) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
@@ -342,7 +340,7 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 Ok(None) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::success(Some(0))).unwrap()
                 } else {
-                    format!("no info posted")
+                    "no info posted".to_string()
                 }
                 Err(e) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
@@ -353,7 +351,7 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
             _ => format!("command '{}' is not implemented", c),
         }
     }
-    else { format!("invalid command") }
+    else { "invalid command".to_string() }
 }
 
 pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
@@ -496,16 +494,16 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
             }
             "import" => match DocumentUI::<ContractRecord>::import(wallet, &a.value_of("contract-value").unwrap()) {
 // TODO: print cxid of imported contract
-                Ok(()) => format!("contract imported"),
+                Ok(()) => "contract imported".to_string(),
                 Err(e) => format!("{}", e),
             }
             "export" => match DocumentUI::<ContractRecord>::export(wallet, &a.value_of("cxid").unwrap()) {
-                Some(hex) => format!("{}", hex),
-                None => format!("no such contract"),
+                Some(hex) => hex,
+                None => "no such contract".to_string(),
             }
             "details" => match DocumentUI::<ContractRecord>::get(wallet, a.value_of("cxid").unwrap()) {
                 Some(cr) => format!("{:?}\n{:?}", cr, Contract::from_bytes(hex::decode(&cr.hex).unwrap()).unwrap()),
-                None => format!("no such contract"),
+                None => "no such contract".to_string(),
             }
             "summary" => match DocumentUI::<ContractRecord>::get(wallet, a.value_of("cxid").unwrap()) {
                 Some(cr) => if a.is_present("json-output") {
@@ -516,7 +514,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 None => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
                 } else {
-                    format!("no such contract")
+                    "no such contract".to_string()
                 }
             }
             "sign" => match DocumentUI::<ContractRecord>::sign(
@@ -529,7 +527,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 Ok(()) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
                 } else {
-                    format!("contract signed")
+                    "contract signed".to_string()
                 }
                 Err(e) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
@@ -541,7 +539,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 Ok(()) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
                 } else {
-                    format!("contract sent")
+                    "contract sent".to_string()
                 }
                 Err(e) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
@@ -555,12 +553,10 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 Secret::new(a.value_of("password").unwrap().to_owned())) {
                 Ok(cxid) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::success(cxid)).unwrap()
+                } else  if let Some(cxid) = cxid {
+                    format!("contract {} received", cxid)
                 } else {
-                    if let Some(cxid) = cxid {
-                        format!("contract {} received", cxid)
-                    } else {
-                        format!("no contract to receive")
-                    }
+                    "no contract to receive".to_string()
                 }
                 Err(e) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
@@ -572,7 +568,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 Ok(()) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
                 } else {
-                    format!("submission accepted")
+                    "submission accepted".to_string()
                 }
                 Err(e) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
@@ -581,11 +577,11 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 }
             }
             "broadcast" => match DocumentUI::<ContractRecord>::broadcast(wallet, a.value_of("cxid").unwrap()) {
-                Ok(()) => format!("funding tx broadcasted to network"),
+                Ok(()) => "funding tx broadcasted to network".to_string(),
                 Err(e) => format!("{}", e),
             }
             "delete" => match DocumentUI::<ContractRecord>::delete(wallet, a.value_of("cxid").unwrap()) {
-                Ok(()) => format!("contract deleted"),
+                Ok(()) => "contract deleted".to_string(),
                 Err(e) => format!("{}", e),
             }
             "list" => if a.is_present("json-output") {
@@ -599,7 +595,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
             }
         }            
     }
-    else { format!("invalid command") }
+    else { "invalid command".to_string() }
 }
 
 pub fn payout_ui<'a, 'b>() -> App<'a, 'b> {
@@ -728,16 +724,16 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
             }
             "import" => match DocumentUI::<PayoutRecord>::import(wallet, a.value_of("payout-value").unwrap()) {
 // TODO: print cxid of imported payout
-                Ok(()) => format!("payout imported"),
+                Ok(()) => "payout imported".to_string(),
                 Err(e) => format!("{}", e),
             }
             "export" => match DocumentUI::<PayoutRecord>::export(wallet, a.value_of("cxid").unwrap()) {
-                Some(hex) => format!("{}", hex),
-                None => format!("no such payout"),
+                Some(hex) => hex,
+                None => "no such payout".to_string(),
             }
             "details" => match DocumentUI::<PayoutRecord>::get(wallet, a.value_of("cxid").unwrap()) {
                 Some(pr) => format!("{:?}\n{:?}", pr, consensus::deserialize::<PartiallySignedTransaction>(&hex::decode(pr.clone().psbt).unwrap()).unwrap()),
-                None => format!("no such payout"),
+                None => "no such payout".to_string(),
             }
             "summary" => match DocumentUI::<PayoutRecord>::get(wallet, a.value_of("cxid").unwrap()) {
                 Some(pr) => if a.is_present("json-output") {
@@ -748,7 +744,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 None => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
                 } else {
-                    format!("no such payout")
+                    "no such payout".to_string()
                 }
             }
             "sign" => match DocumentUI::<PayoutRecord>::sign(
@@ -764,7 +760,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 Ok(()) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
                 } else {
-                    format!("payout signed")
+                    "payout signed".to_string()
                 }
                 Err(e) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
@@ -776,7 +772,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 Ok(()) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
                 } else {
-                    format!("payout sent")
+                    "payout sent".to_string()
                 }
                 Err(e) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
@@ -790,12 +786,10 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 Secret::new(a.value_of("password").unwrap().to_owned())) {
                 Ok(cxid) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::success(cxid)).unwrap()
+                } else  if let Some(cxid) = cxid {
+                    format!("payout {} received", cxid)
                 } else {
-                    if let Some(cxid) = cxid {
-                        format!("payout {} received", cxid)
-                    } else {
-                        format!("no payout to receive")
-                    }
+                    "no payout to receive".to_string()
                 }
                 Err(e) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
@@ -804,15 +798,15 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 }
             }
             "submit" => match DocumentUI::<PayoutRecord>::submit(wallet, a.value_of("cxid").unwrap()) {
-                Ok(()) => format!("submission accepted"),
+                Ok(()) => "submission accepted".to_string(),
                 Err(e) => format!("{}", e),
             }
             "broadcast" => match DocumentUI::<PayoutRecord>::broadcast(wallet, a.value_of("cxid").unwrap()) {
-                Ok(()) => format!("payout tx broadcasted to network"),
+                Ok(()) => "payout tx broadcasted to network".to_string(),
                 Err(e) => format!("{}", e),
             }
             "delete" => match DocumentUI::<PayoutRecord>::delete(wallet, a.value_of("cxid").unwrap()) {
-                Ok(()) => format!("payout deleted"),
+                Ok(()) => "payout deleted".to_string(),
                 Err(e) => format!("{}", e),
             }
             "list" => if a.is_present("json-output") {
@@ -824,6 +818,6 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
             _ => format!("command '{}' is not implemented", c)
         }            
     }
-    else { format!("invalid command") }
+    else { "invalid command".to_string() }
 }
 

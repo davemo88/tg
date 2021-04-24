@@ -159,7 +159,7 @@ impl PlayerUI for PlayerWallet {
 
     fn add(&self, name: PlayerName) -> Result<()> {
         let player = PlayerRecord { name };
-        match self.db().insert_player(player.clone()) {
+        match self.db().insert_player(player) {
             Ok(_) => Ok(()),
             Err(e) => Err(Box::new(Error::Database(Arc::new(e)))),
         }
@@ -263,7 +263,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
 // is not a necessarily standardized encoding like contract
 // try to parse contract record first, since it contains more info
         if let Ok(contract_record) = serde_json::from_str::<ContractRecord>(&hex) {
-            match self.db().insert_contract(contract_record.clone()) {
+            match self.db().insert_contract(contract_record) {
                 Ok(_) => Ok(()),
                 Err(_) => Err(Error::Adhoc("couldn't import contract: db insertion failed").into()),
             }
@@ -325,10 +325,10 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
 
     fn send(&self, cxid: &str) -> Result<()> {
         let contract_record = DocumentUI::<ContractRecord>::get(self, cxid).ok_or(Error::Adhoc("unknown contract"))?;
-        Ok(self.arbiter_client().send_contract(
+        self.arbiter_client().send_contract(
             contract_record.clone(),
             self.get_other_player_name(&contract_record)?,
-        )?)
+        )
     }
 
     fn receive(&self, player_name: PlayerName, pw: Secret<String>) -> Result<Option<String>> {
@@ -344,7 +344,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
 
     fn submit(&self, cxid: &str) -> Result<()> {
         if let Some(cr) = self.db().get_contract(&cxid) {
-            let mut contract = Contract::from_bytes(hex::decode(cr.hex.clone())?)?;
+            let mut contract = Contract::from_bytes(hex::decode(cr.hex)?)?;
             if let Ok(sig) = self.arbiter_client().submit_contract(&contract) {
                contract.sigs.push(sig);
                let _r = self.db().add_signature(cr.cxid, hex::encode(contract.to_bytes()));
@@ -361,7 +361,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
 
     fn broadcast(&self, cxid: &str) -> Result<()> {
         if let Some(cr) = self.db().get_contract(&cxid) {
-            let contract = Contract::from_bytes(hex::decode(cr.hex.clone())?)?;
+            let contract = Contract::from_bytes(hex::decode(cr.hex)?)?;
             self.wallet()?.broadcast(contract.funding_tx.extract_tx())?;
             Ok(())
         } else {
@@ -397,7 +397,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
 
     fn import(&self, hex: &str) -> Result<()> {
         if let Ok(payout_record) = serde_json::from_str::<PayoutRecord>(&hex) {
-            let _r = self.db().insert_payout(payout_record.clone());
+            let _r = self.db().insert_payout(payout_record);
             Ok(())
         }
         else {
@@ -448,10 +448,10 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
     fn send(&self, cxid: &str) -> Result<()> {
         let payout_record = DocumentUI::<PayoutRecord>::get(self, cxid).ok_or(Error::Adhoc("unknown payout"))?;
         let contract_record = DocumentUI::<ContractRecord>::get(self, cxid).ok_or(Error::Adhoc("unknown contract"))?;
-        Ok(self.arbiter_client().send_payout(
+        self.arbiter_client().send_payout(
             payout_record,
             self.get_other_player_name(&contract_record)?
-        )?)
+        )
     }
 
     fn receive(&self, player_name: PlayerName, pw: Secret<String>) -> Result<Option<String>> {

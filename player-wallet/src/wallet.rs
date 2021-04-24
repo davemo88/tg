@@ -3,7 +3,6 @@ use std::{
     path::PathBuf,
     fs::File,
 };
-use sled;
 use tglib::{
     bdk::{
         bitcoin::{
@@ -132,13 +131,12 @@ impl PlayerWallet {
         let saved_seed = self.saved_seed().unwrap();
         let descriptor_key = format!("[{}/{}]{}", saved_seed.fingerprint, BITCOIN_ACCOUNT_PATH, saved_seed.xpubkey);
 
-        let w = Wallet::new_offline(
+        Wallet::new_offline(
             &self.external_descriptor(&descriptor_key),
             Some(&self.internal_descriptor(&descriptor_key)),
             self.network,
             self.wallet_db(),
-        ).unwrap();
-        w
+        ).unwrap()
     }
 
     fn signing_wallet(&self, pw: Secret<String>) -> TgResult<Wallet<ElectrumBlockchain, sled::Tree>> {
@@ -307,12 +305,14 @@ impl PlayerWallet {
             NETWORK,
             ).unwrap();
         let funding_tx = contract.clone().funding_tx.extract_tx();
-        let (escrow_vout, escrow_txout) = funding_tx.output.iter().enumerate().filter(|(_vout, txout)| txout.script_pubkey == escrow_address.script_pubkey()).next().unwrap();
+        let (escrow_vout, escrow_txout) = funding_tx.output.iter().enumerate().find(|(_vout, txout)| txout.script_pubkey == escrow_address.script_pubkey()).unwrap();
         let wallet = self.offline_wallet();
         let mut builder = wallet.build_tx();
-        let mut psbt_input = Input::default();
-        psbt_input.witness_utxo = Some(escrow_txout.clone());
-        psbt_input.witness_script = Some(create_escrow_script(&contract.p1_pubkey, &contract.p2_pubkey, &contract.arbiter_pubkey));
+        let psbt_input = Input {
+            witness_utxo: Some(escrow_txout.clone()),
+            witness_script: Some(create_escrow_script(&contract.p1_pubkey, &contract.p2_pubkey, &contract.arbiter_pubkey)),
+            ..Default::default()
+        };
 // TODO: set satisfaction weight correctly and include tx fee
         builder.add_foreign_utxo(OutPoint { vout: escrow_vout as u32, txid: funding_tx.txid()}, psbt_input, 100).unwrap();
         if p1_amount.as_sat() != 0 {
@@ -329,7 +329,7 @@ impl PlayerWallet {
 impl NameWallet for PlayerWallet {
     fn name_pubkey(&self) -> PublicKey {
         let secp = Secp256k1::new();
-        let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX))).unwrap();
+        let path = DerivationPath::from_str(&format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX)).unwrap();
         let pubkey = self.saved_seed().unwrap().xpubkey.derive_pub(&secp, &path).unwrap();
         pubkey.public_key
     }
@@ -338,7 +338,7 @@ impl NameWallet for PlayerWallet {
 impl EscrowWallet for PlayerWallet {
     fn get_escrow_pubkey(&self) -> PublicKey {
         let secp = Secp256k1::new();
-        let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
+        let path = DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap();
         let escrow_pubkey = self.saved_seed().unwrap().xpubkey.derive_pub(&secp, &path).unwrap();
         escrow_pubkey.public_key
     }
@@ -359,21 +359,20 @@ impl EscrowWallet for PlayerWallet {
 
 impl SigningWallet for PlayerWallet {
 
-    fn sign_tx(&self, psbt: PartiallySignedTransaction, path: Option<DerivationPath>, pw: Secret<String>) -> TgResult<PartiallySignedTransaction> {
+    fn sign_tx(&self, mut psbt: PartiallySignedTransaction, path: Option<DerivationPath>, pw: Secret<String>) -> TgResult<PartiallySignedTransaction> {
         match path {
             Some(path) => {
-                let seed = self.saved_seed().unwrap().get_seed(pw.clone())?;
+                let seed = self.saved_seed().unwrap().get_seed(pw)?;
                 let account_key = derive_account_xprivkey(seed, self.network);
                 let secp = Secp256k1::new();
                 let signing_key = account_key.derive_priv(&secp, &path).unwrap();
-                let mut maybe_signed = psbt.clone();
-                signing_key.private_key.sign_tx(&mut maybe_signed, &secp)?;
-                Ok(maybe_signed)
+                signing_key.private_key.sign_tx(&mut psbt, &secp)?;
+                Ok(psbt)
             }
             None => {
                 let signing_wallet = self.signing_wallet(pw)?;
                 signing_wallet.sync(noop_progress(), None).unwrap();
-                let (signed_psbt, _finished) = signing_wallet.sign(psbt.clone(), None)?;
+                let (signed_psbt, _finished) = signing_wallet.sign(psbt, None)?;
 
                 Ok(signed_psbt)
             },
@@ -381,7 +380,7 @@ impl SigningWallet for PlayerWallet {
     }
 
     fn sign_message(&self, msg: Message, path: DerivationPath, pw: Secret<String>) -> TgResult<Signature> {
-        let seed = self.saved_seed().unwrap().get_seed(pw.clone())?;
+        let seed = self.saved_seed().unwrap().get_seed(pw)?;
         let account_key = derive_account_xprivkey(seed, self.network);
         let secp = Secp256k1::new();
         let signing_key = account_key.derive_priv(&secp, &path).unwrap();
