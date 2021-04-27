@@ -3,23 +3,26 @@ use std::{
     sync::Arc,
 };
 use tglib::{
-    bdk::bitcoin::{
-        Address,
-        Amount,
-        consensus,
-        hash_types::Txid,
-        hashes::{
-            sha256,
-            Hash,
-            HashEngine,
-        },
-        secp256k1::{
-            Message,
-            Signature,
-        },
-        util::{
-            bip32::DerivationPath,
-            psbt::PartiallySignedTransaction,
+    bdk::{
+        blockchain::Blockchain,
+        bitcoin::{
+            Address,
+            Amount,
+            consensus,
+            hash_types::Txid,
+            hashes::{
+                sha256,
+                Hash,
+                HashEngine,
+            },
+            secp256k1::{
+                Message,
+                Signature,
+            },
+            util::{
+                bip32::DerivationPath,
+                psbt::PartiallySignedTransaction,
+            },
         },
     },
     hex,
@@ -65,6 +68,7 @@ pub trait WalletUI {
     fn balance(&self) -> Result<Amount>;
 //    fn withdraw(&self, address: Address, amount: Amount) -> Transaction;
     fn fund(&self) -> Result<Txid>;
+    fn get_tx(&self, txid: &str) -> Result<bool>;
 }
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -137,6 +141,12 @@ impl WalletUI for PlayerWallet {
     fn fund(&self) -> Result<Txid> {
         let txid = self.arbiter_client().fund_address(self.offline_wallet().get_new_address().unwrap())?;
         Ok(txid)
+    }
+
+    fn get_tx(&self, txid: &str) -> Result<bool> {
+        let wallet = self.wallet()?;
+        let blockchain_client = wallet.client();
+        Ok(blockchain_client.get_tx(&Txid::from_str(txid)?)?.is_some())
     }
 }
 

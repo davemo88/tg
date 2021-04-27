@@ -143,6 +143,11 @@ fn player_cli<'a, 'b>() -> App<'a, 'b> {
                 .index(2)
                 .help("withdrawal address")
                 .required(true)))
+        .subcommand(SubCommand::with_name("get-tx").about("get tx from blockchain")
+            .arg(Arg::with_name("txid")
+                .index(1)
+                .help("txid of tx to get")
+                .required(true)))
         .subcommand(player_ui())
         .subcommand(contract_ui())
         .subcommand(payout_ui())
@@ -218,6 +223,11 @@ pub fn cli(line: String, conf: Conf) -> String {
                 }
                 "deposit" => format!("{}", wallet.deposit()),
                 "fund" => format!("{}", wallet.fund().unwrap()),
+                "get-tx" => match wallet.get_tx(a.value_of("txid").unwrap()) {
+                    Ok(true) => "found it".to_string(),
+                    Ok(false) => "didn't find it".to_string(),
+                    Err(e) => format!("{}", e),
+                }
                 "player" => player_subcommand(a.subcommand(), &wallet),
                 "contract" => contract_subcommand(a.subcommand(), &wallet),
                 "payout" => payout_subcommand(a.subcommand(), &wallet),
