@@ -15,7 +15,13 @@ export const LoadingSplash = ({ navigation }) => {
             .then(() => {
                     console.debug("loading complete");
                     navigation.reset({ index:0, routes: [{ name: 'Player Select' }] });
-                }).catch(error => console.erorr("loading failed:", error)); 
+                }).catch(error => {
+                    if (error === "no seed. initialize wallet first") {
+                    navigation.reset({ index:0, routes: [{ name: 'Initialize Wallet' }] });
+                    } else {
+                        console.error("loading failed:", error)
+                    }
+                }); 
     }, []);
 
     return (

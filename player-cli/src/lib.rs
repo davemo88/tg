@@ -203,15 +203,23 @@ pub fn cli(line: String, conf: Conf) -> String {
                             Err(e) => return format!("{:?}", e),
                         };
                         match File::create(&seed_path) {
-                            Ok(mut writer) => {
-                                writer.write_all(serde_json::to_string(&new_seed).unwrap().as_bytes()).unwrap();
-                            },
-//                            Ok(mut writer) => writer.write_all(serde_json::to_string(&new_seed).unwrap().as_bytes()).unwrap(),
+                            Ok(mut writer) => writer.write_all(serde_json::to_string(&new_seed).unwrap().as_bytes()).unwrap(),
                             Err(e) => return format!("{:?}", e),
                         };
-                        return "wallet initialized".to_string()
+                        if a.is_present("json-output") {
+                            return serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
+                        } else {
+                            return "wallet initialized".to_string()
+                        }
                     }
-                    _ => return "no seed. initialize wallet first".to_string(),
+                    _ => {
+                        let msg = "no seed. initialize wallet first".to_string();
+                        if a.is_present("json-output") {
+                            return serde_json::to_string(&JsonResponse::<String>::error(msg, None)).unwrap()
+                        } else {
+                            return msg
+                        }
+                    }
                 }
             };
 
