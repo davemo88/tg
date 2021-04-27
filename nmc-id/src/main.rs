@@ -23,6 +23,7 @@ use tglib::{
         },
     },
     hex,
+    JsonResponse,
     player::RegisterNameBody,
     wallet::get_namecoin_address,
     mock::NETWORK,
@@ -58,34 +59,22 @@ async fn register_name_handler(body: RegisterNameBody, nmc_rpc: NamecoinRpcClien
     let name_address = get_namecoin_address(&body.pubkey, NETWORK);
     let name = format!("{}{}",PLAYER_NAME_PREFIX, body.player_name.0);
     let new_address = nmc_rpc.get_new_address().await.unwrap();
-    match nmc_rpc.name_new(&name, &new_address).await {
-        Ok((name_new_txid, rand)) => {
+    let (name_new_txid, rand) = match nmc_rpc.name_new(&name, &new_address).await {
+        Ok((name_new_txid, rand)) => (name_new_txid, rand),
+        Err(e) => return Ok(serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()),
+    };
 // need 12 blocks on top of the name_new
-            let _r = nmc_rpc.generate_to_address(13, new_address.clone()).await;
-//            let _name_firstupdate_txid = nmc_rpc.name_firstupdate(&name, &rand, &name_new_txid, Some("hello world"), &name_address).await.unwrap();
-//            match nmc_rpc.name_firstupdate(&name, &rand, &name_new_txid, Some("firstupdate"), &name_address).await {
-            match nmc_rpc.name_firstupdate(&name, &rand, &name_new_txid, Some("firstupdate")).await {
-                Ok(_txid) => (),
-                Err(e) => return Ok(e.to_string())
-            }
-            let _r = nmc_rpc.generate_to_address(1, new_address.clone()).await;
-            match nmc_rpc.name_update(&name, "update", &name_address).await {
-                Ok(_txid) => (),
-                Err(e) => {
-                    println!("{}", e.to_string());
-                    return Ok(e.to_string())
-                }
-            }
-// i think first update only keeps the name around for a small number of blocks
-// need to do an actual update to keep it for longer
-            let _r = nmc_rpc.generate_to_address(1, new_address).await;
-// TODO: confirm name op tx's are in the chain
-            Ok(name)
-        }
-        Err(msg) => {
-            Ok(msg)
-        }
+    let _r = nmc_rpc.generate_to_address(13, new_address.clone()).await;
+    if let Err(e) = nmc_rpc.name_firstupdate(&name, &rand, &name_new_txid, Some("firstupdate")).await {
+        return Ok(serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap())
     }
+    let _r = nmc_rpc.generate_to_address(1, new_address.clone()).await;
+    if let Err(e) = nmc_rpc.name_update(&name, "update", &name_address).await {
+        return Ok(serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap())
+    }
+   let _r = nmc_rpc.generate_to_address(1, new_address).await;
+// TODO: confirm name op tx's are in the chain
+   Ok(serde_json::to_string(&JsonResponse::<String>::success(Some(name))).unwrap())
 }
 
 async fn get_player_names_handler(pubkey: String, nmc_rpc: NamecoinRpcClient) -> WebResult<impl Reply> {

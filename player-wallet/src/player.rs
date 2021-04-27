@@ -4,10 +4,14 @@ use tglib::{
         PublicKey,
     },
     hex,
+    Error,
+    JsonResponse,
+    Status,
     player::{
         PlayerName,
         PlayerNameService,
         RegisterNameBody,
+        Result,
     },
 };
 
@@ -30,25 +34,17 @@ impl PlayerNameClient {
 }
 
 impl PlayerNameService for PlayerNameClient {
-    fn register_name(&self, player_name: PlayerName, pubkey: PublicKey, sig: Signature) -> Result<(), String> {
+    fn register_name(&self, player_name: PlayerName, pubkey: PublicKey, sig: Signature) -> Result<()> {
 // TODO: require player_name isn't empty / all whitespace or something lame
         let body = RegisterNameBody {
             player_name: player_name.clone(),
             pubkey,
             sig_hex: hex::encode(sig.serialize_der()),
         };
-        match self.post("register-name", serde_json::to_string(&body).unwrap()) {
-            Ok(response) => {
-// response contrains name because the endpoint has to implement
-// the warp::Reply trait, and so can't return () for success
-                let msg = response.text().unwrap();
-                if msg == format!("player/{}", player_name.0) {
-                    Ok(())
-                } else {
-                    Err(msg)
-                }
-            }
-            Err(e) => Err(format!("{:?}", e))
+        let response: JsonResponse<String> = serde_json::from_str(&self.post("register-name", serde_json::to_string(&body).unwrap())?.text()?)?;
+        match response.status {
+            Status::Success => Ok(()),
+            Status::Error => Err(Box::new(Error::JsonResponse(response.message.unwrap_or("register name failed mysteriously".into())))),
         }
     }
 
@@ -59,10 +55,10 @@ impl PlayerNameService for PlayerNameClient {
         }
     }
 
-    fn get_name_address(&self, name: PlayerName) -> Result<String, &'static str> {
+    fn get_name_address(&self, name: PlayerName) -> Result<String> {
         match self.get("get-name-address", &hex::encode(name.0.as_bytes())) {
             Ok(response) => Ok(response.text().unwrap()),
-            Err(_) => Err("couldn't get address"),
+            Err(e) => Err(Box::new(e)),
         }
     }
 }

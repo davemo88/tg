@@ -22,6 +22,8 @@ use bdk::bitcoin::{
     },
 };
 
+pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct PlayerName(pub String);
 
@@ -33,9 +35,9 @@ impl fmt::Display for PlayerName {
 }
 
 pub trait PlayerNameService {
-    fn register_name(&self, name: PlayerName, pubkey: PublicKey, sig: Signature) -> Result<(), String>;
+    fn register_name(&self, name: PlayerName, pubkey: PublicKey, sig: Signature) -> Result<()>;
     fn get_player_names(&self, pubkey: &PublicKey) -> Vec<PlayerName>;
-    fn get_name_address(&self, name: PlayerName) -> Result<String, &'static str>;
+    fn get_name_address(&self, name: PlayerName) -> Result<String>;
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

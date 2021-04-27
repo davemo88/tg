@@ -28,12 +28,13 @@ export const loadPlayers = () => {
             throw(response.message);
         }
         let players = response.data;
-        console.log("players:", players);
+        console.debug("player list:", players);
         response = JSON.parse(await PlayerWalletModule.call_cli("player mine"));
         if (response.status === "error") {
             throw(response.message);
         }
         const my_players = response.data;
+        console.debug("player mine:", my_players);
         players.forEach(function (p) { 
             p.pictureUrl = "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0";
             p.mine = my_players.some(mp => mp === p.name);

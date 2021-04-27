@@ -1,7 +1,4 @@
-use std::{
-    str::FromStr,
-    sync::Arc,
-};
+use std::str::FromStr;
 use tglib::{
     bdk::{
         blockchain::Blockchain,
@@ -62,6 +59,8 @@ use crate::{
     wallet::PlayerWallet,
 };
 
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
 // basic crypto wallet
 pub trait WalletUI {
     fn deposit(&self) -> Address;
@@ -70,8 +69,6 @@ pub trait WalletUI {
     fn fund(&self) -> Result<Txid>;
     fn get_tx(&self, txid: &str) -> Result<bool>;
 }
-
-type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 impl PlayerWallet {
     fn get_auth(&self, player_name: &PlayerName, pw: Secret<String>) -> Result<AuthTokenSig> {
@@ -160,19 +157,14 @@ impl PlayerUI for PlayerWallet {
             DerivationPath::from_str(&format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX)).unwrap(),
             pw,
         ).unwrap();
-        match self.name_client().register_name(name.clone(), self.name_pubkey(), sig) {
-            Ok(()) => PlayerUI::add(self, name),
-// TODO: better error message here
-            Err(_) => Err(Error::Adhoc("register name failed").into()),
-        }
+        self.name_client().register_name(name.clone(), self.name_pubkey(), sig)?;
+        PlayerUI::add(self, name)
     }
 
     fn add(&self, name: PlayerName) -> Result<()> {
         let player = PlayerRecord { name };
-        match self.db().insert_player(player) {
-            Ok(_) => Ok(()),
-            Err(e) => Err(Box::new(Error::Database(Arc::new(e)))),
-        }
+        self.db().insert_player(player)?; 
+        Ok(())
     }
 
     fn remove(&self, name: PlayerName) -> Result<()> {

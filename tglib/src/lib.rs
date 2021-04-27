@@ -29,6 +29,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug)]
 pub enum Error {
     Adhoc(&'static str),
+    JsonResponse(String),
     Bdk(bdk::Error),
     WrongPassword,
     InvalidContract(&'static str),
@@ -39,6 +40,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Error::Adhoc(message) => write!(f, "Adhoc({})", message),
+            Error::JsonResponse(message) => write!(f, "JsonResponse({})", message),
             Error::Bdk(error) => write!(f, "Bdk({})", error),
             Error::WrongPassword => write!(f, "WrongPassword"),
             Error::InvalidContract(message) => write!(f, "InvalidContract({})", message),
@@ -51,6 +53,7 @@ impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Error::Adhoc(_) => None,
+            Error::JsonResponse(_) => None,
             Error::Bdk(e) => Some(e),
             Error::WrongPassword => None,
             Error::InvalidPayout(_) => None,
@@ -80,9 +83,9 @@ pub enum Status {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct JsonResponse<T: Serialize> {
-    status: Status,
-    data: Option<T>,
-    message: Option<String>,
+    pub status: Status,
+    pub data: Option<T>,
+    pub message: Option<String>,
 }
 
 impl<T: Serialize> JsonResponse<T> {
