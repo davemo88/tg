@@ -75,6 +75,7 @@ pub const NAMECOIN_ACCOUNT_PATH: &'static str = "44'/7'/0'";
 pub const ESCROW_SUBACCOUNT: &'static str = "7";
 pub const NAME_SUBACCOUNT: &'static str = "17";
 pub const NAME_KIX: &'static str = "0";
+pub const TX_FEE: u64 = 20000;
 
 // mainnet
 //const NAMECOIN_VERSION_BYTE: u8 = 0x34;//52
@@ -300,6 +301,8 @@ pub fn create_payout_script(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbite
 
 fn create_payout_tx(funding_tx: &Transaction, escrow_address: &Address, payout_address: &Address) -> TgResult<Transaction> {
 
+// TODO: need to standardize this with builder-implementation in player wallet
+// and include a miner fee
     let mut input = Vec::<TxIn>::new();
     let mut amount = 0;
 
@@ -324,7 +327,7 @@ fn create_payout_tx(funding_tx: &Transaction, escrow_address: &Address, payout_a
         lock_time: 0,
         input,
         output: vec!(TxOut { 
-            value: amount, 
+            value: amount - TX_FEE,
             script_pubkey: payout_address.script_pubkey() 
         })
     })

@@ -59,6 +59,7 @@ use tglib::{
         BITCOIN_ACCOUNT_PATH,
         NAME_SUBACCOUNT,
         NAME_KIX,
+        TX_FEE,
     },
     mock::{
         DB_NAME,
@@ -205,7 +206,8 @@ impl PlayerWallet {
         let mut input = Vec::new();
         let mut psbt_inputs = Vec::new();
         let arbiter_fee = amount.as_sat()/100;
-        let sats_per_player = (amount.as_sat() + arbiter_fee)/2;
+        let sats_per_player = (amount.as_sat() + arbiter_fee + TX_FEE)/2;
+// electrum default is 2mBTC
         let mut total: u64 = 0;
 
         for (outpoint, value, psbt_input) in &p2_contract_info.utxos {
