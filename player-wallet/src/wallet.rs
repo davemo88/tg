@@ -310,18 +310,21 @@ impl PlayerWallet {
         let (escrow_vout, escrow_txout) = funding_tx.output.iter().enumerate().find(|(_vout, txout)| txout.script_pubkey == escrow_address.script_pubkey()).unwrap();
         let wallet = self.offline_wallet();
         let mut builder = wallet.build_tx();
+        builder.manually_selected_only();
         let psbt_input = Input {
             witness_utxo: Some(escrow_txout.clone()),
             witness_script: Some(create_escrow_script(&contract.p1_pubkey, &contract.p2_pubkey, &contract.arbiter_pubkey)),
             ..Default::default()
         };
 // TODO: set satisfaction weight correctly and include tx fee
+        let p1_tx_fee: u64 = TX_FEE * (p1_amount.as_sat() / contract_amount.as_sat());
+        let p2_tx_fee: u64 = contract_amount.as_sat() - p1_tx_fee;
         builder.add_foreign_utxo(OutPoint { vout: escrow_vout as u32, txid: funding_tx.txid()}, psbt_input, 100).unwrap();
         if p1_amount.as_sat() != 0 {
-            builder.add_recipient(Address::p2wpkh(&contract.p1_pubkey, NETWORK).unwrap().script_pubkey(), p1_amount.as_sat());
+            builder.add_recipient(Address::p2wpkh(&contract.p1_pubkey, NETWORK).unwrap().script_pubkey(), p1_amount.as_sat() - p1_tx_fee);
         }
         if p2_amount.as_sat() != 0 {
-            builder.add_recipient(Address::p2wpkh(&contract.p2_pubkey, NETWORK).unwrap().script_pubkey(), p2_amount.as_sat());
+            builder.add_recipient(Address::p2wpkh(&contract.p2_pubkey, NETWORK).unwrap().script_pubkey(), p2_amount.as_sat() - p2_tx_fee);
         }
         let (psbt, _details) = builder.finish().unwrap();
         Ok(Payout::new(contract.clone(), psbt))

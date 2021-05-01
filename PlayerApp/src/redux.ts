@@ -3,7 +3,6 @@ import { createEntityAdapter, createSlice, createReducer, createAction, configur
 import { Secret, } from './secret';
 import { JsonResponse, Player, Contract, Payout, } from './datatypes';
 
-import { getPosted } from './wallet';
 import PlayerWalletModule from './PlayerWallet';
 
 const playerAdapter = createEntityAdapter<Player>({
@@ -224,14 +223,6 @@ export const postedSlice = createSlice({
     setPosted:  (state, action) => action.payload
   }
 })
-
-export const setSelectedPlayerPosted = () => {
-    return async (dispatch, getState) => {
-        let selectedPlayerName = getState().selectedPlayerName;
-        let posted = await getPosted(selectedPlayerName);
-        return dispatch(postedSlice.actions.setPosted(posted))
-    }
-}
 
 export const store = configureStore({
   reducer: {

@@ -15,12 +15,21 @@ export const LIVE_IMAGE_SOURCE: string  = STATIC_CONTENT_HOST+'live.png';
 export const NETWORK: string = 'Test';
 
 export const initWallet = async (password: Secret<string>) => {
-    let cli_response = await PlayerWalletModule.call_cli_with_password("init", password.expose_secret());
-    let response: JsonResponse = JSON.parse(cli_response);
+    let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password("init", password.expose_secret()));
     if (response.status === "error") {
         throw(response.message);
     }
-    cli_response = await PlayerWalletModule.call_cli("fund");
+    response = JSON.parse(await PlayerWalletModule.call_cli("fund"));
+    if (response.status === "error") {
+        throw(response.message);
+    }
+    const txid = response.data;
+    do {
+        response = JSON.parse(await PlayerWalletModule.call_cli(`get-tx ${txid}`));
+        if (response.status === "error") {
+            throw(response.message);
+        }
+    } while (!response.data)
 }
 
 export const postContractInfo = (name: string, amount: number, password: Secret<string>) => {
@@ -41,6 +50,14 @@ export const getPosted = async (name: string) => {
     }
     const posted = +response.data;
     return Promise.resolve(posted)
+}
+
+export const setSelectedPlayerPosted = () => {
+    return async (dispatch, getState) => {
+        let selectedPlayerName = getState().selectedPlayerName;
+        let posted = await getPosted(selectedPlayerName);
+        return dispatch(postedSlice.actions.setPosted(posted))
+    }
 }
 
 export const signContract = (contract: Contract, password: Secret<string>) => {

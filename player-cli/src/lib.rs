@@ -230,11 +230,28 @@ pub fn cli(line: String, conf: Conf) -> String {
                     Err(e) => return format!("{:?}", e),
                 }
                 "deposit" => format!("{}", wallet.deposit()),
-                "fund" => format!("{}", wallet.fund().unwrap()),
+                "fund" => {
+                    let funding_txid = wallet.fund().unwrap();
+                    if a.is_present("json-output") {
+                        serde_json::to_string(&JsonResponse::<String>::success(Some(funding_txid.to_string()))).unwrap()
+                    } else {
+                        format!("{}", funding_txid)
+                    }
+                }
                 "get-tx" => match wallet.get_tx(a.value_of("txid").unwrap()) {
-                    Ok(true) => "found it".to_string(),
-                    Ok(false) => "didn't find it".to_string(),
-                    Err(e) => format!("{}", e),
+                    Ok(found_it) => if a.is_present("json-output") {
+// TODO: if not     returning data, need to specify a dummy type
+                        serde_json::to_string(&JsonResponse::<bool>::success(Some(found_it))).unwrap()
+                    } else if found_it {
+                        "found it".to_string()
+                    } else {
+                        "didn't find it".to_string()
+                    }
+                    Err(e) => if a.is_present("json-output") {
+                        serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
+                    } else {
+                        format!("{:?}", e)
+                    }
                 }
                 "player" => player_subcommand(a.subcommand(), &wallet),
                 "contract" => contract_subcommand(a.subcommand(), &wallet),

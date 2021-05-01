@@ -5,10 +5,10 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 
 import { styles } from '../../styles';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, setSelectedPlayerPosted} from '../../redux';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice } from '../../redux';
 import { Player, Contract, ContractStatus} from '../../datatypes';
 import { getContractStatus } from '../../dump';
-import { postContractInfo } from '../../wallet';
+import { postContractInfo, setSelectedPlayerPosted } from '../../wallet';
 
 import { Currency } from '../currency';
 import { PlayerPortrait } from '../player-portrait';

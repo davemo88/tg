@@ -303,24 +303,43 @@ fn create_payout_tx(funding_tx: &Transaction, escrow_address: &Address, payout_a
 
 // TODO: need to standardize this with builder-implementation in player wallet
 // and include a miner fee
-    let mut input = Vec::<TxIn>::new();
-    let mut amount = 0;
+//    let mut input = Vec::<TxIn>::new();
+//    let mut amount = 0;
 
-    for (i, txout) in funding_tx.output.iter().enumerate() {
-        if txout.script_pubkey == escrow_address.script_pubkey() {
-            amount = txout.value;
-            input.push(TxIn {
-                previous_output: OutPoint {
-                    txid: funding_tx.txid(),
-                    vout: i as u32,
-                },
-                script_sig: Script::new(),
-                sequence: 0,
-                witness: Vec::new()
-            });
-            break;
-        }
-    }
+    let (input, amount) = funding_tx.output
+        .iter()
+        .enumerate()
+        .find_map(|(i, txout)| {
+            if txout.script_pubkey == escrow_address.script_pubkey() {
+                Some((
+                    vec!(TxIn {
+                        previous_output: OutPoint {
+                            txid: funding_tx.txid(),
+                            vout: i as u32,
+                        },
+                        script_sig: Script::new(),
+                        sequence: 0,
+                        witness: Vec::new()
+                    }),
+                    txout.value,
+                ))
+            } else { None }
+    }).ok_or(Error::Adhoc("couldn't find escrow output in funding tx"))?;
+//    for (i, txout) in funding_tx.output.iter().enumerate() {
+//        if txout.script_pubkey == escrow_address.script_pubkey() {
+//            amount = txout.value;
+//            input.push(TxIn {
+//                previous_output: OutPoint {
+//                    txid: funding_tx.txid(),
+//                    vout: i as u32,
+//                },
+//                script_sig: Script::new(),
+//                sequence: 0,
+//                witness: Vec::new()
+//            });
+//            break;
+//        }
+//    }
 
     Ok(Transaction {
         version: 1,

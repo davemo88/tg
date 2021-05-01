@@ -143,7 +143,12 @@ impl WalletUI for PlayerWallet {
     fn get_tx(&self, txid: &str) -> Result<bool> {
         let wallet = self.wallet()?;
         let blockchain_client = wallet.client();
-        Ok(blockchain_client.get_tx(&Txid::from_str(txid)?)?.is_some())
+        match blockchain_client.get_tx(&Txid::from_str(txid)?) {
+            Ok(maybe_transaction) => Ok(maybe_transaction.is_some()),
+// electrum client returns an error for a missing / unindexed tx so the option within the result seems redundant sometimes
+            Err(tglib::bdk::Error::Electrum(tglib::bdk::electrum_client::Error::Protocol(_))) => Ok(false),
+            Err(e) => Err(Box::new(e))
+        }
     }
 }
 
