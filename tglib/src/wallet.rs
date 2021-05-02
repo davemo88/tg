@@ -62,7 +62,7 @@ use crate::{
         TgScript,
         TgScriptEnv,
     },
-    Result as TgResult,
+    Result,
     mock::{
         referee_pubkey,
         ESCROW_KIX,
@@ -93,7 +93,7 @@ pub struct SavedSeed {
 }
 
 impl SavedSeed {
-    pub fn new(pw: Secret<String>, mnemonic: Option<Secret<String>>) -> TgResult<Self> {
+    pub fn new(pw: Secret<String>, mnemonic: Option<Secret<String>>) -> Result<Self> {
 //  generate salt
         let pw_salt = rand::thread_rng().gen::<[u8; 32]>().to_vec();
         let config = Config::default();
@@ -133,7 +133,7 @@ impl SavedSeed {
         })
     }
 
-    pub fn get_seed(&self, pw: Secret<String>) -> TgResult<Secret<Vec<u8>>> {
+    pub fn get_seed(&self, pw: Secret<String>) -> Result<Secret<Vec<u8>>> {
 // TODO: fix unwrap on wrong password
         if argon2::verify_encoded(&self.pw_hash, pw.expose_secret().as_bytes()).unwrap() {
             {
@@ -158,25 +158,16 @@ pub trait NameWallet {
     fn name_pubkey(&self) -> PublicKey;
 }
 
-// TODO: need to clarify. this is signing in the normal bitcoin / crypto sense
-// and the Signing trait is for signing our contracts and payouts only
-// this is here because we will delegate from the app wallet to e.g.
-// a hardware wallet for key storage and signing
-
-// we'll only do pubkey-related tasks in our application wallet
-// and delegate key storage and signing to a better tested wallet 
-// e.g. trezor
+// TODO: enable external signers e.g. hardware wallets
 pub trait SigningWallet {
-//    fn fingerprint(&self) -> Fingerprint;
-//    fn xpubkey(&self) -> ExtendedPubKey;
-    fn sign_tx(&self, psbt: PartiallySignedTransaction, path: Option<DerivationPath>, pw: Secret<String>) -> TgResult<PartiallySignedTransaction>;
-    fn sign_message(&self, msg: Message, path: DerivationPath, pw: Secret<String>) -> TgResult<Signature>;
+    fn sign_tx(&self, psbt: PartiallySignedTransaction, path: Option<DerivationPath>, pw: Secret<String>) -> Result<PartiallySignedTransaction>;
+    fn sign_message(&self, msg: Message, path: DerivationPath, pw: Secret<String>) -> Result<Signature>;
 }
 
 pub trait EscrowWallet {
     fn get_escrow_pubkey(&self) -> PublicKey;
-    fn validate_contract(&self, contract: &Contract) -> TgResult<()>;
-    fn validate_payout(&self, payout: &Payout) -> TgResult<()> {
+    fn validate_contract(&self, contract: &Contract) -> Result<()>;
+    fn validate_payout(&self, payout: &Payout) -> Result<()> {
         self.validate_contract(&payout.contract)?;
 // payouts require fully signed contracts
         let fully_signed = payout.contract.sigs.len() == 3 as usize;
@@ -215,19 +206,18 @@ pub trait EscrowWallet {
     }
 }
 
-pub fn sign_contract<T>(wallet: &T, contract: &Contract, pw: Secret<String>) -> TgResult<Signature> 
+pub fn sign_contract<T>(wallet: &T, contract: &Contract, pw: Secret<String>) -> Result<Signature> 
 where T: EscrowWallet + SigningWallet {
     Ok(wallet.sign_message(Message::from_slice(&contract.cxid()).unwrap(), 
                 DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(), pw).unwrap())
 }
 
-pub fn sign_payout_psbt<T>(wallet: &T, psbt: PartiallySignedTransaction, pw: Secret<String>) -> TgResult<PartiallySignedTransaction> 
-where T: EscrowWallet + SigningWallet{
+pub fn sign_payout_psbt<T>(wallet: &T, psbt: PartiallySignedTransaction, pw: Secret<String>) -> Result<PartiallySignedTransaction> 
+where T: EscrowWallet + SigningWallet {
     wallet.sign_tx(psbt, Some(DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap()), pw)
 }
 
-
-pub fn create_escrow_address(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pubkey: &PublicKey, network: Network) -> TgResult<Address> {
+pub fn create_escrow_address(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pubkey: &PublicKey, network: Network) -> Result<Address> {
     let escrow_address = Address::p2wsh(
         &create_escrow_script(p1_pubkey, p2_pubkey, arbiter_pubkey),
         network,
@@ -299,7 +289,7 @@ pub fn create_payout_script(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbite
     ])
 }
 
-fn create_payout_tx(funding_tx: &Transaction, escrow_address: &Address, payout_address: &Address) -> TgResult<Transaction> {
+fn create_payout_tx(funding_tx: &Transaction, escrow_address: &Address, payout_address: &Address) -> Result<Transaction> {
 
 // TODO: need to standardize this with builder-implementation in player wallet
 // and include a miner fee
