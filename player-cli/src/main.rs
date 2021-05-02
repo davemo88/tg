@@ -9,7 +9,6 @@ use tglib::mock::NETWORK;
 fn main() {
 
     let work_dir: PathBuf = current_dir().unwrap();
-//    let mut history_file = work_dir.clone();
     let mut history_file = work_dir;
     history_file.push(&NETWORK.to_string());
     history_file.push("history.txt");
@@ -48,6 +47,5 @@ fn main() {
         }
     }
     rl.save_history(history_file).unwrap();
-    println!("stopping");
     println!("stopped");
 }

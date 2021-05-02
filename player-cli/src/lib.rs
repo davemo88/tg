@@ -537,8 +537,16 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 None => "no such contract".to_string(),
             }
             "details" => match DocumentUI::<ContractRecord>::get(wallet, a.value_of("cxid").unwrap()) {
-                Some(cr) => format!("{:?}\n{:?}", cr, Contract::from_bytes(hex::decode(&cr.hex).unwrap()).unwrap()),
-                None => "no such contract".to_string(),
+                Some(cr) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::success(Some(Contract::from_bytes(hex::decode(&cr.hex).unwrap()).unwrap()))).unwrap()
+                } else {
+                    format!("{:?}", Contract::from_bytes(hex::decode(&cr.hex).unwrap()).unwrap())
+                }
+                None => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
+                } else {
+                    "no such contract".to_string()
+                }
             }
             "summary" => match DocumentUI::<ContractRecord>::get(wallet, a.value_of("cxid").unwrap()) {
                 Some(cr) => if a.is_present("json-output") {
@@ -767,8 +775,16 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 None => "no such payout".to_string(),
             }
             "details" => match DocumentUI::<PayoutRecord>::get(wallet, a.value_of("cxid").unwrap()) {
-                Some(pr) => format!("{:?}\n{:?}", pr, consensus::deserialize::<PartiallySignedTransaction>(&hex::decode(pr.clone().psbt).unwrap()).unwrap()),
-                None => "no such payout".to_string(),
+                Some(pr) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::success(Some(consensus::deserialize::<PartiallySignedTransaction>(&hex::decode(pr.psbt).unwrap()).unwrap()))).unwrap()
+                } else {
+                    format!("{:?}", consensus::deserialize::<PartiallySignedTransaction>(&hex::decode(pr.clone().psbt).unwrap()).unwrap())
+                }
+                None => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
+                } else {
+                    "no such payout".to_string()
+                }
             }
             "summary" => match DocumentUI::<PayoutRecord>::get(wallet, a.value_of("cxid").unwrap()) {
                 Some(pr) => if a.is_present("json-output") {
@@ -856,3 +872,199 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
     else { "invalid command".to_string() }
 }
 
+#[cfg(test)]
+mod test {
+    
+    use super::{
+        cli,
+        Conf,
+        ContractSummary,
+    };
+    use tglib::JsonResponse;
+
+    const DIR_1: &'static str = "/tmp/wallet1";
+    const DIR_2: &'static str = "/tmp/wallet2";
+
+    const PW: &'static str = "boguspw";
+
+    fn conf() -> Conf {
+        Conf {
+            electrum_url: "tcp://localhost:60401".into(),
+            name_url: "http://localhost:18420".into(),
+            arbiter_url: "http://localhost:5000".into(),
+        }
+    }
+    
+    fn init_funded_wallet(wallet_dir: &str) {
+        std::fs::create_dir(wallet_dir).unwrap();
+        cli(format!("init --wallet-dir {} --password {}", wallet_dir, PW), conf());
+        let txid = cli(format!("fund --wallet-dir {}", wallet_dir), conf());
+// wait until the funding tx is indexed by electrum
+        assert!(poll_get_tx(wallet_dir, &txid));
+    }
+
+    fn poll_get_tx(wallet_dir: &str, txid: &str) -> bool {
+        let mut waiting_time = std::time::Duration::from_millis(50);
+        let mut retries = 0;
+        let max_retries = 5;
+        loop {
+            std::thread::sleep(waiting_time);
+            let response: JsonResponse<bool> = serde_json::from_str(&cli(format!("get-tx {} --wallet-dir {} --json-output", txid, wallet_dir), conf())).unwrap();
+            if let Some(b) = response.data {
+                if b {
+                    return true
+                }
+            }
+            if retries < max_retries {
+                retries += 1;
+                waiting_time *= 2;
+            } else {
+                return false 
+            }
+        }
+    }
+
+    fn remove_test_wallets() {
+        std::fs::remove_dir_all(DIR_1).unwrap();
+        std::fs::remove_dir_all(DIR_2).unwrap();
+    }
+
+    fn random_player() -> String {
+        use rand::{
+            distributions::Alphanumeric,
+            thread_rng, 
+            Rng,
+        };
+        let player: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(10)
+            .map(char::from)
+            .collect();
+        player
+    }
+    
+    fn setup_live_contract(player1: &str, player2: &str) -> String {
+
+        println!("init p1 wallet");
+        init_funded_wallet(DIR_1);
+        println!("init p2 wallet");
+        init_funded_wallet(DIR_2);
+
+        println!("register p1");
+        cli(format!("player register {} --wallet-dir {} --password {}", player1, DIR_1, PW), conf());
+        println!("register p2");
+        cli(format!("player register {} --wallet-dir {} --password {}", player2, DIR_2, PW), conf());
+        cli(format!("player add {} --wallet-dir {}", player2, DIR_1), conf());
+        cli(format!("player add {} --wallet-dir {}", player1, DIR_2), conf());
+
+        println!("p2 posts");
+        cli(format!("player post {} 100000000 --wallet-dir {} --password {}", player2, DIR_2, PW), conf());
+
+        println!("p1 creates contract");
+        let response: JsonResponse<ContractSummary> = serde_json::from_str(&
+            cli(format!("contract new {} {} 100000000 --wallet-dir {} --json-output", player1, player2, DIR_1), conf())).unwrap();
+        let contract_summary = response.data.unwrap();
+        let cxid = contract_summary.cxid;
+        println!("p1 signs");
+        cli(format!("contract sign {} --sign-funding-tx --wallet-dir {} --password {}", cxid, DIR_1, PW), conf());
+        println!("p1 sends to p2");
+        cli(format!("contract send {} --wallet-dir {}", cxid, DIR_1), conf());
+
+        println!("p2 receives");
+        cli(format!("contract receive {} --wallet-dir {} --password {}", player2, DIR_2, PW), conf());
+        println!("p2 signs");
+        cli(format!("contract sign {} --sign-funding-tx --wallet-dir {} --password {}", cxid, DIR_2, PW), conf());
+        println!("p2 submits to arbiter");
+        cli(format!("contract submit {} --wallet-dir {}", cxid, DIR_2), conf());
+        println!("p2 sends fully-signed contract back to p1");
+        cli(format!("contract send {} --wallet-dir {}", cxid, DIR_2), conf());
+
+        println!("p1 receives");
+        cli(format!("contract receive {} --wallet-dir {} --password {}", player1, DIR_1, PW), conf());
+        println!("p1 broadcasts funding tx");
+        cli(format!("contract broadcast {} --wallet-dir {}", cxid, DIR_1), conf());
+
+        let response: JsonResponse<tglib::contract::Contract> = serde_json::from_str(&
+            cli(format!("contract details {} --wallet-dir {} --json-output", cxid, DIR_1), conf())).unwrap();
+        let contract = response.data.unwrap();
+        let funding_txid = contract.funding_tx.extract_tx().txid().to_string();
+
+        assert_eq!(contract.sigs.len(), 3);
+        assert!(poll_get_tx(DIR_1, &funding_txid));
+
+        cxid
+    }
+    
+    #[test]
+    fn test_contract_with_player_payout() {
+        let (p1, p2) = (random_player(), random_player());
+        let cxid = setup_live_contract(&p1, &p2);
+
+        println!("p1 creates payout");
+        cli(format!("payout new {} --wallet-dir {} 50000000 50000000", cxid, DIR_1), conf());
+        println!("p1 signs");
+        cli(format!("payout sign {} --wallet-dir {} --password {}", cxid, DIR_1, PW), conf());
+        println!("p1 sends");
+        cli(format!("payout send {} --wallet-dir {}", cxid, DIR_1), conf());
+
+        println!("p2 receives");
+        cli(format!("payout receive {} --wallet-dir {} --password {}", p2, DIR_2, PW), conf());
+        println!("p2 signs");
+// doesn't work because the wallet descriptor doesn't match the utxo
+        cli(format!("payout sign {} --wallet-dir {} --password {}", cxid, DIR_2, PW), conf());
+        println!("p2 broadcasts payout tx");
+        println!("{}", cli(format!("payout broadcast {} --wallet-dir {}", cxid, DIR_2), conf()));
+
+        let response: JsonResponse<tglib::bdk::bitcoin::util::psbt::PartiallySignedTransaction> = serde_json::from_str(&
+            cli(format!("payout details {} --wallet-dir {} --json-output", cxid, DIR_2), conf())).unwrap();
+        println!("payout details response: {:?}", response);
+        let psbt = response.data.unwrap();
+        let payout_txid = psbt.extract_tx().txid().to_string();
+
+        assert!(poll_get_tx(DIR_1, &payout_txid));
+
+        remove_test_wallets();
+    }
+    
+    #[test]
+    fn test_contract_with_arbiter_payout_p1() {
+        let (p1, p2) = (random_player(), random_player());
+        let cxid = setup_live_contract(&p1, &p2);
+        let payout_script_sig = "bogus script sig";
+
+        cli(format!("payout new {} --wallet-dir {}", cxid, DIR_1), conf());
+        cli(format!("payout sign {} {} --wallet-dir {} --password {}", cxid, payout_script_sig, DIR_1, PW), conf());
+        cli(format!("payout submit {} --wallet-dir {}", cxid, DIR_1), conf());
+        cli(format!("payout broadcast {} --wallet-dir {}", cxid, DIR_1), conf());
+
+        let response: JsonResponse<tglib::bdk::bitcoin::util::psbt::PartiallySignedTransaction> = serde_json::from_str(&
+            cli(format!("payout details {} --wallet-dir {} --json-output", cxid, DIR_1), conf())).unwrap();
+        let psbt = response.data.unwrap();
+        let payout_txid = psbt.extract_tx().txid().to_string();
+
+        assert!(poll_get_tx(DIR_1, &payout_txid));
+
+        remove_test_wallets()
+    }
+    
+    #[test]
+    fn test_contract_with_arbiter_payout_p2() {
+        let (p1, p2) = (random_player(), random_player());
+        let cxid = setup_live_contract(&p1, &p2);
+        let payout_script_sig = "bogus script sig";
+
+        cli(format!("payout new {} --wallet-dir {}", cxid, DIR_2), conf());
+        cli(format!("payout sign {} {} --wallet-dir {} --password {}", cxid, payout_script_sig, DIR_2, PW), conf());
+        cli(format!("payout submit {} --wallet-dir {}", cxid, DIR_2), conf());
+        cli(format!("payout broadcast {} --wallet-dir {} --password {}", cxid, DIR_2, PW), conf());
+
+        let response: JsonResponse<tglib::bdk::bitcoin::util::psbt::PartiallySignedTransaction> = serde_json::from_str(&
+            cli(format!("payout details {} --wallet-dir {} --json-output", cxid, DIR_2), conf())).unwrap();
+        let psbt = response.data.unwrap();
+        let payout_txid = psbt.extract_tx().txid().to_string();
+
+        assert!(poll_get_tx(DIR_2, &payout_txid));
+
+        remove_test_wallets();
+    }
+}

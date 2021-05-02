@@ -318,7 +318,7 @@ impl PlayerWallet {
         };
 // TODO: set satisfaction weight correctly and include tx fee
         let p1_tx_fee: u64 = TX_FEE * (p1_amount.as_sat() / contract_amount.as_sat());
-        let p2_tx_fee: u64 = contract_amount.as_sat() - p1_tx_fee;
+        let p2_tx_fee: u64 = TX_FEE - p1_tx_fee;
         builder.add_foreign_utxo(OutPoint { vout: escrow_vout as u32, txid: funding_tx.txid()}, psbt_input, 100).unwrap();
         if p1_amount.as_sat() != 0 {
             builder.add_recipient(Address::p2wpkh(&contract.p1_pubkey, NETWORK).unwrap().script_pubkey(), p1_amount.as_sat() - p1_tx_fee);
