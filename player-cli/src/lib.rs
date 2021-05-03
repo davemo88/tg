@@ -997,13 +997,23 @@ mod test {
     
     #[test]
     fn test_contract_with_player_payout() {
+
+        simple_logger::SimpleLogger::new()
+            .with_level(tglib::log::LevelFilter::Debug)
+            .with_module_level("reqwest", tglib::log::LevelFilter::Warn)
+            .with_module_level("sled", tglib::log::LevelFilter::Warn)
+            .init()
+            .unwrap();
+
         let (p1, p2) = (random_player(), random_player());
         let cxid = setup_live_contract(&p1, &p2);
 
         println!("p1 creates payout");
         cli(format!("payout new {} --wallet-dir {} 50000000 50000000", cxid, DIR_1), conf());
+        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
         println!("p1 signs");
         cli(format!("payout sign {} --wallet-dir {} --password {}", cxid, DIR_1, PW), conf());
+        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
         println!("p1 sends");
         cli(format!("payout send {} --wallet-dir {}", cxid, DIR_1), conf());
 
@@ -1012,6 +1022,7 @@ mod test {
         println!("p2 signs");
 // doesn't work because the wallet descriptor doesn't match the utxo
         cli(format!("payout sign {} --wallet-dir {} --password {}", cxid, DIR_2, PW), conf());
+        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_2), conf()));
         println!("p2 broadcasts payout tx");
         println!("{}", cli(format!("payout broadcast {} --wallet-dir {}", cxid, DIR_2), conf()));
 

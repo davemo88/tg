@@ -331,20 +331,26 @@ impl PlayerWallet {
     }
 
     pub fn sign_payout(&self, payout: Payout, pw: Secret<String>) -> Result<PartiallySignedTransaction> {
-// derive escrow privkey
+// derive escrow private key
         let path = DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap();
         let seed = self.saved_seed().unwrap().get_seed(pw)?;
         let account_key = derive_account_xprivkey(seed, self.network);
         let secp = Secp256k1::new();
-        let escrow_key = account_key.derive_priv(&secp, &path).unwrap().private_key;
+        let escrow_privkey = account_key.derive_priv(&secp, &path).unwrap().private_key;
 // check if we are p1 or p2
         let secp = Secp256k1::new();
-        let escrow_pubkey = PublicKey::from_private_key(&secp, &escrow_key);
+        let escrow_pubkey = PublicKey::from_private_key(&secp, &escrow_privkey);
 // create escrow descriptor wallet
         let desc = if escrow_pubkey == payout.contract.p1_pubkey {
-            format!("sh(multi(2,{},{},{}))", escrow_key.to_wif(), payout.contract.p2_pubkey.to_string(), payout.contract.arbiter_pubkey.to_string())
+            format!("sh(multi(2,{},{},{}))", 
+                escrow_privkey.to_wif(), 
+                payout.contract.p2_pubkey.to_string(), 
+                payout.contract.arbiter_pubkey.to_string())
         } else if escrow_pubkey == payout.contract.p2_pubkey {
-            format!("sh(multi(2,{},{},{}))", payout.contract.p1_pubkey.to_string(), escrow_key.to_wif(), payout.contract.arbiter_pubkey.to_string())
+            format!("sh(multi(2,{},{},{}))", 
+                payout.contract.p1_pubkey.to_string(), 
+                escrow_privkey.to_wif(), 
+                payout.contract.arbiter_pubkey.to_string())
         } else {
             return Err(Error::Adhoc("can't sign payout - not party to this payout"))
         };
@@ -352,6 +358,7 @@ impl PlayerWallet {
         let wallet = tglib::bdk::Wallet::new_offline(&desc, None, NETWORK, tglib::bdk::database::MemoryDatabase::default()).unwrap();
 
         let (psbt, _finalized) = wallet.sign(payout.psbt, None).unwrap();
+        println!("finalized: {}", _finalized);
         
         Ok(psbt)
     }

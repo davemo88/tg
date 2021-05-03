@@ -43,7 +43,6 @@ use tglib::{
     },
     wallet::{
         sign_contract,
-        sign_payout_psbt,
         EscrowWallet,
         NameWallet,
         SigningWallet,
@@ -433,23 +432,22 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
             SignDocumentParams::SignPayoutParams { cxid, script_sig } => (cxid, script_sig),
             _ => return Err(Error::Adhoc("invalid params").into()),
         };
-        if let Some(pr) = self.db().get_payout(&cxid) {
-            let psbt: PartiallySignedTransaction = consensus::deserialize(&hex::decode(pr.psbt)?)?;
-            let psbt = sign_payout_psbt(self, psbt, pw)?;
-            let psbt = hex::encode(consensus::serialize(&psbt));
-            self.db().insert_payout(PayoutRecord {
-                cxid: pr.cxid, 
-                psbt,
-                sig: match script_sig {
-                    Some(sig) => hex::encode(sig.serialize_der()),
-                    None => String::default(),
-                }
-            })?;
-            Ok(())
-        }
-        else {
-            Err(Error::Adhoc("unknown payout").into())
-        }
+        let pr = self.db().get_payout(&cxid).ok_or(Error::Adhoc("unknown payout"))?;
+        let cr = DocumentUI::<ContractRecord>::get(self, &cxid).ok_or(Error::Adhoc("unknown contract"))?;
+        let contract = Contract::from_bytes(hex::decode(cr.hex)?)?;
+        let psbt: PartiallySignedTransaction = consensus::deserialize(&hex::decode(pr.psbt)?)?;
+        let payout = Payout::new(contract, psbt);
+        let psbt = self.sign_payout(payout, pw)?;
+        let psbt = hex::encode(consensus::serialize(&psbt));
+        self.db().insert_payout(PayoutRecord {
+            cxid: pr.cxid, 
+            psbt,
+            sig: match script_sig {
+                Some(sig) => hex::encode(sig.serialize_der()),
+                None => String::default(),
+            }
+        })?;
+        Ok(())
     }
 
     fn send(&self, cxid: &str) -> Result<()> {
