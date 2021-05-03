@@ -904,7 +904,7 @@ mod test {
     }
 
     fn poll_get_tx(wallet_dir: &str, txid: &str) -> bool {
-        let mut waiting_time = std::time::Duration::from_millis(50);
+        let mut waiting_time = std::time::Duration::from_millis(100);
         let mut retries = 0;
         let max_retries = 5;
         loop {
@@ -950,10 +950,8 @@ mod test {
         println!("init p2 wallet");
         init_funded_wallet(DIR_2);
 
-        println!("register p1");
-        cli(format!("player register {} --wallet-dir {} --password {}", player1, DIR_1, PW), conf());
-        println!("register p2");
-        cli(format!("player register {} --wallet-dir {} --password {}", player2, DIR_2, PW), conf());
+        println!("register p1: {}", cli(format!("player register {} --wallet-dir {} --password {}", player1, DIR_1, PW), conf()));
+        println!("register p2: {}", cli(format!("player register {} --wallet-dir {} --password {}", player2, DIR_2, PW), conf()));
         cli(format!("player add {} --wallet-dir {}", player2, DIR_1), conf());
         cli(format!("player add {} --wallet-dir {}", player1, DIR_2), conf());
 
@@ -963,6 +961,7 @@ mod test {
         println!("p1 creates contract");
         let response: JsonResponse<ContractSummary> = serde_json::from_str(&
             cli(format!("contract new {} {} 100000000 --wallet-dir {} --json-output", player1, player2, DIR_1), conf())).unwrap();
+        println!("contract new response: {:?}", response);
         let contract_summary = response.data.unwrap();
         let cxid = contract_summary.cxid;
         println!("p1 signs");
@@ -970,8 +969,7 @@ mod test {
         println!("p1 sends to p2");
         cli(format!("contract send {} --wallet-dir {}", cxid, DIR_1), conf());
 
-        println!("p2 receives");
-        cli(format!("contract receive {} --wallet-dir {} --password {}", player2, DIR_2, PW), conf());
+        println!("p2 receives: {}", cli(format!("contract receive {} --wallet-dir {} --password {}", player2, DIR_2, PW), conf()));
         println!("p2 signs");
         cli(format!("contract sign {} --sign-funding-tx --wallet-dir {} --password {}", cxid, DIR_2, PW), conf());
         println!("p2 submits to arbiter");
@@ -979,8 +977,7 @@ mod test {
         println!("p2 sends fully-signed contract back to p1");
         cli(format!("contract send {} --wallet-dir {}", cxid, DIR_2), conf());
 
-        println!("p1 receives");
-        cli(format!("contract receive {} --wallet-dir {} --password {}", player1, DIR_1, PW), conf());
+        println!("p1 receives: {}", cli(format!("contract receive {} --wallet-dir {} --password {}", player1, DIR_1, PW), conf()));
         println!("p1 broadcasts funding tx");
         cli(format!("contract broadcast {} --wallet-dir {}", cxid, DIR_1), conf());
 

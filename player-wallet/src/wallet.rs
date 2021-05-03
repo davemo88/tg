@@ -310,14 +310,13 @@ impl PlayerWallet {
         let (escrow_vout, escrow_txout) = funding_tx.output.iter().enumerate().find(|(_vout, txout)| txout.script_pubkey == escrow_address.script_pubkey()).unwrap();
         let wallet = self.offline_wallet();
         let mut builder = wallet.build_tx();
-        builder.manually_selected_only();
         let psbt_input = Input {
             witness_utxo: Some(escrow_txout.clone()),
             witness_script: Some(create_escrow_script(&contract.p1_pubkey, &contract.p2_pubkey, &contract.arbiter_pubkey)),
             ..Default::default()
         };
 // TODO: set satisfaction weight correctly and include tx fee
-        let p1_tx_fee: u64 = TX_FEE * (p1_amount.as_sat() / contract_amount.as_sat());
+        let p1_tx_fee: u64 = Amount::from_btc(Amount::from_sat(TX_FEE).as_btc() * (p1_amount.as_btc() as f64 / contract_amount.as_btc())).unwrap().as_sat();
         let p2_tx_fee: u64 = TX_FEE - p1_tx_fee;
         builder.add_foreign_utxo(OutPoint { vout: escrow_vout as u32, txid: funding_tx.txid()}, psbt_input, 100).unwrap();
         if p1_amount.as_sat() != 0 {
@@ -326,6 +325,8 @@ impl PlayerWallet {
         if p2_amount.as_sat() != 0 {
             builder.add_recipient(Address::p2wpkh(&contract.p2_pubkey, NETWORK).unwrap().script_pubkey(), p2_amount.as_sat() - p2_tx_fee);
         }
+        builder.manually_selected_only();
+        builder.fee_absolute(TX_FEE);
         let (psbt, _details) = builder.finish().unwrap();
         Ok(Payout::new(contract.clone(), psbt))
     }
@@ -342,20 +343,31 @@ impl PlayerWallet {
         let escrow_pubkey = PublicKey::from_private_key(&secp, &escrow_privkey);
 // create escrow descriptor wallet
         let desc = if escrow_pubkey == payout.contract.p1_pubkey {
-            format!("sh(multi(2,{},{},{}))", 
+            println!("using p1 descriptor");
+            format!("wsh(multi(2,{},{},{}))", 
                 escrow_privkey.to_wif(), 
                 payout.contract.p2_pubkey.to_string(), 
                 payout.contract.arbiter_pubkey.to_string())
         } else if escrow_pubkey == payout.contract.p2_pubkey {
-            format!("sh(multi(2,{},{},{}))", 
+            println!("using p2 descriptor");
+            format!("wsh(multi(2,{},{},{}))", 
                 payout.contract.p1_pubkey.to_string(), 
                 escrow_privkey.to_wif(), 
                 payout.contract.arbiter_pubkey.to_string())
         } else {
             return Err(Error::Adhoc("can't sign payout - not party to this payout"))
         };
-
+        println!("payout signing descriptor: {}", desc);
+        
         let wallet = tglib::bdk::Wallet::new_offline(&desc, None, NETWORK, tglib::bdk::database::MemoryDatabase::default()).unwrap();
+// TODO: why aren't these equal?
+        println!("{:?}", wallet.get_new_address());
+        println!("{:?}", create_escrow_address(
+                &payout.contract.p1_pubkey,
+                &payout.contract.p2_pubkey,
+                &payout.contract.arbiter_pubkey,
+                NETWORK,
+        ));
 
         let (psbt, _finalized) = wallet.sign(payout.psbt, None).unwrap();
         println!("finalized: {}", _finalized);
