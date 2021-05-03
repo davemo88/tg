@@ -218,6 +218,7 @@ where T: EscrowWallet + SigningWallet {
 }
 
 pub fn create_escrow_address(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pubkey: &PublicKey, network: Network) -> Result<Address> {
+// TODO: could use descriptor here
     let escrow_address = Address::p2wsh(
         &create_escrow_script(p1_pubkey, p2_pubkey, arbiter_pubkey),
         network,
@@ -229,11 +230,11 @@ pub fn create_escrow_script(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbite
 // standard multisig transaction script
 // https://en.bitcoin.it/wiki/BIP_0011
     let b = Builder::new()
-        .push_opcode(Opcodes::OP_PUSHBYTES_2)
+        .push_opcode(Opcodes::OP_PUSHNUM_2)
         .push_slice(&p1_pubkey.to_bytes())
         .push_slice(&p2_pubkey.to_bytes())
         .push_slice(&arbiter_pubkey.to_bytes())
-        .push_opcode(Opcodes::OP_PUSHBYTES_3)
+        .push_opcode(Opcodes::OP_PUSHNUM_3)
         .push_opcode(Opcodes::OP_CHECKMULTISIG);
     b.into_script()
 }
