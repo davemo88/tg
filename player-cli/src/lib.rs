@@ -621,7 +621,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 }
             }
             "broadcast" => match DocumentUI::<ContractRecord>::broadcast(wallet, a.value_of("cxid").unwrap()) {
-                Ok(()) => "funding tx broadcasted to network".to_string(),
+                Ok(()) => "funding tx broadcast to network".to_string(),
                 Err(e) => format!("{}", e),
             }
             "delete" => match DocumentUI::<ContractRecord>::delete(wallet, a.value_of("cxid").unwrap()) {
@@ -854,7 +854,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 Err(e) => format!("{}", e),
             }
             "broadcast" => match DocumentUI::<PayoutRecord>::broadcast(wallet, a.value_of("cxid").unwrap()) {
-                Ok(()) => "payout tx broadcasted to network".to_string(),
+                Ok(()) => "payout tx broadcast to network".to_string(),
                 Err(e) => format!("{}", e),
             }
             "delete" => match DocumentUI::<PayoutRecord>::delete(wallet, a.value_of("cxid").unwrap()) {
@@ -911,10 +911,9 @@ mod test {
         loop {
             std::thread::sleep(waiting_time);
             let response: JsonResponse<bool> = serde_json::from_str(&cli(format!("get-tx {} --wallet-dir {} --json-output", txid, wallet_dir), conf())).unwrap();
-            if let Some(b) = response.data {
-                if b {
-                    return true
-                }
+            match response.data {
+                Some(true) => return true,
+                _ => (),
             }
             if retries < max_retries {
                 retries += 1;
@@ -970,7 +969,8 @@ mod test {
         println!("p1 sends to p2");
         cli(format!("contract send {} --wallet-dir {}", cxid, DIR_1), conf());
 
-        println!("p2 receives: {}", cli(format!("contract receive {} --wallet-dir {} --password {}", player2, DIR_2, PW), conf()));
+        println!("p2 receives");
+        cli(format!("contract receive {} --wallet-dir {} --password {}", player2, DIR_2, PW), conf());
         println!("p2 signs");
         cli(format!("contract sign {} --sign-funding-tx --wallet-dir {} --password {}", cxid, DIR_2, PW), conf());
         println!("p2 submits to arbiter");
@@ -978,7 +978,8 @@ mod test {
         println!("p2 sends fully-signed contract back to p1");
         cli(format!("contract send {} --wallet-dir {}", cxid, DIR_2), conf());
 
-        println!("p1 receives: {}", cli(format!("contract receive {} --wallet-dir {} --password {}", player1, DIR_1, PW), conf()));
+        println!("p1 receives");
+        cli(format!("contract receive {} --wallet-dir {} --password {}", player1, DIR_1, PW), conf());
         println!("p1 broadcasts funding tx");
         cli(format!("contract broadcast {} --wallet-dir {}", cxid, DIR_1), conf());
 
@@ -1009,10 +1010,10 @@ mod test {
 
         println!("p1 creates payout");
         cli(format!("payout new {} --wallet-dir {} 50000000 50000000", cxid, DIR_1), conf());
-        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
+//        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
         println!("p1 signs");
         cli(format!("payout sign {} --wallet-dir {} --password {}", cxid, DIR_1, PW), conf());
-        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
+//        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
         println!("p1 sends");
         cli(format!("payout send {} --wallet-dir {}", cxid, DIR_1), conf());
 
@@ -1021,7 +1022,7 @@ mod test {
         println!("p2 signs");
 // doesn't work because the wallet descriptor doesn't match the utxo
         cli(format!("payout sign {} --wallet-dir {} --password {}", cxid, DIR_2, PW), conf());
-        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_2), conf()));
+//        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_2), conf()));
         println!("p2 broadcasts payout tx");
         println!("{}", cli(format!("payout broadcast {} --wallet-dir {}", cxid, DIR_2), conf()));
 

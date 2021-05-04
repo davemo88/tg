@@ -343,13 +343,11 @@ impl PlayerWallet {
         let escrow_pubkey = PublicKey::from_private_key(&secp, &escrow_privkey);
 // create escrow descriptor wallet
         let desc = if escrow_pubkey == payout.contract.p1_pubkey {
-            println!("using p1 descriptor");
             format!("wsh(multi(2,{},{},{}))", 
                 escrow_privkey.to_wif(), 
                 payout.contract.p2_pubkey.to_string(), 
                 payout.contract.arbiter_pubkey.to_string())
         } else if escrow_pubkey == payout.contract.p2_pubkey {
-            println!("using p2 descriptor");
             format!("wsh(multi(2,{},{},{}))", 
                 payout.contract.p1_pubkey.to_string(), 
                 escrow_privkey.to_wif(), 
@@ -357,20 +355,19 @@ impl PlayerWallet {
         } else {
             return Err(Error::Adhoc("can't sign payout - not party to this payout"))
         };
-        println!("payout signing descriptor: {}", desc);
         
         let wallet = tglib::bdk::Wallet::new_offline(&desc, None, NETWORK, tglib::bdk::database::MemoryDatabase::default()).unwrap();
 // TODO: why aren't these equal?
-        println!("{:?}", wallet.get_new_address());
-        println!("{:?}", create_escrow_address(
-                &payout.contract.p1_pubkey,
-                &payout.contract.p2_pubkey,
-                &payout.contract.arbiter_pubkey,
-                NETWORK,
-        ));
+//        println!("{:?}", wallet.get_new_address());
+//        println!("{:?}", create_escrow_address(
+//                &payout.contract.p1_pubkey,
+//                &payout.contract.p2_pubkey,
+//                &payout.contract.arbiter_pubkey,
+//                NETWORK,
+//        ));
 
         let (psbt, _finalized) = wallet.sign(payout.psbt, None).unwrap();
-        println!("finalized: {}", _finalized);
+//        println!("finalized: {}", _finalized);
         
         Ok(psbt)
     }
