@@ -123,7 +123,7 @@ export const loadContracts = () => {
 }
 
 export const newContract = (p1Name: string, p2Name: string, sats: number) => {
-    return async (dispatch, getState) => {
+    return async (dispatch) => {
         let output = await PlayerWalletModule.call_cli(`contract new "${p1Name}" "${p2Name}" ${sats}`); 
         let response = JSON.parse(output);
         if (response.status === "error") {
@@ -157,7 +157,7 @@ export const loadPayouts = () => {
 }
 
 export const newPayout = (cxid: string, p1Amount: number, p2Amount: number) => {
-    return async (dispatch, getState) => {
+    return async (dispatch) => {
         let output = await PlayerWalletModule.call_cli(`payout new ${cxid} ${p1Amount} ${p2Amount}`); 
         let response = JSON.parse(output);
         if (response.status === "error") {
