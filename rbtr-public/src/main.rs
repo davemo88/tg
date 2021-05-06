@@ -34,7 +34,6 @@ use tglib::{
             util::{
                 bip32::{
                     ExtendedPubKey,
-                    DerivationPath,
                     Fingerprint,
                 },
                 psbt::PartiallySignedTransaction,
@@ -100,12 +99,6 @@ fn wallet() -> Wallet<ElectrumBlockchain, MemoryDatabase> {
 
 fn get_escrow_pubkey() -> PublicKey {
     EscrowWallet::get_escrow_pubkey(&wallet())
-}
-
-fn get_fee_address() -> Address {
-    let w = wallet();
-    let a = w.xpubkey.derive_pub(&Secp256k1::new(), &DerivationPath::from_str("m/0/0").unwrap()).unwrap();
-    Address::p2wpkh(&a.public_key, w.network).unwrap()
 }
 
 // TODO: more functions like these for the other redis ops
@@ -366,7 +359,7 @@ async fn main() {
     
     let escrow_pubkey = get_escrow_pubkey();
     let escrow_pubkey = warp::any().map(move || escrow_pubkey.clone());
-    let fee_address = get_fee_address();
+    let fee_address = wallet().get_fee_address();
     let fee_address = warp::any().map(move || fee_address.clone());
     let redis_client = redis_client();
     let redis_client = warp::any().map(move || redis_client.clone());

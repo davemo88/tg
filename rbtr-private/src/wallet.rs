@@ -2,6 +2,7 @@ use std::str::FromStr;
 use tglib::{
     bdk::{
         bitcoin::{
+            Address,
             PublicKey,
             secp256k1::{
                 Message,
@@ -44,6 +45,11 @@ impl Wallet {
        Wallet {
            saved_seed: SavedSeed::new(pw, Some(Secret::new(ARBITER_MNEMONIC.to_owned()))).unwrap()
        } 
+    }
+
+    pub fn get_fee_address(&self) -> Address {
+        let a = self.saved_seed.xpubkey.derive_pub(&Secp256k1::new(), &DerivationPath::from_str("m/0/0").unwrap()).unwrap();
+        Address::p2wpkh(&a.public_key, NETWORK).unwrap()
     }
 
     pub fn sign_payout(&self, payout: Payout, pw: Secret<String>) -> Result<PartiallySignedTransaction> {
@@ -104,6 +110,11 @@ impl EscrowWallet for Wallet {
         if contract.arbiter_pubkey != self.get_escrow_pubkey() {
             error!("incorrect arbiter pubkey");
             return Err(Error::Adhoc("incorrect arbiter pubkey"));
+        }
+        if contract.fee_address()? != self.get_fee_address() {
+            let e = Error::Adhoc("incorrect fee address");
+            error!("{}", e);
+            return Err(e);
         }
         contract.validate()
     }

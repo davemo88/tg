@@ -4,6 +4,7 @@ use tglib::{
         Wallet as BdkWallet,
         database::BatchDatabase,
         bitcoin::{
+            Address,
             Network,
             PublicKey,
             secp256k1::Secp256k1,
@@ -61,6 +62,16 @@ where
     }
 }
 
+impl<B, D> Wallet<B, D>
+where
+    D: BatchDatabase + Default, 
+{
+    pub fn get_fee_address(&self) -> Address {
+        let a = self.xpubkey.derive_pub(&Secp256k1::new(), &DerivationPath::from_str("m/0/0").unwrap()).unwrap();
+        Address::p2wpkh(&a.public_key, self.network).unwrap()
+    }
+}
+
 impl<D> Wallet<(),D>
 where
     D: BatchDatabase + Default 
@@ -96,8 +107,13 @@ where
     }
 
     fn validate_contract(&self, contract: &Contract) -> Result<()> {
-        if contract.arbiter_pubkey != EscrowWallet::get_escrow_pubkey(self) {
+        if contract.arbiter_pubkey != self.get_escrow_pubkey() {
             let e = Error::Adhoc("unexpected arbiter pubkey");
+            error!("{}", e);
+            return Err(e);
+        }
+        if contract.fee_address()? != self.get_fee_address() {
+            let e = Error::Adhoc("incorrect fee address");
             error!("{}", e);
             return Err(e);
         }

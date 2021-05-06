@@ -129,22 +129,16 @@ impl Contract {
 
     pub fn amount(&self) -> Result<Amount> {
         let escrow_address = create_escrow_address(&self.p1_pubkey, &self.p2_pubkey, &self.arbiter_pubkey, NETWORK).unwrap();
-        for txout in self.funding_tx.clone().extract_tx().output.clone() {
-            if txout.script_pubkey == escrow_address.script_pubkey() {
-                return Ok(Amount::from_sat(txout.value))
-            }
-        }
-        Err(Error::Adhoc("couldn't determine amount"))
+        let funding_tx = self.funding_tx.clone().extract_tx();
+        let escrow_txout = funding_tx.output.iter().find(|txout| txout.script_pubkey == escrow_address.script_pubkey()).ok_or(Error::Adhoc("couldn't determine amount"))?;
+        Ok(Amount::from_sat(escrow_txout.value))
     }
 
-    pub fn fee(&self) -> Result<Address> {
+    pub fn fee_address(&self) -> Result<Address> {
         let fee_amount = self.amount().unwrap().as_sat()/100;
-        for txout in self.funding_tx.clone().extract_tx().output {
-            if txout.value == fee_amount {
-               return Ok(Address::from_script(&txout.script_pubkey, NETWORK).unwrap())
-            }
-        }
-        Err(Error::Adhoc("fee not found"))
+        let funding_tx = self.funding_tx.clone().extract_tx();
+        let fee_txout = funding_tx.output.iter().find(|txout| txout.value == fee_amount).ok_or(Error::Adhoc("fee not found"))?;
+        Ok(Address::from_script(&fee_txout.script_pubkey, NETWORK).unwrap())
     }
 
     pub fn validate(&self) -> Result<()> {
@@ -156,7 +150,7 @@ impl Contract {
 
     fn validate_funding_tx(&self) -> Result<()> {
         self.amount()?;
-        self.fee()?;
+        self.fee_address()?;
         Ok(())
     }
 
