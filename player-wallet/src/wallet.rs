@@ -318,7 +318,7 @@ impl PlayerWallet {
 // TODO: set satisfaction weight correctly and include tx fee
         let p1_tx_fee: u64 = Amount::from_btc(Amount::from_sat(TX_FEE).as_btc() * (p1_amount.as_btc() as f64 / contract_amount.as_btc())).unwrap().as_sat();
         let p2_tx_fee: u64 = TX_FEE - p1_tx_fee;
-        builder.add_foreign_utxo(OutPoint { vout: escrow_vout as u32, txid: funding_tx.txid()}, psbt_input, 100).unwrap();
+        builder.add_foreign_utxo(OutPoint { vout: escrow_vout as u32, txid: funding_tx.txid()}, psbt_input, 0).unwrap();
         if p1_amount.as_sat() != 0 {
             builder.add_recipient(Address::p2wpkh(&contract.p1_pubkey, NETWORK).unwrap().script_pubkey(), p1_amount.as_sat() - p1_tx_fee);
         }
@@ -339,7 +339,6 @@ impl PlayerWallet {
         let secp = Secp256k1::new();
         let escrow_privkey = account_key.derive_priv(&secp, &path).unwrap().private_key;
 // check if we are p1 or p2
-        let secp = Secp256k1::new();
         let escrow_pubkey = PublicKey::from_private_key(&secp, &escrow_privkey);
 // create escrow descriptor wallet
         let desc = if escrow_pubkey == payout.contract.p1_pubkey {
@@ -357,17 +356,8 @@ impl PlayerWallet {
         };
         
         let wallet = tglib::bdk::Wallet::new_offline(&desc, None, NETWORK, tglib::bdk::database::MemoryDatabase::default()).unwrap();
-// TODO: why aren't these equal?
-//        println!("{:?}", wallet.get_new_address());
-//        println!("{:?}", create_escrow_address(
-//                &payout.contract.p1_pubkey,
-//                &payout.contract.p2_pubkey,
-//                &payout.contract.arbiter_pubkey,
-//                NETWORK,
-//        ));
 
         let (psbt, _finalized) = wallet.sign(payout.psbt, None).unwrap();
-//        println!("finalized: {}", _finalized);
         
         Ok(psbt)
     }

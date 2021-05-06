@@ -185,7 +185,6 @@ pub trait EscrowWallet {
         if recipient_pubkey.is_err() {
             return Err(Error::InvalidPayout("invalid recipient"))
         }
-        println!("{:?}", payout.psbt);
         if payout.psbt.inputs[0].partial_sigs.len() != 1 { //|| 
 //                !payout.psbt.inputs[0].partial_sigs.contains_key(&recipient_pubkey.unwrap()) {
 // TODO: need to create psbt correctly.  options: 
@@ -212,10 +211,10 @@ where T: EscrowWallet + SigningWallet {
                 DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap(), pw).unwrap())
 }
 
-pub fn sign_payout_psbt<T>(wallet: &T, psbt: PartiallySignedTransaction, pw: Secret<String>) -> Result<PartiallySignedTransaction> 
-where T: EscrowWallet + SigningWallet {
-    wallet.sign_tx(psbt, Some(DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap()), pw)
-}
+//pub fn sign_payout_psbt<T>(wallet: &T, psbt: PartiallySignedTransaction, pw: Secret<String>) -> Result<PartiallySignedTransaction> 
+//where T: EscrowWallet + SigningWallet {
+//    wallet.sign_tx(psbt, Some(DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap()), pw)
+//}
 
 pub fn create_escrow_address(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pubkey: &PublicKey, network: Network) -> Result<Address> {
 // TODO: could use descriptor here
@@ -239,8 +238,6 @@ pub fn create_escrow_script(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbite
     b.into_script()
 }
 
-// TODO: refactor this to take p1_amount instead of payout address
-// and p2 gets the difference between p1_amount and the contract amount
 pub fn create_payout(contract: &Contract, payout_address: &Address) -> Payout {
     let escrow_address = create_escrow_address(
         &contract.p1_pubkey,
@@ -294,9 +291,6 @@ fn create_payout_tx(funding_tx: &Transaction, escrow_address: &Address, payout_a
 
 // TODO: need to standardize this with builder-implementation in player wallet
 // and include a miner fee
-//    let mut input = Vec::<TxIn>::new();
-//    let mut amount = 0;
-
     let (input, amount) = funding_tx.output
         .iter()
         .enumerate()
@@ -309,7 +303,8 @@ fn create_payout_tx(funding_tx: &Transaction, escrow_address: &Address, payout_a
                             vout: i as u32,
                         },
                         script_sig: Script::new(),
-                        sequence: 0,
+// see bdk::Wallet::create tx
+                        sequence: 0xFFFFFFFF,
                         witness: Vec::new()
                     }),
                     txout.value,

@@ -17,6 +17,7 @@ use tglib::{
     hex,
     log::{
         LevelFilter,
+        debug,
         error,
     },
     secrecy::Secret,
@@ -24,7 +25,6 @@ use tglib::{
     payout::Payout,
     wallet::{
         sign_contract,
-        sign_payout_psbt,
         EscrowWallet,
     },
     mock::REDIS_SERVER,
@@ -57,7 +57,8 @@ async fn set_contract_signature(con: &mut Connection, contract: Contract, sig: S
 async fn maybe_sign_payout(con: &mut Connection, wallet: &Wallet) {
     if let Some(payout) = next_payout(con).await {
         if wallet.validate_payout(&payout).is_ok() {
-            if let Ok(psbt) = sign_payout_psbt(wallet, payout.psbt.clone(), Secret::new(ARBITER_PW.to_owned())) {
+            debug!("payout validation succeeded");
+            if let Ok(psbt) = wallet.sign_payout(payout.clone(), Secret::new(ARBITER_PW.to_owned())) {
                 let _r = set_payout_psbt(con, payout, psbt).await;
             }
         }

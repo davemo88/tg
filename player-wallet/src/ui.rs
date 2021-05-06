@@ -145,7 +145,7 @@ impl WalletUI for PlayerWallet {
         match blockchain_client.get_tx(&Txid::from_str(txid)?) {
             Ok(maybe_transaction) => Ok(maybe_transaction.is_some()),
 // electrum client returns an error for a missing / unindexed tx so the option within the result seems redundant sometimes
-            Err(tglib::bdk::Error::Electrum(tglib::bdk::electrum_client::Error::Protocol(_))) => Ok(false),
+            Err(tglib::bdk::Error::Electrum(tglib::bdk::electrum_client::Error::Protocol(_e))) => Ok(false),
             Err(e) => Err(Box::new(e))
         }
     }
@@ -480,14 +480,10 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
             psbt: consensus::deserialize(&hex::decode(pr.psbt).unwrap()).unwrap(),
             script_sig: Signature::from_der(&hex::decode(pr.sig).unwrap()).ok()
         };
-        if let Ok(psbt) = self.arbiter_client().submit_payout(&p) {
-            p.psbt = psbt; 
-            self.db().insert_payout(PayoutRecord::from(p)).unwrap();
-            Ok(())
-        }
-        else {
-            Err(Error::Adhoc("payout rejected").into())
-        }
+        let psbt = self.arbiter_client().submit_payout(&p)?; 
+        p.psbt = psbt; 
+        self.db().insert_payout(PayoutRecord::from(p)).unwrap();
+        Ok(())
     }
 
     fn broadcast(&self, cxid: &str) -> Result<()> {

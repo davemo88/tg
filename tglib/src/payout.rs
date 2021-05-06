@@ -70,7 +70,9 @@ impl Payout {
         v.extend(payout_tx);
 // payout script sig
         if let Some(sig) = self.script_sig {
-            v.extend(sig.serialize_der().to_vec());
+            let sig_bytes = sig.serialize_der().to_vec();
+            v.write_u8(sig_bytes.len() as u8).unwrap();
+            v.extend(sig_bytes);
         }
         v
 
@@ -87,10 +89,10 @@ impl Payout {
     }
 
     pub fn address(&self) -> Result<Address> {
-        let amount = self.contract.amount()?;
+        let amount = self.contract.amount()?.as_sat() - crate::wallet::TX_FEE;
         let tx = self.psbt.clone().extract_tx();
         for txout in tx.output {
-            if txout.value == amount.as_sat() {
+            if txout.value == amount {
                 return Ok(Address::from_script(&txout.script_pubkey, NETWORK).unwrap())
             }
         };

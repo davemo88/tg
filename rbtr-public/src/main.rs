@@ -52,7 +52,6 @@ use tglib::{
     hex,
     log::{
         error,
-        info,
         LevelFilter,
     },
     rand::{self, Rng},
@@ -155,12 +154,13 @@ async fn check_auth_token_sig(player_name: PlayerName, auth: AuthTokenSig, con: 
 async fn submit_contract(con: &mut Connection, contract: &Contract) -> Result<Signature> {
     wallet().validate_contract(&contract)?;
 
-    let cxid = push_contract(con, &hex::encode(contract.to_bytes())).await.unwrap();
+    let _r = push_contract(con, &hex::encode(contract.to_bytes())).await.unwrap();
+    let cxid = hex::encode(contract.cxid());
     for _ in 1..15 as u32 {
         sleep(Duration::from_secs(1));
-        let r: RedisResult<String> = con.get(hex::encode(contract.cxid())).await;
+        let r: RedisResult<String> = con.get(cxid.clone()).await;
         if let Ok(sig_hex) = r {
-            let _r : RedisResult<String> = con.del(cxid).await;
+            let _r : RedisResult<u64> = con.del(cxid).await;
             return Ok(Signature::from_der(&hex::decode(sig_hex).unwrap()).unwrap())
         }
     }
@@ -177,7 +177,7 @@ async fn submit_payout(con: &mut Connection, payout: &Payout) -> Result<Partiall
         sleep(Duration::from_secs(1));
         let r: RedisResult<String> = con.get(cxid.clone()).await;
         if let Ok(tx) = r {
-            let _r : RedisResult<String> = con.del(cxid).await;
+            let _r : RedisResult<u64> = con.del(cxid).await;
             return Ok(consensus::deserialize::<PartiallySignedTransaction>(&hex::decode(tx).unwrap()).unwrap())
         }
     }
@@ -234,8 +234,7 @@ async fn send_contract_handler(body: SendContractBody, redis_client: redis::Clie
     let mut con = redis_client.get_async_connection().await.unwrap();
     let r: RedisResult<i64> = con.rpush(&format!("{}/contracts", body.player_name), serde_json::to_string(&body.contract).unwrap()).await;
     match r {
-        Ok(_string) => {
-            info!("{}",_string);
+        Ok(_num) => {
             Ok("sent contract".to_string())
         }
         Err(e) => {

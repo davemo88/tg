@@ -92,14 +92,14 @@ impl PayoutSummary {
             let cr = DocumentUI::<ContractRecord>::get(player_wallet, &pr.cxid)?; 
             let contract = Contract::from_bytes(hex::decode(cr.hex).unwrap()).unwrap();
             let my_script_pubkey = Address::p2wpkh(&player_wallet.get_escrow_pubkey(), NETWORK).unwrap().script_pubkey();
-            let my_amount: u64 = psbt.global.unsigned_tx.output.iter().filter_map(|txout| if txout.script_pubkey == my_script_pubkey { Some(txout.value) } else { None}).sum();
-            let contract_amount = contract.amount().ok()?.as_sat();
+            let my_amount = Amount::from_sat(psbt.global.unsigned_tx.output.iter().filter_map(|txout| if txout.script_pubkey == my_script_pubkey { Some(txout.value) } else { None}).sum());
+            let contract_amount = contract.amount().ok()?;
             let p1_amount = if contract.p1_pubkey == player_wallet.get_escrow_pubkey() {
-                my_amount + TX_FEE/2
+                my_amount.as_sat()
             } else {
-                contract_amount - my_amount - TX_FEE/2
+                contract_amount.as_sat() - my_amount.as_sat() - TX_FEE
             };
-            let p2_amount = contract_amount - p1_amount;
+            let p2_amount = contract_amount.as_sat() - p1_amount - TX_FEE;
 
             Some(PayoutSummary {
                 cxid: pr.cxid.clone(),
@@ -803,7 +803,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                     wallet,
                     SignDocumentParams::SignPayoutParams {
                         cxid: a.value_of("cxid").unwrap().to_string(),
-                        script_sig: match a.value_of("script_sig") {
+                        script_sig: match a.value_of("script-sig") {
                             Some(sig_hex) => Some(Signature::from_der(&hex::decode(sig_hex).unwrap()).unwrap()),
                             None => None,
                         },
@@ -942,6 +942,17 @@ mod test {
             .collect();
         player
     }
+
+    fn payout_script_sig(payout_txid: &tglib::bdk::bitcoin::Txid) -> String {
+        println!("payout_txid {}",payout_txid);
+        use tglib::bdk::bitcoin::secp256k1;
+        let secp = secp256k1::Secp256k1::new();
+        let key = tglib::bdk::bitcoin::PrivateKey::from_wif(tglib::mock::REFEREE_PRIVKEY).unwrap();
+        let msg = secp256k1::Message::from_slice(&payout_txid).unwrap();
+        let sig = secp.sign(&msg, &key.key);
+
+        tglib::hex::encode(sig.serialize_der())
+    }
     
     fn setup_live_contract(player1: &str, player2: &str) -> String {
 
@@ -991,6 +1002,7 @@ mod test {
         assert_eq!(contract.sigs.len(), 3);
         assert!(poll_get_tx(DIR_1, &funding_txid));
 
+        println!("contract live");
         cxid
     }
     
@@ -1010,19 +1022,18 @@ mod test {
 
         println!("p1 creates payout");
         cli(format!("payout new {} --wallet-dir {} 50000000 50000000", cxid, DIR_1), conf());
-//        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
+        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
         println!("p1 signs");
         cli(format!("payout sign {} --wallet-dir {} --password {}", cxid, DIR_1, PW), conf());
-//        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
+        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
         println!("p1 sends");
         cli(format!("payout send {} --wallet-dir {}", cxid, DIR_1), conf());
 
         println!("p2 receives");
         cli(format!("payout receive {} --wallet-dir {} --password {}", p2, DIR_2, PW), conf());
         println!("p2 signs");
-// doesn't work because the wallet descriptor doesn't match the utxo
         cli(format!("payout sign {} --wallet-dir {} --password {}", cxid, DIR_2, PW), conf());
-//        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_2), conf()));
+        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_2), conf()));
         println!("p2 broadcasts payout tx");
         println!("{}", cli(format!("payout broadcast {} --wallet-dir {}", cxid, DIR_2), conf()));
 
@@ -1041,11 +1052,16 @@ mod test {
     fn test_contract_with_arbiter_payout_p1() {
         let (p1, p2) = (random_player(), random_player());
         let cxid = setup_live_contract(&p1, &p2);
-        let payout_script_sig = "bogus script sig";
 
-        cli(format!("payout new {} --wallet-dir {}", cxid, DIR_1), conf());
+        cli(format!("payout new {} --wallet-dir {} 100000000 0", cxid, DIR_1), conf());
+        let response: JsonResponse<tglib::bdk::bitcoin::util::psbt::PartiallySignedTransaction> = serde_json::from_str(&
+            cli(format!("payout details {} --wallet-dir {} --json-output", cxid, DIR_1), conf())).unwrap();
+        let payout_psbt = response.data.unwrap();
+        let payout_script_sig = payout_script_sig(&payout_psbt.extract_tx().txid());
         cli(format!("payout sign {} {} --wallet-dir {} --password {}", cxid, payout_script_sig, DIR_1, PW), conf());
+        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
         cli(format!("payout submit {} --wallet-dir {}", cxid, DIR_1), conf());
+        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
         cli(format!("payout broadcast {} --wallet-dir {}", cxid, DIR_1), conf());
 
         let response: JsonResponse<tglib::bdk::bitcoin::util::psbt::PartiallySignedTransaction> = serde_json::from_str(&
@@ -1062,12 +1078,17 @@ mod test {
     fn test_contract_with_arbiter_payout_p2() {
         let (p1, p2) = (random_player(), random_player());
         let cxid = setup_live_contract(&p1, &p2);
-        let payout_script_sig = "bogus script sig";
 
-        cli(format!("payout new {} --wallet-dir {}", cxid, DIR_2), conf());
+        cli(format!("payout new {} --wallet-dir {} 0 100000000", cxid, DIR_2), conf());
+        let response: JsonResponse<tglib::bdk::bitcoin::util::psbt::PartiallySignedTransaction> = serde_json::from_str(&
+            cli(format!("payout details {} --wallet-dir {} --json-output", cxid, DIR_2), conf())).unwrap();
+        let payout_psbt = response.data.unwrap();
+        let payout_script_sig = payout_script_sig(&payout_psbt.extract_tx().txid());
         cli(format!("payout sign {} {} --wallet-dir {} --password {}", cxid, payout_script_sig, DIR_2, PW), conf());
+        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_2), conf()));
         cli(format!("payout submit {} --wallet-dir {}", cxid, DIR_2), conf());
-        cli(format!("payout broadcast {} --wallet-dir {} --password {}", cxid, DIR_2, PW), conf());
+        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_2), conf()));
+        cli(format!("payout broadcast {} --wallet-dir {}", cxid, DIR_2), conf());
 
         let response: JsonResponse<tglib::bdk::bitcoin::util::psbt::PartiallySignedTransaction> = serde_json::from_str(&
             cli(format!("payout details {} --wallet-dir {} --json-output", cxid, DIR_2), conf())).unwrap();
