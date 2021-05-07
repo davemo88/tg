@@ -17,17 +17,17 @@ export const NETWORK: string = 'Test';
 export const initWallet = async (password: Secret<string>) => {
     let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password("init", password.expose_secret()));
     if (response.status === "error") {
-        throw(Error(response.message))
+        throw Error(response.message)
     }
     response = JSON.parse(await PlayerWalletModule.call_cli("fund"));
     if (response.status === "error") {
-        throw(Error(response.message))
+        throw Error(response.message)
     }
     const txid = response.data;
     do {
         response = JSON.parse(await PlayerWalletModule.call_cli(`get-tx ${txid}`));
         if (response.status === "error") {
-            throw(Error(response.message))
+            throw Error(response.message)
         }
     } while (!response.data)
 }
@@ -36,7 +36,7 @@ export const postContractInfo = (name: string, amount: number, password: Secret<
     return async (dispatch) => {
         const response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`player post "${name}" ${amount}`, password.expose_secret()));
         if (response.status === "error") {
-            throw(Error(response.message))
+            throw Error(response.message)
         }
         return dispatch(postedSlice.actions.setPosted(response.data))
     }
@@ -46,7 +46,7 @@ export const getPosted = async (name: string) => {
     const cli_output = await PlayerWalletModule.call_cli(`player posted "${name}"`);
     let response: JsonResponse = JSON.parse(cli_output);
     if (response.status === "error") {
-        throw(Error(response.message));
+        throw Error(response.message);
     }
     const posted = +response.data;
     return Promise.resolve(posted)
@@ -65,7 +65,7 @@ export const signContract = (contract: Contract, password: Secret<string>) => {
         const selectedPlayerName = getState().selectedPlayerName;
         let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`contract sign ${contract.cxid} --sign-funding-tx`, password.expose_secret()));
         if (response.status === "error") {
-            throw(Error(response.message));
+            throw Error(response.message);
         }
         let action = {id: contract.cxid, changes: {
             p1Sig: selectedPlayerName === contract.p1Name,
@@ -79,7 +79,7 @@ export const sendContract = async (contract: Contract) => {
     const cli_output = await PlayerWalletModule.call_cli(`contract send ${contract.cxid}`);
     const response: JsonResponse = JSON.parse(cli_output);
     if (response.status === "error") {
-        throw(Error(response.message));
+        throw Error(response.message);
     }
     return Promise.resolve(null)
 }
@@ -89,14 +89,14 @@ export const receiveContract = (name: string, password: Secret<string>) => {
         let cli_output = await PlayerWalletModule.call_cli_with_password(`contract receive ${name}`, password.expose_secret());
         let response: JsonResponse = JSON.parse(cli_output);
         if (response.status === "error") {
-            throw(Error(response.message));
+            throw Error(response.message);
         }
         let cxid = response.data;
         if (cxid) {
             cli_output = await PlayerWalletModule.call_cli(`contract summary ${cxid}`);
             response = JSON.parse(cli_output);
             if (response.status === "error") {
-                throw(Error(response.message));
+                throw Error(response.message);
             }
             let contract = response.data;
             console.info("received contract:", contract);
@@ -119,7 +119,7 @@ export const submitContract = (contract: Contract) => {
         let cli_output = await PlayerWalletModule.call_cli(`contract submit ${contract.cxid}`);
         let response: JsonResponse = JSON.parse(cli_output);
         if (response.status === "error") {
-            throw(Error(response.message));
+            throw Error(response.message);
         }
         return dispatch(contractSlice.actions.contractUpdated({
             id: contract.cxid, changes: { arbiterSig: true }
@@ -136,7 +136,7 @@ export const signPayout = (payout: Payout, password: Secret<string>) => {
         const selectedPlayerName = getState().selectedPlayerName;
         let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`payout sign ${payout.cxid}`, password.expose_secret()));
         if (response.status === "error") {
-            throw(Error(response.message));
+            throw Error(response.message);
         }
         const contract = contractSelectors.selectById(getState(), payout.cxid);
         if (contract) {
@@ -153,7 +153,7 @@ export const sendPayout = async (payout: Payout) => {
     const cli_output = await PlayerWalletModule.call_cli(`payout send ${payout.cxid}`);
     const response: JsonResponse = JSON.parse(cli_output);
     if (response.status === "error") {
-        throw(Error(response.message));
+        throw Error(response.message);
     }
     return Promise.resolve(null)
 }
@@ -163,14 +163,14 @@ export const receivePayout = (name: string, password: Secret<string>) => {
         let cli_output = await PlayerWalletModule.call_cli_with_password(`payout receive ${name}`, password.expose_secret());
         let response: JsonResponse = JSON.parse(cli_output);
         if (response.status === "error") {
-            throw(Error(response.message));
+            throw Error(response.message);
         }
         let cxid = response.data;
         if (cxid) {
             cli_output = await PlayerWalletModule.call_cli(`payout summary ${cxid}`);
             response = JSON.parse(cli_output);
             if (response.status === "error") {
-                throw(Error(response.message));
+                throw Error(response.message);
             }
             let payout = response.data;
             console.info("received payout:", payout);
@@ -196,7 +196,7 @@ export const broadcastFundingTx = async (contract: Contract) => {
         const cli_output = await PlayerWalletModule.call_cli(`contract broadcast ${contract.cxid}`);
         const response: JsonResponse = JSON.parse(cli_output);
         if (response.status === "error") {
-            throw(Error(response.message));
+            throw Error(response.message);
         }
         return dispatch(contractSlice.actions.contractUpdated({
             id: contract.cxid,
@@ -212,7 +212,7 @@ export const broadcastPayoutTx = async (payout: Payout) => {
         const cli_output = await PlayerWalletModule.call_cli(`payout broadcast ${payout.cxid}`);
         const response: JsonResponse = JSON.parse(cli_output);
         if (response.status === "error") {
-            throw(Error(response.message));
+            throw Error(response.message);
         }
         return dispatch(payoutSlice.actions.payoutUpdated({
             id: payout.cxid,
