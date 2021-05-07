@@ -1,29 +1,35 @@
 export interface Player {
-  name:             string;
-  mine:             boolean;
+  name:             string,
+  mine:             boolean,
 }
 
 export interface Contract {
-    cxid:               string;
-    p1Name:             string;
-    p2Name:             string;
-    amount:             number;
-    desc:               string; 
-    p1Sig:              boolean;
-    p2Sig:              boolean;
-    arbiterSig:         boolean;
-    fundingTx:          boolean;
+    cxid:               string,
+    p1Name:             string,
+    p2Name:             string,
+    amount:             number,
+    desc:               string, 
+    p1Sig:              boolean,
+    p2Sig:              boolean,
+    arbiterSig:         boolean,
+    fundingTx:          TransactionStatus,
 }
 
 export interface Payout {
-  cxid:             string;
-  p1Amount:         number;
-  p2Amount:         number;
-  p1Sig:            boolean;
-  p2Sig:            boolean;
-  arbiterSig:       boolean;
-  token:            string;
-  tx:               boolean;
+  cxid:             string,
+  p1Amount:         number,
+  p2Amount:         number,
+  p1Sig:            boolean,
+  p2Sig:            boolean,
+  arbiterSig:       boolean,
+  scriptSig:        string,
+  tx:               TransactionStatus,
+}
+
+export enum TransactionStatus {
+    Unbroadcast,
+    Broadcast,
+    Confirmed,
 }
 
 export enum ContractStatus {
@@ -67,7 +73,7 @@ export enum PayoutStatus {
 }
 
 export interface JsonResponse {
-    status: "success"|"error";
-    data?: any;
-    message?: string;
+    status: "success"|"error",
+    data?: any,
+    message?: string,
 }

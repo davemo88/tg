@@ -6,9 +6,9 @@ import { styles } from '../styles';
 
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, payoutSlice, selectedPlayerNameSlice, } from '../redux';
 import { Player, Contract, ContractStatus, } from '../datatypes';
-import { receiveContract, sendContract, signContract, submitContract, sendPayout, signPayout, } from '../wallet';
+import { receiveContract, sendContract, signContract, submitContract, sendPayout, signPayout, broadcastFundingTx, broadcastPayoutTx } from '../wallet';
 import { getContractStatus } from '../dump';
-import { broadcastFundingTx, broadcastPayoutTx, declineContract, dismissContract, denyPayout, } from '../mock';
+import { declineContract, dismissContract, denyPayout, } from '../mock';
 
 import { Secret } from '../secret';
 import { Currency } from './currency';

@@ -1,7 +1,7 @@
 import { createStore } from 'redux';
 import { createEntityAdapter, createSlice, createReducer, createAction, configureStore, createAsyncThunk } from '@reduxjs/toolkit';
 import { Secret, } from './secret';
-import { JsonResponse, Player, Contract, Payout, } from './datatypes';
+import { JsonResponse, TransactionStatus, Player, Contract, Payout, } from './datatypes';
 
 import PlayerWalletModule from './PlayerWallet';
 
@@ -24,13 +24,13 @@ export const loadPlayers = () => {
     return async (dispatch) => {
         let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli("player list"));
         if (response.status === "error") {
-            throw(response.message);
+            throw(Error(response.message));
         }
         let players = response.data;
         console.debug("player list:", players);
         response = JSON.parse(await PlayerWalletModule.call_cli("player mine"));
         if (response.status === "error") {
-            throw(response.message);
+            throw(Error(response.message));
         }
         const my_players = response.data;
         console.debug("player mine:", my_players);
@@ -49,7 +49,7 @@ export const newPlayer = (name: string, password: Secret<string>) => {
 // confusing because of native module. what should its signature in typescript be?
         let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`player register "${name}"`, password.expose_secret())); 
         if (response.status === "error") {
-            throw(response.message);
+            throw(Error(response.message));
         }
         if (playerSelectors.selectById(getState(), name)) {
             return dispatch(playerSlice.actions.playerUpdated({
@@ -78,7 +78,7 @@ export const addPlayer = (name: string) => {
                 pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0",
             }));
         } else {
-            throw(cli_response);
+            throw(Error(cli_response));
         }
     }
 } 
@@ -89,7 +89,7 @@ export const removePlayer = (player: Player) => {
         if (cli_response === "remove player") {
             return dispatch(playerSlice.actions.playerRemoved(player.name));
         } else {
-            throw(cli_response);
+            throw(Error(cli_response));
         }
     }
 }
@@ -114,7 +114,7 @@ export const loadContracts = () => {
     return async (dispatch) => {
         let response = JSON.parse(await PlayerWalletModule.call_cli("contract list"));
         if (response.status === "error") {
-            throw(response.message);
+            throw(Error(response.message));
         }
         let contracts = response.data;
         console.debug("loaded contracts:", contracts);
@@ -127,7 +127,7 @@ export const newContract = (p1Name: string, p2Name: string, sats: number) => {
         let output = await PlayerWalletModule.call_cli(`contract new "${p1Name}" "${p2Name}" ${sats}`); 
         let response = JSON.parse(output);
         if (response.status === "error") {
-            throw(response.message)
+            throw(Error(response.message))
         }
         let contract = response.data;
         return dispatch(contractSlice.actions.contractAdded({
@@ -135,7 +135,7 @@ export const newContract = (p1Name: string, p2Name: string, sats: number) => {
             p1Name: contract.p1Name,
             p2Name: contract.p2Name,
             amount: contract.amount,
-            fundingTx: false,
+            fundingTx: TransactionStatus.Unbroadcast,
             p1Sig: false,
             p2Sig: false,
             arbiterSig: false,
@@ -148,7 +148,7 @@ export const loadPayouts = () => {
     return async (dispatch) => {
         let response = JSON.parse(await PlayerWalletModule.call_cli("payout list"));
         if (response.status === "error") {
-            throw(response.message);
+            throw(Error(response.message));
         }
         let payouts = response.data;
         console.debug("loaded payouts:", payouts);
@@ -161,7 +161,7 @@ export const newPayout = (cxid: string, p1Amount: number, p2Amount: number) => {
         let output = await PlayerWalletModule.call_cli(`payout new ${cxid} ${p1Amount} ${p2Amount}`); 
         let response = JSON.parse(output);
         if (response.status === "error") {
-            throw(response.message)
+            throw(Error(response.message))
         }
         return dispatch(payoutSlice.actions.payoutAdded({
             cxid: cxid,
@@ -170,8 +170,8 @@ export const newPayout = (cxid: string, p1Amount: number, p2Amount: number) => {
             p1Sig: false,
             p2Sig: false,
             arbiterSig: false,
-            token: "",
-            tx: false,
+            scriptSig: "",
+            tx: TransactionStatus.Unbroadcast,
         }))
     }
 }

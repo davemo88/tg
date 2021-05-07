@@ -83,7 +83,7 @@ pub struct PayoutSummary {
     pub arbiter_sig:    bool,
     pub p1_amount:      u64,
     pub p2_amount:      u64,
-    pub payout_token:   String,
+    pub script_sig:     String,
 }
 
 impl PayoutSummary {
@@ -106,7 +106,7 @@ impl PayoutSummary {
                 p1_sig: psbt.inputs.iter().any(|input| input.partial_sigs.get(&contract.p1_pubkey).is_some()),
                 p2_sig: psbt.inputs.iter().any(|input| input.partial_sigs.get(&contract.p2_pubkey).is_some()),
                 arbiter_sig: psbt.inputs.iter().any(|input| input.partial_sigs.get(&contract.arbiter_pubkey).is_some()),
-                payout_token: pr.sig.clone(),
+                script_sig: pr.sig.clone(),
                 p1_amount,
                 p2_amount,
             })

@@ -36,7 +36,7 @@ export const arbiterSignContract = (contract: Contract) => {
 }
 
 export const arbiterSignPayout = (payout: Payout) => {
-  if (payout.token) {
+  if (payout.scriptSig) {
     store.dispatch(payoutSlice.actions.payoutUpdated({
       id: payout.cxid,
       changes: { arbiterSig: true },
