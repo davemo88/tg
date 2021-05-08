@@ -1,6 +1,7 @@
 import React, { useState, useEffect, } from 'react';
 import { useDispatch, useSelector, } from 'react-redux';
 import { StackActions } from '@react-navigation/native'
+import CheckBox from '@react-native-community/checkbox';
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
 import { styles } from '../../styles';
@@ -70,6 +71,7 @@ export const Home = ({ navigation }) => {
               </View>
               <View style={{ flexDirection: 'row' }}>
                 <Text>Show Resolved</Text>
+                <CheckBox value={showResolved} onValueChange={(newValue) => setShowResolved(newValue)} />
                 <Button 
                   title="Receive"
                   onPress={() => 
