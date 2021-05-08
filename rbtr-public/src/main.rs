@@ -441,6 +441,7 @@ async fn main() {
         .or(submit_payout)
         .or(fund_address)
         .or(auth_token);
-
+// TODO: add task to purge stale posted contract info
+// e.g. when a posted utxo is spent
     warp::serve(routes).run(([0, 0, 0, 0], 5000)).await;
 }

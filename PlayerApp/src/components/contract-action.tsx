@@ -26,11 +26,13 @@ export const ContractAction = (props) => {
         [ContractStatus.Received]: <ActionReceived navigation={props.navigation} contract={props.contract}/>,
         [ContractStatus.PlayersSigned]: <ActionPlayersSigned navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Certified]: <ActionCertified navigation={props.navigation} contract={props.contract} />,
+        [ContractStatus.FundingTxBroadcast]: <ActionFundingTxBroadcast navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Live]: <ActionLive navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.PayoutUnsigned]: <ActionPayoutUnsigned navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.PayoutSigned]: <ActionPayoutSigned navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.PayoutReceived]: <ActionPayoutReceived navigation={props.navigation} contract={props.contract} />,
-        [ContractStatus.PayoutLive]: <ActionPayoutLive navigation={props.navigation} contract={props.contract} />,
+        [ContractStatus.PayoutCertified]: <ActionPayoutCertified navigation={props.navigation} contract={props.contract} />,
+        [ContractStatus.PayoutTxBroadcast]: <ActionPayoutTxBroadcast navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Resolved]: <ActionResolved navigation={props.navigation} contract={props.contract} />,
         [ContractStatus.Invalid]: <ActionInvalid navigation={props.navigation} contract={props.contract} />,
       }[getContractStatus(props.contract)]
@@ -112,13 +114,36 @@ const ActionPlayersSigned = (props) => {
 }
 
 const ActionCertified = (props) => {
+  const dispatch = useDispatch();
+  const [broadcasting, setBroadcasting] = React.useState(false);
   return (
     <View>
       <Button 
         title="Broadcast Funding Tx" 
         onPress={() => {
-          broadcastFundingTx(props.contract);
-          resetDetails(props.navigation, props.contract.cxid);
+          dispatch(broadcastFundingTx(props.contract))
+            .then(() => resetDetails(props.navigation, props.contract.cxid))
+            .catch(error => console.error(error))
+            .finally(() => setBroadcasting(false));
+        } }
+      />
+    </View>
+  )
+}
+
+const ActionFundingTxBroadcast = (props) => {
+  const dispatch = useDispatch();
+  const [broadcasting, setBroadcasting] = React.useState(false);
+  return (
+    <View>
+      <Text>Waiting for funding tx confirmation</Text>
+      <Button 
+        title="Broadcast Funding Tx" 
+        onPress={() => {
+          dispatch(broadcastFundingTx(props.contract))
+            .then(() => resetDetails(props.navigation, props.contract.cxid))
+            .catch(error => console.error(error))
+            .finally(() => setBroadcasting(false));
         } }
       />
     </View>
@@ -215,17 +240,39 @@ const ActionPayoutReceived = (props) => {
   )
 }
 
-const ActionPayoutLive = (props) => {
+const ActionPayoutCertified = (props) => {
+  const dispatch = useDispatch();
   const payout = payoutSelectors.selectAll(store.getState())
     .filter((pr, i, a) => pr.cxid === props.contract.cxid ).pop();
   return (
     <View>
-      <Text>Payout Live</Text>
+      <Text>Payout Certified</Text>
       <Button 
         title="Broadcast Payout Tx" 
         onPress={() => {
-          broadcastPayoutTx(payout);
-          resetDetails(props.navigation, props.contract.cxid);
+          dispatch(broadcastPayoutTx(props.payout))
+            .then(() => resetDetails(props.navigation, props.contract.cxid))
+            .catch(error => console.error(error))
+            .finally(() => setBroadcasting(false));
+        } }
+      />
+    </View>
+  )
+}
+
+const ActionPayoutTxBroadcast = (props) => {
+  const dispatch = useDispatch();
+  const [broadcasting, setBroadcasting] = React.useState(false);
+  return (
+    <View>
+      <Text>Waiting for payout tx confirmation</Text>
+      <Button 
+        title="Broadcast Payout Tx" 
+        onPress={() => {
+          dispatch(broadcastPayoutTx(props.payout))
+            .then(() => resetDetails(props.navigation, props.contract.cxid))
+            .catch(error => console.error(error))
+            .finally(() => setBroadcasting(false));
         } }
       />
     </View>

@@ -56,6 +56,7 @@ pub struct ContractSummary {
     pub p1_sig:         bool,
     pub p2_sig:         bool,
     pub arbiter_sig:    bool,
+    pub txid:           String,
 }
 
 impl From<&ContractRecord> for ContractSummary {
@@ -70,6 +71,7 @@ impl From<&ContractRecord> for ContractSummary {
             p1_sig: !contract.sigs.is_empty(),
             p2_sig: contract.sigs.len() > 1,
             arbiter_sig: contract.sigs.len() > 2,
+            txid: contract.funding_tx.extract_tx().txid().to_string(),
         }
     }
 }
@@ -84,11 +86,13 @@ pub struct PayoutSummary {
     pub p1_amount:      u64,
     pub p2_amount:      u64,
     pub script_sig:     String,
+    pub txid:           String,
 }
 
 impl PayoutSummary {
         fn get(player_wallet: &PlayerWallet, pr: &PayoutRecord) -> Option<PayoutSummary> {
             let psbt: PartiallySignedTransaction = consensus::deserialize(&hex::decode(&pr.psbt).unwrap()).unwrap();
+            let txid = psbt.clone().extract_tx().txid().to_string();
             let cr = DocumentUI::<ContractRecord>::get(player_wallet, &pr.cxid)?; 
             let contract = Contract::from_bytes(hex::decode(cr.hex).unwrap()).unwrap();
             let my_script_pubkey = Address::p2wpkh(&player_wallet.get_escrow_pubkey(), NETWORK).unwrap().script_pubkey();
@@ -109,6 +113,7 @@ impl PayoutSummary {
                 script_sig: pr.sig.clone(),
                 p1_amount,
                 p2_amount,
+                txid,
             })
         }
     }
@@ -621,8 +626,16 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 }
             }
             "broadcast" => match DocumentUI::<ContractRecord>::broadcast(wallet, a.value_of("cxid").unwrap()) {
-                Ok(()) => "funding tx broadcast to network".to_string(),
-                Err(e) => format!("{}", e),
+                Ok(()) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
+                } else {
+                    "funding tx broadcast to network".to_string()
+                }
+                Err(e) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
+                } else {
+                    format!("{:?}", e)
+                }
             }
             "delete" => match DocumentUI::<ContractRecord>::delete(wallet, a.value_of("cxid").unwrap()) {
                 Ok(()) => "contract deleted".to_string(),
@@ -850,12 +863,28 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 }
             }
             "submit" => match DocumentUI::<PayoutRecord>::submit(wallet, a.value_of("cxid").unwrap()) {
-                Ok(()) => "submission accepted".to_string(),
-                Err(e) => format!("{}", e),
+                Ok(()) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
+                } else {
+                    "submission accepted".to_string()
+                }
+                Err(e) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
+                } else {
+                    format!("{:?}", e)
+                }
             }
             "broadcast" => match DocumentUI::<PayoutRecord>::broadcast(wallet, a.value_of("cxid").unwrap()) {
-                Ok(()) => "payout tx broadcast to network".to_string(),
-                Err(e) => format!("{}", e),
+                Ok(()) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
+                } else {
+                    "payout tx broadcast to network".to_string()
+                }
+                Err(e) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
+                } else {
+                    format!("{:?}", e)
+                }
             }
             "delete" => match DocumentUI::<PayoutRecord>::delete(wallet, a.value_of("cxid").unwrap()) {
                 Ok(()) => "payout deleted".to_string(),

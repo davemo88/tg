@@ -1,7 +1,7 @@
 import { createStore } from 'redux';
 import { createEntityAdapter, createSlice, createReducer, createAction, configureStore, createAsyncThunk } from '@reduxjs/toolkit';
 import { Secret, } from './secret';
-import { JsonResponse, TransactionStatus, Player, Contract, Payout, } from './datatypes';
+import { JsonResponse, TxStatus, Player, Contract, Payout, } from './datatypes';
 
 import PlayerWalletModule from './PlayerWallet';
 
@@ -112,11 +112,22 @@ export const contractSlice = createSlice({
 
 export const loadContracts = () => {
     return async (dispatch) => {
-        let response = JSON.parse(await PlayerWalletModule.call_cli("contract list"));
+        let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli("contract list"));
         if (response.status === "error") {
             throw Error(response.message);
         }
-        let contracts = response.data;
+        let contracts: Contract[] = response.data;
+        for (var idx in contracts) {
+            response = JSON.parse(await PlayerWalletModule.call_cli(`get-tx ${contracts[idx].txid}`));
+            if (response.status === "error") {
+                throw Error(response.message);
+            } 
+            if (response.data) {
+                contracts[idx].txStatus = TxStatus.Confirmed;
+            } else {
+                contracts[idx].txStatus = TxStatus.Unbroadcast;
+            }
+        }
         console.debug("loaded contracts:", contracts);
         return dispatch(contractSlice.actions.contractAddedMany(contracts));
     }
@@ -135,12 +146,30 @@ export const newContract = (p1Name: string, p2Name: string, sats: number) => {
             p1Name: contract.p1Name,
             p2Name: contract.p2Name,
             amount: contract.amount,
-            fundingTx: TransactionStatus.Unbroadcast,
             p1Sig: false,
             p2Sig: false,
             arbiterSig: false,
             desc: "",
+            txid: contract.txid,
+            txStatus: TxStatus.Unbroadcast,
         }))
+    }
+}
+
+export const updateContractTxStatus = (contract: Contract) => {
+    return async (dispatch) => {
+        let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli(`get-tx ${contract.txid}`));
+        if (response.status === "error") {
+            throw Error(response.message);
+        } 
+        if (response.data) {
+            return dispatch(contractSlice.actions.contractUpdated({
+                id: contract.cxid,
+                changes: {
+                    txStatus: TxStatus.Confirmed,
+                }
+            }))
+        } 
     }
 }
 
@@ -150,7 +179,19 @@ export const loadPayouts = () => {
         if (response.status === "error") {
             throw Error(response.message);
         }
-        let payouts = response.data;
+        let payouts: Payout[] = response.data;
+        for (var idx in payouts) {
+            response = JSON.parse(await PlayerWalletModule.call_cli(`get-tx ${payouts[idx].txid}`));
+            if (response.status === "error") {
+                throw Error(response.message);
+            } 
+            if (response.data) {
+                payouts[idx].txStatus = TxStatus.Confirmed;
+            } else {
+// TODO: could be in mempool but we don't have a great way to check yet
+                payouts[idx].txStatus = TxStatus.Unbroadcast;
+            }
+        }
         console.debug("loaded payouts:", payouts);
         return dispatch(payoutSlice.actions.payoutAddedMany(payouts));
     }
@@ -158,21 +199,41 @@ export const loadPayouts = () => {
 
 export const newPayout = (cxid: string, p1Amount: number, p2Amount: number) => {
     return async (dispatch) => {
-        let output = await PlayerWalletModule.call_cli(`payout new ${cxid} ${p1Amount} ${p2Amount}`); 
-        let response = JSON.parse(output);
+        console.log("new payout args:", cxid, p1Amount, p2Amount);
+        let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli(`payout new ${cxid} ${p1Amount} ${p2Amount}`)); 
+        console.log("new payout response:", response);
         if (response.status === "error") {
             throw Error(response.message)
         }
+        let payout = response.data;
         return dispatch(payoutSlice.actions.payoutAdded({
-            cxid: cxid,
-            p1Amount,
-            p2Amount,
+            cxid: payout.cxid,
+            p1Amount: payout.p1Amount,
+            p2Amount: payout.p2Amount,
             p1Sig: false,
             p2Sig: false,
             arbiterSig: false,
             scriptSig: "",
-            tx: TransactionStatus.Unbroadcast,
+            txid: payout.txid,
+            txStatus: TxStatus.Unbroadcast,
         }))
+    }
+}
+
+export const updatePayoutTxStatus = (payout: Payout) => {
+    return async (dispatch) => {
+        let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli(`get-tx ${payout.txid}`));
+        if (response.status === "error") {
+            throw Error(response.message);
+        } 
+        if (response.data) {
+            return dispatch(contractSlice.actions.contractUpdated({
+                id: payout.cxid,
+                changes: {
+                    txStatus: TxStatus.Confirmed,
+                }
+            }))
+        } 
     }
 }
 

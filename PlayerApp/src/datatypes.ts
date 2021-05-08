@@ -12,7 +12,8 @@ export interface Contract {
     p1Sig:              boolean,
     p2Sig:              boolean,
     arbiterSig:         boolean,
-    fundingTx:          TransactionStatus,
+    txid:               string,
+    txStatus:           TxStatus,
 }
 
 export interface Payout {
@@ -23,10 +24,11 @@ export interface Payout {
   p2Sig:            boolean,
   arbiterSig:       boolean,
   scriptSig:        string,
-  tx:               TransactionStatus,
+  txid:             string,
+  txStatus:         TxStatus,
 }
 
-export enum TransactionStatus {
+export enum TxStatus {
     Unbroadcast,
     Broadcast,
     Confirmed,
@@ -41,8 +43,10 @@ export enum ContractStatus {
   Received,
 // signed by both players
   PlayersSigned,
-// all signed and funding tx not in chain
+// all signed and funding tx not broadcast yet
   Certified,
+// all signed and funding tx broadcast
+  FundingTxBroadcast,
 // arbiter signed and funding tx is in chain
   Live,
 // payout unsigned
@@ -52,8 +56,10 @@ export enum ContractStatus {
 // opponent submitted signed payout
   PayoutReceived,
 // both players signed payout
-  PayoutLive,
-// payout broadcast
+  PayoutCertified,
+// payout tx broadcast
+  PayoutTxBroadcast,
+// payout tx in chain
   Resolved,
   Invalid,
 }
@@ -65,8 +71,10 @@ export enum PayoutStatus {
   TheySigned,
 // 2/3 sigs provided
 // the payout only requires 2/3 sigs instead of 3/3 like the contract
-  Live,
-// payout tx mined
+  Certified,
+// payout tx broadcast
+  Broadcast,
+// payout tx in chain
   Resolved,
 // if only the arbiter has signed, invalid
   Invalid,

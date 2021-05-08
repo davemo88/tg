@@ -1,7 +1,7 @@
 import { LogBox } from 'react-native';
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, payoutSlice, selectedPlayerNameSlice, postedSlice, } from './redux';
 import { Secret } from './secret';
-import { JsonResponse, TransactionStatus, Player, Contract, Payout, } from './datatypes';
+import { JsonResponse, TxStatus, Player, Contract, Payout, } from './datatypes';
 
 import PlayerWalletModule from './PlayerWallet';
 
@@ -191,7 +191,7 @@ export const receivePayout = (name: string, password: Secret<string>) => {
     }
 }
 
-export const broadcastFundingTx = async (contract: Contract) => {
+export const broadcastFundingTx = (contract: Contract) => {
     return async (dispatch) => {
         const cli_output = await PlayerWalletModule.call_cli(`contract broadcast ${contract.cxid}`);
         const response: JsonResponse = JSON.parse(cli_output);
@@ -201,13 +201,13 @@ export const broadcastFundingTx = async (contract: Contract) => {
         return dispatch(contractSlice.actions.contractUpdated({
             id: contract.cxid,
             changes: {
-                fundingTx: TransactionStatus.Broadcast,
+                txStatus: TxStatus.Broadcast,
             }
         }))
     }
 }
 
-export const broadcastPayoutTx = async (payout: Payout) => {
+export const broadcastPayoutTx = (payout: Payout) => {
     return async (dispatch) => {
         const cli_output = await PlayerWalletModule.call_cli(`payout broadcast ${payout.cxid}`);
         const response: JsonResponse = JSON.parse(cli_output);
@@ -217,7 +217,7 @@ export const broadcastPayoutTx = async (payout: Payout) => {
         return dispatch(payoutSlice.actions.payoutUpdated({
             id: payout.cxid,
             changes: {
-                tx: TransactionStatus.Broadcast,
+                txStatus: TxStatus.Broadcast,
             }
         }))
     }
