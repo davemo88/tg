@@ -36,6 +36,8 @@ export const getContractStatus = (contract: Contract ): ContractStatus => {
             return ContractStatus.PayoutReceived;
           case PayoutStatus.Certified:
             return ContractStatus.PayoutCertified;
+          case PayoutStatus.Broadcast:
+            return ContractStatus.PayoutTxBroadcast;
           case PayoutStatus.Resolved:
             return ContractStatus.Resolved;
           case PayoutStatus.Invalid:

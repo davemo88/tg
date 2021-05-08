@@ -193,8 +193,7 @@ export const receivePayout = (name: string, password: Secret<string>) => {
 
 export const broadcastFundingTx = (contract: Contract) => {
     return async (dispatch) => {
-        const cli_output = await PlayerWalletModule.call_cli(`contract broadcast ${contract.cxid}`);
-        const response: JsonResponse = JSON.parse(cli_output);
+        const response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli(`contract broadcast ${contract.cxid}`));
         if (response.status === "error") {
             throw Error(response.message);
         }
@@ -209,8 +208,7 @@ export const broadcastFundingTx = (contract: Contract) => {
 
 export const broadcastPayoutTx = (payout: Payout) => {
     return async (dispatch) => {
-        const cli_output = await PlayerWalletModule.call_cli(`payout broadcast ${payout.cxid}`);
-        const response: JsonResponse = JSON.parse(cli_output);
+        const response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli(`payout broadcast ${payout.cxid}`));
         if (response.status === "error") {
             throw Error(response.message);
         }

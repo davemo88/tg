@@ -17,28 +17,30 @@ import { PasswordEntry } from './password-entry';
 import { CheckMail } from './check-mail';
 
 export const ContractAction = (props) => {
-  return(
-    <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
-    {
+    const contractStatus = getContractStatus(props.contract);
+    console.log(contractStatus);
+    return(
+      <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
       {
-        [ContractStatus.Unsigned]: <ActionUnsigned navigation={props.navigation} contract={props.contract} />,
-        [ContractStatus.Signed]: <ActionSigned navigation={props.navigation} contract={props.contract} />,
-        [ContractStatus.Received]: <ActionReceived navigation={props.navigation} contract={props.contract}/>,
-        [ContractStatus.PlayersSigned]: <ActionPlayersSigned navigation={props.navigation} contract={props.contract} />,
-        [ContractStatus.Certified]: <ActionCertified navigation={props.navigation} contract={props.contract} />,
-        [ContractStatus.FundingTxBroadcast]: <ActionFundingTxBroadcast navigation={props.navigation} contract={props.contract} />,
-        [ContractStatus.Live]: <ActionLive navigation={props.navigation} contract={props.contract} />,
-        [ContractStatus.PayoutUnsigned]: <ActionPayoutUnsigned navigation={props.navigation} contract={props.contract} />,
-        [ContractStatus.PayoutSigned]: <ActionPayoutSigned navigation={props.navigation} contract={props.contract} />,
-        [ContractStatus.PayoutReceived]: <ActionPayoutReceived navigation={props.navigation} contract={props.contract} />,
-        [ContractStatus.PayoutCertified]: <ActionPayoutCertified navigation={props.navigation} contract={props.contract} />,
-        [ContractStatus.PayoutTxBroadcast]: <ActionPayoutTxBroadcast navigation={props.navigation} contract={props.contract} />,
-        [ContractStatus.Resolved]: <ActionResolved navigation={props.navigation} contract={props.contract} />,
-        [ContractStatus.Invalid]: <ActionInvalid navigation={props.navigation} contract={props.contract} />,
-      }[getContractStatus(props.contract)]
-    }
-    </View>
-  )
+        {
+          [ContractStatus.Unsigned]: <ActionUnsigned navigation={props.navigation} contract={props.contract} />,
+          [ContractStatus.Signed]: <ActionSigned navigation={props.navigation} contract={props.contract} />,
+          [ContractStatus.Received]: <ActionReceived navigation={props.navigation} contract={props.contract}/>,
+          [ContractStatus.PlayersSigned]: <ActionPlayersSigned navigation={props.navigation} contract={props.contract} />,
+          [ContractStatus.Certified]: <ActionCertified navigation={props.navigation} contract={props.contract} />,
+          [ContractStatus.FundingTxBroadcast]: <ActionFundingTxBroadcast navigation={props.navigation} contract={props.contract} />,
+          [ContractStatus.Live]: <ActionLive navigation={props.navigation} contract={props.contract} />,
+          [ContractStatus.PayoutUnsigned]: <ActionPayoutUnsigned navigation={props.navigation} contract={props.contract} />,
+          [ContractStatus.PayoutSigned]: <ActionPayoutSigned navigation={props.navigation} contract={props.contract} />,
+          [ContractStatus.PayoutReceived]: <ActionPayoutReceived navigation={props.navigation} contract={props.contract} />,
+          [ContractStatus.PayoutCertified]: <ActionPayoutCertified navigation={props.navigation} contract={props.contract} />,
+          [ContractStatus.PayoutTxBroadcast]: <ActionPayoutTxBroadcast navigation={props.navigation} contract={props.contract} />,
+          [ContractStatus.Resolved]: <ActionResolved navigation={props.navigation} contract={props.contract} />,
+          [ContractStatus.Invalid]: <ActionInvalid navigation={props.navigation} contract={props.contract} />,
+        }[contractStatus]
+      }
+      </View>
+    )
 }
 
 const ActionUnsigned = (props) => {
@@ -244,13 +246,14 @@ const ActionPayoutCertified = (props) => {
   const dispatch = useDispatch();
   const payout = payoutSelectors.selectAll(store.getState())
     .filter((pr, i, a) => pr.cxid === props.contract.cxid ).pop();
+  const [broadcasting, setBroadcasting] = React.useState(false);
   return (
     <View>
       <Text>Payout Certified</Text>
       <Button 
         title="Broadcast Payout Tx" 
         onPress={() => {
-          dispatch(broadcastPayoutTx(props.payout))
+          dispatch(broadcastPayoutTx(payout))
             .then(() => resetDetails(props.navigation, props.contract.cxid))
             .catch(error => console.error(error))
             .finally(() => setBroadcasting(false));
@@ -262,6 +265,8 @@ const ActionPayoutCertified = (props) => {
 
 const ActionPayoutTxBroadcast = (props) => {
   const dispatch = useDispatch();
+  const payout = payoutSelectors.selectAll(store.getState())
+    .filter((pr, i, a) => pr.cxid === props.contract.cxid ).pop();
   const [broadcasting, setBroadcasting] = React.useState(false);
   return (
     <View>
@@ -269,7 +274,7 @@ const ActionPayoutTxBroadcast = (props) => {
       <Button 
         title="Broadcast Payout Tx" 
         onPress={() => {
-          dispatch(broadcastPayoutTx(props.payout))
+          dispatch(broadcastPayoutTx(payout))
             .then(() => resetDetails(props.navigation, props.contract.cxid))
             .catch(error => console.error(error))
             .finally(() => setBroadcasting(false));

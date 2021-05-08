@@ -21,12 +21,13 @@ export const Home = ({ navigation }) => {
     const selectedPlayer = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerName);
     const [balance, setBalance] = useState(store.getState().balance);
     const [posted, setPosted] = useState(store.getState().posted);
+    const [showResolved, setShowResolved] = useState(false);
 // should use effect for this
     const contracts = useSelector(contractSelectors.selectAll)
     .filter((contract, i, a) =>{ return (
       (contract.p1Name === selectedPlayer.name || contract.p2Name === selectedPlayer.name) 
       && 
-      (getContractStatus(contract) != ContractStatus.Resolved)
+      (showResolved || getContractStatus(contract) != ContractStatus.Resolved)
     )})
 
     useEffect(() => {
@@ -68,6 +69,7 @@ export const Home = ({ navigation }) => {
                 <Text style={{ fontSize: 20, }}>Contracts</Text>
               </View>
               <View style={{ flexDirection: 'row' }}>
+                <Text>Show Resolved</Text>
                 <Button 
                   title="Receive"
                   onPress={() => 
