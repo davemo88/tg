@@ -1,6 +1,5 @@
 use std::{
     str::FromStr,
-    thread::sleep,
     time::Duration,
 };
 use redis::{
@@ -10,6 +9,7 @@ use redis::{
     aio::Connection,
 };
 use simple_logger::SimpleLogger;
+use tokio::time::sleep;
 use warp::{
     Filter,
     Reply,
@@ -29,6 +29,8 @@ use tglib::{
         bitcoin::{
             Address,
             PublicKey,
+            Script,
+            Txid,
             consensus,
             hashes::hex::ToHex,
             util::{
@@ -46,7 +48,11 @@ use tglib::{
         },
         blockchain::ElectrumBlockchain,
         database::MemoryDatabase,
-        electrum_client::Client,
+        electrum_client::{
+            Client,
+            ElectrumApi,
+            ListUnspentRes,
+        }
     },
     hex,
     log::{
@@ -54,7 +60,7 @@ use tglib::{
         LevelFilter,
     },
     rand::{self, Rng},
-    Result,
+//    Result,
     Error,
     arbiter::{
         AuthTokenSig,
@@ -64,7 +70,10 @@ use tglib::{
         SubmitContractBody,
         SubmitPayoutBody,
     },
-    contract::Contract,
+    contract::{
+        Contract,
+        PlayerContractInfo,
+    },
     payout::Payout,
     player::PlayerName,
     wallet::{
@@ -85,12 +94,13 @@ use wallet::Wallet;
 const BITCOIN_RPC_URL: &'static str = "http://electrs:18443";
 const NAME_SERVICE_URL: &'static str = "http://nmc-id:18420";
 const AUTH_TOKEN_LIFETIME: usize = 30;
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 type WebResult<T> = std::result::Result<T, Rejection>;
 
 fn wallet() -> Wallet<ElectrumBlockchain, MemoryDatabase> {
     let mut client = Client::new(ELECTRS_SERVER);
     while client.is_err() {
-        sleep(Duration::from_secs(1));
+        std::thread::sleep(Duration::from_secs(1));
         client = Client::new(ELECTRS_SERVER);
     }
 //TODO: should this database be persisted?
@@ -150,7 +160,7 @@ async fn submit_contract(con: &mut Connection, contract: &Contract) -> Result<Si
     let _r = push_contract(con, &hex::encode(contract.to_bytes())).await.unwrap();
     let cxid = hex::encode(contract.cxid());
     for _ in 1..15 as u32 {
-        sleep(Duration::from_secs(1));
+        sleep(Duration::from_secs(1)).await;
         let r: RedisResult<String> = con.get(cxid.clone()).await;
         if let Ok(sig_hex) = r {
             let _r : RedisResult<u64> = con.del(cxid).await;
@@ -159,7 +169,7 @@ async fn submit_contract(con: &mut Connection, contract: &Contract) -> Result<Si
     }
     let e = Error::InvalidContract("arbiter rejected contract");
     error!("{:?}", e);
-    Err(e)
+    Err(Box::new(e))
 }
 
 async fn submit_payout(con: &mut Connection, payout: &Payout) -> Result<PartiallySignedTransaction> {
@@ -167,7 +177,7 @@ async fn submit_payout(con: &mut Connection, payout: &Payout) -> Result<Partiall
     let _r = push_payout(con, &hex::encode(payout.to_bytes())).await.unwrap();
     let cxid = hex::encode(payout.contract.cxid());
     for _ in 1..15 as u32 {
-        sleep(Duration::from_secs(1));
+        sleep(Duration::from_secs(1)).await;
         let r: RedisResult<String> = con.get(cxid.clone()).await;
         if let Ok(tx) = r {
             let _r : RedisResult<u64> = con.del(cxid).await;
@@ -176,7 +186,7 @@ async fn submit_payout(con: &mut Connection, payout: &Payout) -> Result<Partiall
     }
     let e = Error::InvalidPayout("arbiter rejected payout");
     error!("{:?}", e);
-    Err(e)
+    Err(Box::new(e))
 }
 
 //TODO: this function needs to reply more clearly when it fails
@@ -199,7 +209,7 @@ async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redi
     }
 
     let mut con = redis_client.get_async_connection().await.unwrap();
-    let r: RedisResult<String> = con.set(body.contract_info.name.clone().0, &serde_json::to_string(&body.contract_info).unwrap()).await;
+    let r: RedisResult<String> = con.set(format!("{}/info", body.contract_info.name.clone().0), &serde_json::to_string(&body.contract_info).unwrap()).await;
     match r {
         Ok(_string) => {
             Ok(format!("set contract info for {}", body.contract_info.name.0))
@@ -213,7 +223,7 @@ async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redi
 
 async fn get_contract_info_handler(player_name: String, redis_client: redis::Client) -> WebResult<impl Reply> {
     let mut con = redis_client.get_async_connection().await.unwrap();
-    let r: RedisResult<String> = con.get(&String::from_utf8(hex::decode(player_name).unwrap()).unwrap()).await;
+    let r: RedisResult<String> = con.get(format!("{}/info", &String::from_utf8(hex::decode(player_name).unwrap()).unwrap())).await;
     match r {
         Ok(info) => Ok(info),
         Err(e) => {
@@ -337,10 +347,63 @@ async fn auth_token_handler(player_name: String, redis_client: redis::Client) ->
     }
 }
 
+async fn remove_stale_contract_info() -> Result<()> {
+//TODO: try using script pubkey subscription instead
+    let redis_client = redis_client();
+    let electrum_client = Client::new(ELECTRS_SERVER)?;
+    let mut con = redis_client.get_async_connection().await.unwrap();
+    loop {
+        sleep(Duration::from_secs(10)).await;
+        let info_keys: Vec<String>  = con.keys("*/info").await?;
+        for key in info_keys {
+            let info: String = con.get(&key).await?;
+            let info: PlayerContractInfo = serde_json::from_str(&info)?;
+            let txids: Vec<Txid> = info.utxos.iter().map(|utxo| utxo.0.txid).collect();
+            let txs = electrum_client.batch_transaction_get(&txids)?;
+            let utxo_scripts: Vec<Script> = txs
+                .iter()
+                .flat_map(|tx| {
+                    tx.output
+                    .iter()
+                    .zip(vec![tx; tx.output.len()])
+                    .enumerate()
+                    .filter_map(|(vout, (output, tx))| {
+                        if info.utxos.iter().find(|utxo| {
+                            utxo.0.txid == tx.txid() &&
+                            utxo.0.vout as usize == vout}).is_some() {
+                            Some(output.clone().script_pubkey)
+                        } else { 
+                            None 
+                        }
+                    })
+                })
+                .collect();
+            let unspent_utxos = electrum_client.batch_script_list_unspent(&utxo_scripts)?;
+            let unspent_utxos: Vec<&ListUnspentRes> = unspent_utxos.iter().flatten().collect();
+
+            let new_info_utxos = info.utxos.iter().filter(|(outpoint, amount, _)| 
+                    unspent_utxos.iter().find(|list_unspent_res| {
+                        list_unspent_res.tx_hash == outpoint.txid && 
+                        list_unspent_res.tx_pos == outpoint.vout as usize &&
+                        &list_unspent_res.value == amount
+                    }
+                ).is_some()
+            ).cloned().collect();
+
+            let new_info = PlayerContractInfo {
+                utxos: new_info_utxos,
+                ..info
+            };
+
+            con.set(key, serde_json::to_string(&new_info)?).await?;
+        }
+    }
+}
+
 fn redis_client() -> redis::Client {
     let mut client = redis::Client::open(REDIS_SERVER);
     while client.is_err() {
-        sleep(Duration::from_secs(1));
+        std::thread::sleep(Duration::from_millis(100));
         client = redis::Client::open(REDIS_SERVER);
     }
     client.unwrap()
@@ -443,5 +506,8 @@ async fn main() {
         .or(auth_token);
 // TODO: add task to purge stale posted contract info
 // e.g. when a posted utxo is spent
-    warp::serve(routes).run(([0, 0, 0, 0], 5000)).await;
+    let _ = tokio::join!(
+        warp::serve(routes).run(([0, 0, 0, 0], 5000)),
+        remove_stale_contract_info(),
+    );
 }
