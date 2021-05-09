@@ -57,6 +57,7 @@ use tglib::{
     hex,
     log::{
         error,
+        debug,
         LevelFilter,
     },
     rand::{self, Rng},
@@ -359,6 +360,7 @@ async fn remove_stale_contract_info() -> Result<()> {
             let info: String = con.get(&key).await?;
             let info: PlayerContractInfo = serde_json::from_str(&info)?;
             let txids: Vec<Txid> = info.utxos.iter().map(|utxo| utxo.0.txid).collect();
+            debug!("posted utxos: {}", info.utxos.len());
             let txs = electrum_client.batch_transaction_get(&txids)?;
             let utxo_scripts: Vec<Script> = txs
                 .iter()
@@ -380,6 +382,8 @@ async fn remove_stale_contract_info() -> Result<()> {
                 .collect();
             let unspent_utxos = electrum_client.batch_script_list_unspent(&utxo_scripts)?;
             let unspent_utxos: Vec<&ListUnspentRes> = unspent_utxos.iter().flatten().collect();
+
+            debug!("unspent utxos matching posted utxos: {}", unspent_utxos.len());
 
             let new_info_utxos = info.utxos.iter().filter(|(outpoint, amount, _)| 
                     unspent_utxos.iter().find(|list_unspent_res| {
