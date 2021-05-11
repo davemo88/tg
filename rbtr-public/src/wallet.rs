@@ -32,7 +32,6 @@ const ESCROW_KIX: u64 = 0;
 pub struct Wallet<B, D> where D: BatchDatabase {
     pub xpubkey: ExtendedPubKey,
     pub network: Network,
-    escrow_kix: u64,
     pub wallet: BdkWallet<B, D>,
 }
 
@@ -57,7 +56,6 @@ where
                 D::default(),
                 client,
             ).unwrap(),
-            escrow_kix: ESCROW_KIX,
         }
     }
 }
@@ -67,6 +65,7 @@ where
     D: BatchDatabase + Default, 
 {
     pub fn get_fee_address(&self) -> Address {
+// TODO: this should come from a separate wallet and the address hosted statically
         let a = self.xpubkey.derive_pub(&Secp256k1::new(), &DerivationPath::from_str("m/0/0").unwrap()).unwrap();
         Address::p2wpkh(&a.public_key, self.network).unwrap()
     }
@@ -91,7 +90,6 @@ where
                 network,
                 D::default(),
             ).unwrap(),
-            escrow_kix: ESCROW_KIX,
         }
     }
 }
@@ -101,7 +99,7 @@ where
     D: BatchDatabase + Default,
 {
     fn get_escrow_pubkey(&self) -> PublicKey {
-        let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, self.escrow_kix))).unwrap();
+        let path = DerivationPath::from_str(&String::from(format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX))).unwrap();
         let escrow_pubkey = self.xpubkey.derive_pub(&Secp256k1::new(), &path).unwrap();
         escrow_pubkey.public_key
     }

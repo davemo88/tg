@@ -19,7 +19,7 @@ export const PostContractInfo = ({ navigation }) => {
       <View style={styles.container}>
         <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey' }}>
             
-          <Text>Publicly post your utxos so other players can challenge you</Text>
+          <Text style={{ fontSize: 17 }}>Post your utxos publicly so other players can challenge you</Text>
           <PasswordEntry password={password} setPassword={setPassword} />
           <Button 
             title="Ok" 
