@@ -58,8 +58,14 @@ export const Home = ({ navigation }) => {
               <View style={{ alignItems: 'center' }}>
                 <Text>Wallet Balance</Text>
                 <Currency amount={balance} />
-                <Text>Posted Player Balance</Text>
+              </View>
+              <View style={{ alignItems: 'center' }}>
+                <Text>Posted Balance</Text>
                 <Currency amount={posted} />
+                <Button
+                    title="Post"
+                    onPress={() => navigation.push('Post Contract Info') }
+                />
               </View>
             </View> 
           </View> 
@@ -74,15 +80,11 @@ export const Home = ({ navigation }) => {
                 <CheckBox value={showResolved} onValueChange={(newValue) => setShowResolved(newValue)} />
                 <Button 
                   title="Receive"
-                  onPress={() => 
-                    navigation.push('Receive Contract')
-                  }
+                  onPress={() => navigation.push('Receive Contract') }
                 />
                 <Button 
                   title="New"
-                  onPress={() => 
-                    navigation.push('New Contract')
-                  }
+                  onPress={() => navigation.push('New Contract') }
                 />
               </View>
             </View>

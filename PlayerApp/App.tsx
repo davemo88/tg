@@ -10,6 +10,7 @@ import { LoadingSplash } from './src/components/screens/loading-splash';
 import { InitWallet } from './src/components/screens/init-wallet';
 import { PlayerSelect } from './src/components/screens/player-select';
 import { Home } from './src/components/screens/home';
+import { PostContractInfo } from './src/components/screens/post-contract-info';
 import { ContractDetails } from './src/components/screens/contract-details';
 import { NewPlayer } from './src/components/screens/new-player';
 import { AddPlayer } from './src/components/screens/add-player';
@@ -29,6 +30,7 @@ export default function App() {
             <Stack.Screen name="Initialize Wallet" component={InitWallet} />
             <Stack.Screen name="Player Select" component={PlayerSelect} />
             <Stack.Screen name="Home" component={Home} />
+            <Stack.Screen name="Post Contract Info" component={PostContractInfo} />
             <Stack.Screen name="Contract Details" component={ContractDetails} />
             <Stack.Screen name="New Player" component={NewPlayer} />
             <Stack.Screen name="Add Player" component={AddPlayer} />
