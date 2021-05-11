@@ -75,6 +75,12 @@ impl From<tglib::Error> for Error {
     }
 }
 
+impl From<tglib::bdk::Error> for Error {
+    fn from(error: tglib::bdk::Error) -> Self {
+        Error::Tglib(Arc::new(tglib::Error::Bdk(error)))
+    }
+}
+
 impl From<tglib::bdk::electrum_client::Error> for Error {
     fn from(error: tglib::bdk::electrum_client::Error) -> Self {
         Error::ElectrumClient(Arc::new(error))

@@ -174,8 +174,8 @@ pub trait EscrowWallet {
         if !fully_signed {
             return Err(Error::InvalidPayout("contract is not fully signed"))
         }
-// the payout tx must be an expected one
         let payout_address = &payout.address().unwrap();
+// the payout tx must be an expected one
         let payout_tx = payout.psbt.clone().extract_tx();
         let matching_tx = payout_tx.txid() == create_payout(&payout.contract, &payout_address).psbt.clone().extract_tx().txid();
         if !matching_tx {
@@ -255,11 +255,12 @@ pub fn create_payout(contract: &Contract, payout_address: &Address) -> Payout {
     Payout::new(contract.clone(), psbt)
 }
 
-pub fn create_payout_script(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pubkey: &PublicKey, funding_tx: &Transaction, network: Network) -> TgScript {
-    let escrow_address = create_escrow_address(&p1_pubkey, &p2_pubkey, &arbiter_pubkey, network).unwrap();
-    let p1_payout_address = Address::p2wpkh(&p1_pubkey, network).unwrap();
+pub fn create_payout_script(escrow_address: &Address, p1_payout_address: &Address, p2_payout_address: &Address, funding_tx: &Transaction) -> TgScript {
+//pub fn create_payout_script(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pubkey: &PublicKey, funding_tx: &Transaction, network: Network) -> TgScript {
+ //   let escrow_address = create_escrow_address(&p1_pubkey, &p2_pubkey, &arbiter_pubkey, network).unwrap();
+//    let p1_payout_address = Address::p2wpkh(&p1_pubkey, network).unwrap();
     let p1_payout_tx = create_payout_tx(&funding_tx, &escrow_address, &p1_payout_address).unwrap();
-    let p2_payout_address = Address::p2wpkh(&p2_pubkey, network).unwrap();
+//    let p2_payout_address = Address::p2wpkh(&p2_pubkey, network).unwrap();
     let p2_payout_tx = create_payout_tx(&funding_tx, &escrow_address, &p2_payout_address).unwrap();
     use crate::script::TgOpcode::*;
 
@@ -304,6 +305,7 @@ fn create_payout_tx(funding_tx: &Transaction, escrow_address: &Address, payout_a
                         },
                         script_sig: Script::new(),
 // see bdk::Wallet::create tx
+// i believe this disables RBF which is appropriate for now
                         sequence: 0xFFFFFFFF,
                         witness: Vec::new()
                     }),
@@ -311,21 +313,6 @@ fn create_payout_tx(funding_tx: &Transaction, escrow_address: &Address, payout_a
                 ))
             } else { None }
     }).ok_or(Error::Adhoc("couldn't find escrow output in funding tx"))?;
-//    for (i, txout) in funding_tx.output.iter().enumerate() {
-//        if txout.script_pubkey == escrow_address.script_pubkey() {
-//            amount = txout.value;
-//            input.push(TxIn {
-//                previous_output: OutPoint {
-//                    txid: funding_tx.txid(),
-//                    vout: i as u32,
-//                },
-//                script_sig: Script::new(),
-//                sequence: 0,
-//                witness: Vec::new()
-//            });
-//            break;
-//        }
-//    }
 
     Ok(Transaction {
         version: 1,

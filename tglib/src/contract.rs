@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use byteorder::{BigEndian, WriteBytesExt};
 use serde::{Serialize, Deserialize,};
 use bdk::{
@@ -61,6 +62,8 @@ pub struct Contract {
     pub p1_pubkey:          PublicKey,
     pub p2_pubkey:          PublicKey,
     pub arbiter_pubkey:     PublicKey,
+    pub p1_payout_address:  Address,
+    pub p2_payout_address:  Address,
     pub funding_tx:         PartiallySignedTransaction,
     pub payout_script:      TgScript,
     pub sigs:               Vec<Signature>, 
@@ -68,12 +71,14 @@ pub struct Contract {
 }
 
 impl Contract {
-    pub fn new(p1_pubkey: PublicKey, p2_pubkey: PublicKey, arbiter_pubkey: PublicKey, funding_tx: PartiallySignedTransaction, payout_script: TgScript) -> Self {
+    pub fn new(p1_pubkey: PublicKey, p2_pubkey: PublicKey, arbiter_pubkey: PublicKey, p1_payout_address: Address, p2_payout_address: Address, funding_tx: PartiallySignedTransaction, payout_script: TgScript) -> Self {
         Contract {
             version: CONTRACT_VERSION,
             p1_pubkey,
             p2_pubkey,
             arbiter_pubkey,
+            p1_payout_address,
+            p2_payout_address,
             funding_tx,
             payout_script,
             sigs: Vec::new(),
@@ -99,6 +104,15 @@ impl Contract {
         v.extend(self.p1_pubkey.to_bytes());
         v.extend(self.p2_pubkey.to_bytes());
         v.extend(self.arbiter_pubkey.to_bytes());
+// 2 payout addresses
+        let p1_address_string = self.p1_payout_address.to_string();
+        let p1_address_bytes = p1_address_string.as_bytes();
+        v.write_u32::<BigEndian>(p1_address_bytes.len() as u32).unwrap();
+        v.extend(p1_address_bytes);
+        let p2_address_string = self.p2_payout_address.to_string();
+        let p2_address_bytes = p2_address_string.as_bytes();
+        v.write_u32::<BigEndian>(p2_address_bytes.len() as u32).unwrap();
+        v.extend(p2_address_bytes);
 // funding tx length  + bytes
         let funding_tx = consensus::serialize(&self.funding_tx);
         v.write_u32::<BigEndian>(funding_tx.len() as u32).unwrap();
@@ -154,13 +168,14 @@ impl Contract {
         Ok(())
     }
 
+// TODO: payout addresses would need to be included in contract for this validation to carry
+// through with flexible payout addresses, e.g. not derived from player pubkey
     fn validate_payout_script(&self) -> Result<()> {
         let payout_script = create_payout_script(
-            &self.p1_pubkey,
-            &self.p2_pubkey,
-            &self.arbiter_pubkey,
+            &create_escrow_address(&self.p1_pubkey, &self.p2_pubkey, &self.arbiter_pubkey, NETWORK).unwrap(),
+            &self.p1_payout_address,
+            &self.p2_payout_address,
             &self.funding_tx.clone().extract_tx(),
-            NETWORK,
         );
         if self.payout_script != payout_script {
             Err(Error::Adhoc("invalid payout script"))
@@ -193,16 +208,20 @@ pub fn contract(input: &[u8]) ->IResult<&[u8], Contract> {
         p1_pubkey, 
         p2_pubkey, 
         arbiter_pubkey, 
+        p1_payout_address,
+        p2_payout_address,
         funding_tx, 
         payout_script, 
         sigs
-    )) = tuple((version, pubkey, pubkey, pubkey, funding_tx, payout_script, sigs))(input)?; 
+    )) = tuple((version, pubkey, pubkey, pubkey, address, address, funding_tx, payout_script, sigs))(input)?; 
 
     let c = Contract {
         version,
         p1_pubkey,
         p2_pubkey,
         arbiter_pubkey,
+        p1_payout_address,
+        p2_payout_address,
         funding_tx,
         payout_script,
         sigs,
@@ -219,6 +238,12 @@ fn pubkey(input: &[u8]) -> IResult<&[u8], PublicKey> {
     let (input, b) = take(33u8)(input)?;
     let key = PublicKey::from_slice(&b).unwrap();
     Ok((input, key))
+}
+
+fn address(input: &[u8]) -> IResult<&[u8], Address> {
+    let (input, b) = length_data(be_u32)(input)?;
+    let address = Address::from_str(&String::from_utf8(b.to_vec()).unwrap()).unwrap();
+    Ok((input, address))
 }
 
 fn funding_tx(input: &[u8]) -> IResult<&[u8], PartiallySignedTransaction> {
@@ -267,6 +292,7 @@ pub struct PlayerContractInfo {
     pub name: PlayerName,
     pub escrow_pubkey: PublicKey,
     pub change_address: Address,
+    pub payout_address: Address,
     pub utxos: Vec<(OutPoint, u64, Input)>,
 }
 

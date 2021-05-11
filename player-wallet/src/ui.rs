@@ -210,6 +210,7 @@ impl PlayerUI for PlayerWallet {
             name,
             escrow_pubkey: self.get_escrow_pubkey(),
             change_address: wallet.get_new_address()?,
+            payout_address: wallet.get_new_address()?,
             utxos,
         };
 

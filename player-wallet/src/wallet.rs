@@ -191,12 +191,15 @@ impl PlayerWallet {
         let p1_pubkey = self.get_escrow_pubkey();
         let escrow_address = create_escrow_address(&p1_pubkey, &p2_contract_info.escrow_pubkey, &arbiter_pubkey, self.network).unwrap();
         let funding_tx = self.create_funding_tx(&p2_contract_info, amount, &escrow_address)?;
-        let payout_script = create_payout_script(&p1_pubkey, &p2_contract_info.escrow_pubkey, &arbiter_pubkey, &funding_tx.clone().extract_tx(), self.network);
+        let p1_payout_address = self.offline_wallet().get_new_address()?;
+        let payout_script = create_payout_script(&escrow_address, &p1_payout_address, &p2_contract_info.payout_address, &funding_tx.clone().extract_tx());
 
         Ok(Contract::new(
             p1_pubkey,
             p2_contract_info.escrow_pubkey,
             arbiter_pubkey,
+            p1_payout_address,
+            p2_contract_info.payout_address,
             funding_tx,
             payout_script,
         ))
