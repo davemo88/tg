@@ -32,14 +32,12 @@ export const initWallet = async (password: Secret<string>) => {
     } while (!response.data)
 }
 
-export const postContractInfo = (name: string, amount: number, password: Secret<string>) => {
-    return async (dispatch) => {
-        const response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`player post "${name}" ${amount}`, password.expose_secret()));
-        if (response.status === "error") {
-            throw Error(response.message)
-        }
-        return dispatch(postedSlice.actions.setPosted(response.data))
+export const postContractInfo = async (name: string, amount: number, password: Secret<string>) => {
+    const response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`player post "${name}" ${amount}`, password.expose_secret()));
+    if (response.status === "error") {
+        throw Error(response.message)
     }
+    return Promise.resolve(null)
 }
 
 export const getPosted = async (name: string) => {

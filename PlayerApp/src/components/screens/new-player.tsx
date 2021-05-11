@@ -49,7 +49,7 @@ export const NewPlayer = ({ navigation }) => {
                 setRegisteringPlayer(true);
                 dispatch(newPlayer(playerName, password))
                     .then(() => {
-                            dispatch(postContractInfo(playerName, store.getState().balance, password))
+                            postContractInfo(playerName, store.getState().balance, password)
                                 .finally(() => navigation.reset({ index:0, routes: [{ name: 'Player Select' }] }));
                         })
                     .catch(error => console.error(error))

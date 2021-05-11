@@ -31,6 +31,7 @@ use tglib::{
             PublicKey,
             Script,
             Txid,
+            blockdata::transaction::OutPoint,
             consensus,
             hashes::hex::ToHex,
             util::{
@@ -38,7 +39,10 @@ use tglib::{
                     ExtendedPubKey,
                     Fingerprint,
                 },
-                psbt::PartiallySignedTransaction,
+                psbt::{
+                    Input,
+                    PartiallySignedTransaction,
+                },
             },
             secp256k1::{
                 Message,
@@ -385,7 +389,7 @@ async fn remove_stale_contract_info() -> Result<()> {
 
             debug!("unspent utxos matching posted utxos: {}", unspent_utxos.len());
 
-            let new_info_utxos = info.utxos.iter().filter(|(outpoint, amount, _)| 
+            let new_info_utxos: Vec<(OutPoint, u64, Input)> = info.utxos.iter().filter(|(outpoint, amount, _)| 
                     unspent_utxos.iter().find(|list_unspent_res| {
                         list_unspent_res.tx_hash == outpoint.txid && 
                         list_unspent_res.tx_pos == outpoint.vout as usize &&
@@ -393,13 +397,16 @@ async fn remove_stale_contract_info() -> Result<()> {
                     }
                 ).is_some()
             ).cloned().collect();
-
-            let new_info = PlayerContractInfo {
-                utxos: new_info_utxos,
-                ..info
-            };
-
-            con.set(key, serde_json::to_string(&new_info)?).await?;
+            
+            if !new_info_utxos.is_empty() {
+                let new_info = PlayerContractInfo {
+                    utxos: new_info_utxos,
+                    ..info
+                };
+                con.set(key, serde_json::to_string(&new_info)?).await?;
+            } else {
+                con.del(key).await?
+            }
         }
     }
 }
