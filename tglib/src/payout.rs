@@ -15,7 +15,6 @@ use nom::{
 };
 use bdk::bitcoin::{
     Address,
-    PublicKey,
     consensus::{
         self,
         Decodable,
@@ -97,17 +96,6 @@ impl Payout {
             }
         };
         Err(Error::Adhoc("couldn't determine payout address"))
-    }
-
-    pub fn recipient_pubkey(&self) -> Result<PublicKey> {
-        let address = self.address()?;
-        if address == Address::p2wpkh(&self.contract.p1_pubkey, address.network).unwrap() {
-            Ok(self.contract.p1_pubkey.clone())
-        } else if address == Address::p2wpkh(&self.contract.p2_pubkey, address.network).unwrap() {
-            Ok(self.contract.p2_pubkey.clone())
-        } else {
-            Err(Error::Adhoc("couldn't determine recipient pubkey"))
-        }
     }
 }
 

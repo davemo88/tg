@@ -11,16 +11,10 @@ use bdk::bitcoin::{
 use crate::{
     Result,
     Error,
-//    contract::ContractState,
-    payout::{
-        Payout,
-    },
-    script::{
-        lib::{
-//            TgOpcode,
-            TgScript,
-            TgOpcode::*,
-        },
+    payout::Payout,
+    script::lib::{
+        TgScript,
+        TgOpcode::*,
     },
 };
 
@@ -259,7 +253,6 @@ impl TgScriptInterpreter for TgScriptEnv {
 
         let payout = self.payout.as_ref().unwrap();
         let payout_txid: &[u8] = &payout.psbt.clone().extract_tx().txid();
-
         let script_txid = self.stack.pop().unwrap();
         let pubkey: PublicKey = PublicKey::from_slice(&self.stack.pop().unwrap()).unwrap();
         let sig: Signature = Signature::from_der(&self.stack.pop().unwrap()).unwrap();

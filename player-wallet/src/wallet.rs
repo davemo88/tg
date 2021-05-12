@@ -323,10 +323,12 @@ impl PlayerWallet {
         let p2_tx_fee: u64 = TX_FEE - p1_tx_fee;
         builder.add_foreign_utxo(OutPoint { vout: escrow_vout as u32, txid: funding_tx.txid()}, psbt_input, 0).unwrap();
         if p1_amount.as_sat() != 0 {
-            builder.add_recipient(Address::p2wpkh(&contract.p1_pubkey, NETWORK).unwrap().script_pubkey(), p1_amount.as_sat() - p1_tx_fee);
+//            builder.add_recipient(Address::p2wpkh(&contract.p1_pubkey, NETWORK).unwrap().script_pubkey(), p1_amount.as_sat() - p1_tx_fee);
+            builder.add_recipient(contract.p1_payout_address.script_pubkey(), p1_amount.as_sat() - p1_tx_fee);
         }
         if p2_amount.as_sat() != 0 {
-            builder.add_recipient(Address::p2wpkh(&contract.p2_pubkey, NETWORK).unwrap().script_pubkey(), p2_amount.as_sat() - p2_tx_fee);
+//            builder.add_recipient(Address::p2wpkh(&contract.p2_pubkey, NETWORK).unwrap().script_pubkey(), p2_amount.as_sat() - p2_tx_fee);
+            builder.add_recipient(contract.p2_payout_address.script_pubkey(), p2_amount.as_sat() - p2_tx_fee);
         }
         builder.manually_selected_only();
         builder.fee_absolute(TX_FEE);

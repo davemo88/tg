@@ -181,12 +181,12 @@ pub trait EscrowWallet {
         if !matching_tx {
             return Err(Error::InvalidPayout("invalid payout tx"))
         }
-        let recipient_pubkey = payout.recipient_pubkey();
-        if recipient_pubkey.is_err() {
+        let payout_address = payout.address()?;
+        if payout_address != payout.contract.p1_payout_address &&
+           payout_address != payout.contract.p2_payout_address {
             return Err(Error::InvalidPayout("invalid recipient"))
         }
         if payout.psbt.inputs[0].partial_sigs.len() != 1 { //|| 
-//                !payout.psbt.inputs[0].partial_sigs.contains_key(&recipient_pubkey.unwrap()) {
 // TODO: need to create psbt correctly.  options: 
 //  manually set values following bdk::wallet::Wallet::create_tx
 //  is it a foreign UTXO ? no but it's to an address not in the descriptor
@@ -257,7 +257,7 @@ pub fn create_payout(contract: &Contract, payout_address: &Address) -> Payout {
 
 pub fn create_payout_script(escrow_address: &Address, p1_payout_address: &Address, p2_payout_address: &Address, funding_tx: &Transaction) -> TgScript {
 //pub fn create_payout_script(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pubkey: &PublicKey, funding_tx: &Transaction, network: Network) -> TgScript {
- //   let escrow_address = create_escrow_address(&p1_pubkey, &p2_pubkey, &arbiter_pubkey, network).unwrap();
+//    let escrow_address = create_escrow_address(&p1_pubkey, &p2_pubkey, &arbiter_pubkey, network).unwrap();
 //    let p1_payout_address = Address::p2wpkh(&p1_pubkey, network).unwrap();
     let p1_payout_tx = create_payout_tx(&funding_tx, &escrow_address, &p1_payout_address).unwrap();
 //    let p2_payout_address = Address::p2wpkh(&p2_pubkey, network).unwrap();
