@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useDispatch, useStore } from 'react-redux';
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
 import { styles } from '../styles';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, payoutSlice, selectedPlayerNameSlice, } from '../redux';
-import { Player, Contract, ContractStatus, } from '../datatypes';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, payoutSlice, selectedPlayerNameSlice, updateContractTxStatus, updatePayoutTxStatus } from '../redux';
+import { Player, Contract, ContractStatus, TxStatus, } from '../datatypes';
 import { receiveContract, sendContract, signContract, submitContract, sendPayout, signPayout, broadcastFundingTx, broadcastPayoutTx } from '../wallet';
 import { getContractStatus } from '../dump';
 import { declineContract, dismissContract, denyPayout, } from '../mock';
@@ -18,7 +18,6 @@ import { CheckMail } from './check-mail';
 
 export const ContractAction = (props) => {
     const contractStatus = getContractStatus(props.contract);
-    console.log(contractStatus);
     return(
       <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
       {
@@ -136,6 +135,15 @@ const ActionCertified = (props) => {
 const ActionFundingTxBroadcast = (props) => {
   const dispatch = useDispatch();
   const [broadcasting, setBroadcasting] = React.useState(false);
+
+  useEffect(() => {
+      if (props.contract.txStatus == TxStatus.Broadcast) {
+          dispatch(updateContractTxStatus(props.contract))
+              .then(() => resetDetails(props.navigation, props.contract.cxid))
+              .catch(error => console.error(error));
+      }
+  }, []);
+
   return (
     <View>
       <Text>Waiting for funding tx confirmation</Text>
@@ -268,6 +276,13 @@ const ActionPayoutTxBroadcast = (props) => {
   const payout = payoutSelectors.selectAll(store.getState())
     .filter((pr, i, a) => pr.cxid === props.contract.cxid ).pop();
   const [broadcasting, setBroadcasting] = React.useState(false);
+
+  useEffect(() => {
+      dispatch(updatePayoutTxStatus(payout))
+          .then(() => resetDetails(props.navigation, props.contract.cxid))
+          .catch(error => console.error(error));
+  });
+
   return (
     <View>
       <Text>Waiting for payout tx confirmation</Text>

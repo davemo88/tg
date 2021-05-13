@@ -781,7 +781,7 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                     p2_amount: Amount::from_sat(a.value_of("p2_amount").unwrap().parse::<u64>().unwrap()),
                 }) {
                 Ok(payout_record) => if a.is_present("json-output") {
-                    serde_json::to_string(&JsonResponse::success(Some(payout_record))).unwrap()
+                    serde_json::to_string(&JsonResponse::success(Some(PayoutSummary::get(wallet, &payout_record)))).unwrap()
                 } else {
                     format!("payout created for contract {}", payout_record.cxid)
                 }

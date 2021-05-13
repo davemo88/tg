@@ -227,7 +227,7 @@ export const updatePayoutTxStatus = (payout: Payout) => {
             throw Error(response.message);
         } 
         if (response.data) {
-            return dispatch(contractSlice.actions.contractUpdated({
+            return dispatch(payoutSlice.actions.payoutUpdated({
                 id: payout.cxid,
                 changes: {
                     txStatus: TxStatus.Confirmed,
