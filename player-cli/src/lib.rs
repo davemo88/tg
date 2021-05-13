@@ -232,8 +232,16 @@ pub fn cli(line: String, conf: Conf) -> String {
             let wallet = PlayerWallet::new(wallet_dir, NETWORK, conf.electrum_url, conf.name_url, conf.arbiter_url);
             match c {
                 "balance" => match wallet.balance() {
-                    Ok(balance) => format!("{}", balance.as_sat()),
-                    Err(e) => return format!("{:?}", e),
+                    Ok(balance) => if a.is_present("json-output") {
+                        serde_json::to_string(&JsonResponse::<u64>::success(Some(balance.as_sat()))).unwrap()
+                    } else {
+                        format!("{}", balance.as_sat())
+                    }
+                    Err(e) => if a.is_present("json-output") {
+                        serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
+                    } else {
+                        format!("{:?}", e)
+                    }
                 }
                 "deposit" => format!("{}", wallet.deposit()),
                 "fund" => {

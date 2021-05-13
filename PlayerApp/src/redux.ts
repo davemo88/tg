@@ -271,8 +271,11 @@ export const balanceSlice = createSlice({
 
 export const getBalance = () => {
     return async (dispatch) => {
-        let output = await PlayerWalletModule.call_cli("balance");
-        let balance = +output;
+        let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli("balance"));
+        if (response.status === "error") {
+            throw Error(response.message);
+        } 
+        let balance = +response.data;
         return dispatch(balanceSlice.actions.setBalance(balance));
     }
 }
