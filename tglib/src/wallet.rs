@@ -256,40 +256,22 @@ pub fn create_payout(contract: &Contract, payout_address: &Address) -> Payout {
 }
 
 pub fn create_payout_script(escrow_address: &Address, p1_payout_address: &Address, p2_payout_address: &Address, funding_tx: &Transaction) -> TgScript {
-//pub fn create_payout_script(p1_pubkey: &PublicKey, p2_pubkey: &PublicKey, arbiter_pubkey: &PublicKey, funding_tx: &Transaction, network: Network) -> TgScript {
-//    let escrow_address = create_escrow_address(&p1_pubkey, &p2_pubkey, &arbiter_pubkey, network).unwrap();
-//    let p1_payout_address = Address::p2wpkh(&p1_pubkey, network).unwrap();
+
     let p1_payout_tx = create_payout_tx(&funding_tx, &escrow_address, &p1_payout_address).unwrap();
-//    let p2_payout_address = Address::p2wpkh(&p2_pubkey, network).unwrap();
     let p2_payout_tx = create_payout_tx(&funding_tx, &escrow_address, &p2_payout_address).unwrap();
-    use crate::script::TgOpcode::*;
 
     let txid1: &[u8] = &p1_payout_tx.txid();
     let txid2: &[u8] = &p2_payout_tx.txid();
+
 // TODO: should be a pubkeyhash instead of full pubkey, same reasons as bitcoin addresses
 // that requires the pubkey to also be given as input as in standard pay to pubkey hash
     let pubkey_bytes = referee_pubkey().to_bytes();
-//
-//    TgScript(vec![         
-//        OP_PUSHDATA1(pubkey_bytes.len().try_into().unwrap(), pubkey_bytes.clone()),
-//        OP_2DUP,
-//        OP_PUSHDATA1(txid1.len().try_into().unwrap(), Vec::from(txid1)),
-//        OP_VERIFYSIG,
-//        OP_IF(
-//            TgScript(vec![
-//                OP_1,
-//            ]),
-//            Some(TgScript(vec![
-//                OP_PUSHDATA1(txid2.len().try_into().unwrap(), Vec::from(txid2)),
-//                OP_VERIFYSIG,
-//            ]))
-//        ),
-//        OP_VALIDATE,
-//    ])
 
+    use crate::script::TgOpcode::*;
     TgScript(vec![         
         OP_PUSHDATA1(pubkey_bytes.len().try_into().unwrap(), pubkey_bytes.clone()),
-// to use event signifier token, push it here and remove OP_DUP
+// to use referee token instead of txid, push it here and remove OP_DUP
+//        OP_PUSHDATA1(referee_token.len(), referee_token);
         OP_PUSHDATA1(txid1.len().try_into().unwrap(), Vec::from(txid1)),
         OP_DUP,
         OP_PUSHTXID,
@@ -317,7 +299,6 @@ pub fn create_payout_script(escrow_address: &Address, p1_payout_address: &Addres
 fn create_payout_tx(funding_tx: &Transaction, escrow_address: &Address, payout_address: &Address) -> Result<Transaction> {
 
 // TODO: need to standardize this with builder-implementation in player wallet
-// and include a miner fee
     let (input, amount) = funding_tx.output
         .iter()
         .enumerate()
