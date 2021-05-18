@@ -86,6 +86,7 @@ fn op_if(input: &[u8]) -> IResult<&[u8], TgOpcode> {
     let false_branch = if let Some(else_op) = else_block {
         match else_op {
             TgOpcode::OP_ELSE(script) => Some(script),
+// TODO: should be an error here i think
             _ => None,
         }
     }
@@ -106,6 +107,10 @@ fn op_else(input: &[u8]) -> IResult<&[u8], TgOpcode> {
 #[allow(dead_code)]
 fn op_endif(input: &[u8]) -> IResult<&[u8], TgOpcode> {
     op_bytecode(TgOpcode::OP_ENDIF)(input)
+}
+
+fn op_pushtxid(input: &[u8]) -> IResult<&[u8], TgOpcode> {
+    op_bytecode(TgOpcode::OP_PUSHTXID)(input)
 }
 
 fn op_pushdata1(input: &[u8]) -> IResult<&[u8], TgOpcode> {
@@ -163,6 +168,7 @@ pub fn tg_script(input: &[u8]) -> IResult<&[u8], TgScript> {
             op_equal,
             op_verifysig,
             op_validate,
+            op_pushtxid,
             op_pushdata1,
             op_pushdata2,
             op_pushdata4,

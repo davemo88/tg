@@ -8,6 +8,7 @@ use bdk::bitcoin::{
         All,
     },
 };
+use log::debug;
 use crate::{
     Result,
     Error,
@@ -18,7 +19,7 @@ use crate::{
     },
 };
 
-const EVAL_DEPTH_LIMIT : u8 = 2;
+const EVAL_DEPTH_LIMIT : u8 = 3;
 
 pub struct TgScriptEnv {
     pub payout: Option<Payout>,
@@ -59,7 +60,9 @@ impl TgScriptEnv {
 //        }
 //push script sig to stack then evaluate the payout script
         if payout.script_sig.is_some() {
-            self.stack.push(payout.script_sig.unwrap().serialize_der().to_vec());
+            let sig_bytes = payout.script_sig.unwrap().serialize_der().to_vec();
+            debug!("pushing script sig: {:?}", sig_bytes.len());
+            self.stack.push(sig_bytes);
         } else {
             return Err(Error::Adhoc("no script sig"));
         };
@@ -115,6 +118,7 @@ pub trait TgScriptInterpreter {
     fn op_nequal(&mut self);
     fn op_verifysig(&mut self);
     fn op_sha256(&mut self);
+    fn op_pushtxid(&mut self);
 }
 
 impl TgScriptInterpreter for TgScriptEnv {
@@ -143,6 +147,7 @@ impl TgScriptInterpreter for TgScriptEnv {
                 OP_EQUAL                            =>  self.op_equal(),
                 OP_VERIFYSIG                        =>  self.op_verifysig(),
                 OP_SHA256                           =>  self.op_sha256(),
+                OP_PUSHTXID                         =>  self.op_pushtxid(),
                 OP_PUSHDATA1(n, bytes)              =>  self.op_pushdata1(n.try_into().unwrap(), bytes),
                 OP_PUSHDATA2(n, bytes)              =>  self.op_pushdata2(n.try_into().unwrap(), bytes),
                 OP_PUSHDATA4(n, bytes)              =>  self.op_pushdata4(n.try_into().unwrap(), bytes),
@@ -219,17 +224,13 @@ impl TgScriptInterpreter for TgScriptEnv {
     }
 
     fn op_validate(&mut self) {
-        if self.stack.pop().unwrap() != vec![OP_0.bytecode()] {
-            self.validity = Some(true);
-        }
-        else {
-            self.validity = Some(false);
-        }
+        self.validity = Some(
+            self.stack.pop().unwrap() == vec![OP_1.bytecode()]
+        );
     }
 
     fn op_equal(&mut self) {
-        let len = self.stack.len();
-        if self.stack[len - 1] == self.stack[len - 2] {
+        if self.stack.pop().unwrap() == self.stack.pop().unwrap() {
             self.op_1();
         }
         else {
@@ -249,17 +250,20 @@ impl TgScriptInterpreter for TgScriptEnv {
 
     fn op_verifysig(&mut self) {
 
-        assert!(self.payout.is_some());
+        
+        debug!("verify sig stack: {:?}", self.stack);
+        debug!("height: {:?}", self.stack.len());
 
-        let payout = self.payout.as_ref().unwrap();
-        let payout_txid: &[u8] = &payout.psbt.clone().extract_tx().txid();
-        let script_txid = self.stack.pop().unwrap();
-        let pubkey: PublicKey = PublicKey::from_slice(&self.stack.pop().unwrap()).unwrap();
-        let sig: Signature = Signature::from_der(&self.stack.pop().unwrap()).unwrap();
-
-        let msg: Message = Message::from_slice(&script_txid).unwrap();
-
-        if payout_txid.to_vec() == script_txid && self.secp.verify(&msg, &sig, &pubkey.key).is_ok() {
+        let msg_bytes = self.stack.pop().unwrap();
+        debug!("msg bytes len: {}", msg_bytes.len());
+        let msg = Message::from_slice(&msg_bytes).unwrap();
+        let pubkey_bytes = self.stack.pop().unwrap();
+        debug!("pubkey bytes len: {}", pubkey_bytes.len());
+        let pubkey: PublicKey = PublicKey::from_slice(&pubkey_bytes).unwrap();
+        let sig_bytes = self.stack.pop().unwrap();
+        debug!("sig bytes len: {}", sig_bytes.len());
+        let sig: Signature = Signature::from_der(&sig_bytes).unwrap();
+        if self.secp.verify(&msg, &sig, &pubkey.key).is_ok() {
             self.op_1();
         }
         else {
@@ -269,6 +273,16 @@ impl TgScriptInterpreter for TgScriptEnv {
 
     fn op_sha256(&mut self) {
 
+    }
+    
+    fn op_pushtxid(&mut self) {
+
+        assert!(self.payout.is_some());
+
+        let payout = self.payout.as_ref().unwrap();
+        let payout_txid = &payout.psbt.clone().extract_tx().txid();
+
+        self.stack.push(payout_txid.to_vec());
     }
 }
 

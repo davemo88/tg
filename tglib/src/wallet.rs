@@ -269,19 +269,45 @@ pub fn create_payout_script(escrow_address: &Address, p1_payout_address: &Addres
 // TODO: should be a pubkeyhash instead of full pubkey, same reasons as bitcoin addresses
 // that requires the pubkey to also be given as input as in standard pay to pubkey hash
     let pubkey_bytes = referee_pubkey().to_bytes();
+//
+//    TgScript(vec![         
+//        OP_PUSHDATA1(pubkey_bytes.len().try_into().unwrap(), pubkey_bytes.clone()),
+//        OP_2DUP,
+//        OP_PUSHDATA1(txid1.len().try_into().unwrap(), Vec::from(txid1)),
+//        OP_VERIFYSIG,
+//        OP_IF(
+//            TgScript(vec![
+//                OP_1,
+//            ]),
+//            Some(TgScript(vec![
+//                OP_PUSHDATA1(txid2.len().try_into().unwrap(), Vec::from(txid2)),
+//                OP_VERIFYSIG,
+//            ]))
+//        ),
+//        OP_VALIDATE,
+//    ])
 
     TgScript(vec![         
         OP_PUSHDATA1(pubkey_bytes.len().try_into().unwrap(), pubkey_bytes.clone()),
-        OP_2DUP,
+// to use event signifier token, push it here and remove OP_DUP
         OP_PUSHDATA1(txid1.len().try_into().unwrap(), Vec::from(txid1)),
-        OP_VERIFYSIG,
+        OP_DUP,
+        OP_PUSHTXID,
+        OP_EQUAL,
         OP_IF(
             TgScript(vec![
-                OP_1,
+                OP_VERIFYSIG,
             ]),
             Some(TgScript(vec![
+                OP_DROP,
                 OP_PUSHDATA1(txid2.len().try_into().unwrap(), Vec::from(txid2)),
-                OP_VERIFYSIG,
+                OP_DUP,
+                OP_PUSHTXID,
+                OP_EQUAL,
+                OP_IF(
+                    TgScript(vec![OP_VERIFYSIG]),
+                    Some(TgScript(vec![OP_0])),
+                ),
             ]))
         ),
         OP_VALIDATE,
@@ -378,7 +404,7 @@ mod tests {
         },
     };
 
-    const CONTRACT: &'static str = "010344ef4fe364c72338081a390e3311c4640d98160cee450752196df7992270189f0340ae7715992335778916e592d46ba5820e0d0b29df09d1db49ef7f858698d39c0321c5107071c453264592ae948fc124f9b9ff46e286f9eb47510cb9bd2e6b4116000000f370736274ff0100e40100000002590d63eb006fea95d13a0ba91cca8070756caac1d27e66684c8b635931e2fd49010000000000000000d45ee1cccb9f25996549a8df5ec5a8ba5a65cb475e8b1dea469fa40d503408fe00000000000000000004060d00000000000022002028b7b4e22b42a8d96c633b8822a96e2f8cf488df63b2f74e1b7dbde61f4f7c1221000000000000001600148cd86fcd528f929d1aa329e4f5069b9098847b7f6ddaf50500000000160014dbd9ebc5e9498496628dc7c9d53a9db4f3b8e70d6ddaf50500000000160014a506f73ce6855a67f402f1b42807663606e4b3fc00000000000000000000000000006fd121025c571f77d693246e64f01ef740064a0b024a228813c94ae7e1e4ee73e991e0ba53d120019f883e8d300b988f6b22d1e81978d98b08f4e49b38de8d889eb8ebf565c3ecc1f101f2d120e418d174ac87b19bc92010fed4b9f003ab6f09fb67471549d5417f0bdef7cd72c1f3f4";
+    const CONTRACT: &'static str = "";
 
     const PUBKEY: &'static str = "02123e6a7816f2149f90cca1ea1ba41b73e77db44cd71f01c184defd10961d03fc";
     const TESTNET_ADDRESS_FROM_NAMECOIND: &'static str = "mfuf8qvMsMJMgBqtEGBt8aCQPQi1qgANzo";
@@ -414,9 +440,6 @@ mod tests {
         let arbiter_wallet = Trezor::new(Mnemonic::parse(ARBITER_MNEMONIC).unwrap());
         let msg = Message::from_slice(&payout.psbt.clone().extract_tx().txid()).unwrap();
         payout.script_sig = Some(get_referee_signature(msg));
-// TODO: replace with signature from referee
-//        payout.script_sig = Some(arbiter_wallet.sign_message(Message::from_slice(&payout.psbt.clone().extract_tx().txid()).unwrap(), 
-//                DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap()).unwrap());
 
         assert!(arbiter_wallet.validate_payout(&payout).is_ok())
     }

@@ -1,6 +1,4 @@
-use std::{
-    fmt,
-};
+use std::fmt;
 use serde::{Serialize, Deserialize,};
 use byteorder::{BigEndian, WriteBytesExt};
 
@@ -23,6 +21,7 @@ pub enum TgOpcode {
     OP_VERIFYSIG,
     OP_SHA256,
     OP_VALIDATE,
+    OP_PUSHTXID,
 }
 
 impl fmt::Debug for TgOpcode {
@@ -45,6 +44,7 @@ impl fmt::Debug for TgOpcode {
            OP_EQUAL                             =>  write!(f, "EQUAL"),
            OP_VERIFYSIG                         =>  write!(f, "VERIFYSIG"),
            OP_SHA256                            =>  write!(f, "SHA256"),
+           OP_PUSHTXID                          =>  write!(f, "PUSHTXID"),
         }
     }
 }
@@ -75,6 +75,7 @@ impl TgOpcode {
             OP_PUSHDATA1(_,_)   =>  0xD1,
             OP_PUSHDATA2(_,_)   =>  0xD2,
             OP_PUSHDATA4(_,_)   =>  0xD4,
+            OP_PUSHTXID         =>  0xD0,
             OP_IF(_,_)          =>  0xF1,
             OP_ELSE(_)          =>  0xF2,
             OP_ENDIF            =>  0xF3,
