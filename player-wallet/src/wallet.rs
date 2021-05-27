@@ -51,6 +51,8 @@ use tglib::{
         create_escrow_address,
         create_escrow_script,
         create_payout_script,
+        create_payout_tx,
+        create_token_pair_script,
         derive_account_xprivkey,
         EscrowWallet,
         NameWallet,
@@ -62,6 +64,7 @@ use tglib::{
         TX_FEE,
     },
     mock::{
+        referee_pubkey,
         DB_NAME,
         ESCROW_SUBACCOUNT,
         ESCROW_KIX,
@@ -192,7 +195,17 @@ impl PlayerWallet {
         let escrow_address = create_escrow_address(&p1_pubkey, &p2_contract_info.escrow_pubkey, &arbiter_pubkey, self.network).unwrap();
         let funding_tx = self.create_funding_tx(&p2_contract_info, amount, &escrow_address)?;
         let p1_payout_address = self.offline_wallet().get_new_address()?;
+// need the oracle tokens here
+        let p1_payout_tx = create_payout_tx(&funding_tx.clone().extract_tx(), &escrow_address, &p1_payout_address).unwrap();
+        let p2_payout_tx = create_payout_tx(&funding_tx.clone().extract_tx(), &escrow_address, &p2_contract_info.payout_address).unwrap();
+        let tx_token_pairs = vec![
+            (p1_payout_tx.txid(), p1_payout_tx.txid().to_vec()),
+            (p2_payout_tx.txid(), p2_payout_tx.txid().to_vec()),
+        ];
+        let tx_token_script = create_token_pair_script(&referee_pubkey(), tx_token_pairs);
         let payout_script = create_payout_script(&escrow_address, &p1_payout_address, &p2_contract_info.payout_address, &funding_tx.clone().extract_tx());
+
+        assert_eq!(tx_token_script, payout_script);
 
         Ok(Contract::new(
             p1_pubkey,

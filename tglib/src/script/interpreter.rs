@@ -250,19 +250,19 @@ impl TgScriptInterpreter for TgScriptEnv {
 
     fn op_verifysig(&mut self) {
 
-        
-        debug!("verify sig stack: {:?}", self.stack);
-        debug!("height: {:?}", self.stack.len());
-
         let msg_bytes = self.stack.pop().unwrap();
-        debug!("msg bytes len: {}", msg_bytes.len());
-        let msg = Message::from_slice(&msg_bytes).unwrap();
         let pubkey_bytes = self.stack.pop().unwrap();
-        debug!("pubkey bytes len: {}", pubkey_bytes.len());
-        let pubkey: PublicKey = PublicKey::from_slice(&pubkey_bytes).unwrap();
         let sig_bytes = self.stack.pop().unwrap();
-        debug!("sig bytes len: {}", sig_bytes.len());
-        let sig: Signature = Signature::from_der(&sig_bytes).unwrap();
+        let msg = Message::from_slice(&msg_bytes);
+        let pubkey = PublicKey::from_slice(&pubkey_bytes);
+        let sig = Signature::from_der(&sig_bytes);
+        if msg.is_err() || pubkey.is_err() || sig.is_err() {
+            self.op_0();
+            return
+        }
+        let msg = msg.unwrap();
+        let pubkey = pubkey.unwrap();
+        let sig = sig.unwrap();
         if self.secp.verify(&msg, &sig, &pubkey.key).is_ok() {
             self.op_1();
         }

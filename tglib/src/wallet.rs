@@ -25,6 +25,7 @@ use bdk::bitcoin::{
     PublicKey,
     Script,
     Transaction,
+    Txid,
     TxIn,
     TxOut,
     blockdata::{
@@ -59,6 +60,7 @@ use crate::{
     contract::Contract,
     payout::Payout,
     script::{
+        TgOpcode,
         TgScript,
         TgScriptEnv,
     },
@@ -270,33 +272,81 @@ pub fn create_payout_script(escrow_address: &Address, p1_payout_address: &Addres
     use crate::script::TgOpcode::*;
     TgScript(vec![         
         OP_PUSHDATA1(pubkey_bytes.len().try_into().unwrap(), pubkey_bytes.clone()),
-// to use referee token instead of txid, push it here and remove OP_DUP
-//        OP_PUSHDATA1(referee_token.len(), referee_token);
         OP_PUSHDATA1(txid1.len().try_into().unwrap(), Vec::from(txid1)),
-        OP_DUP,
         OP_PUSHTXID,
         OP_EQUAL,
         OP_IF(
             TgScript(vec![
-                OP_VERIFYSIG,
+// wasteful in this case but this handles the case of the generic token in place of a matching txid
+                OP_PUSHDATA1(txid1.len().try_into().unwrap(), Vec::from(txid1)),
             ]),
             Some(TgScript(vec![
-                OP_DROP,
                 OP_PUSHDATA1(txid2.len().try_into().unwrap(), Vec::from(txid2)),
-                OP_DUP,
                 OP_PUSHTXID,
                 OP_EQUAL,
                 OP_IF(
-                    TgScript(vec![OP_VERIFYSIG]),
+                    TgScript(vec![
+                        OP_PUSHDATA1(txid2.len().try_into().unwrap(), Vec::from(txid2)),
+                    ]),
                     Some(TgScript(vec![OP_0])),
                 ),
             ]))
         ),
+        OP_VERIFYSIG,
         OP_VALIDATE,
     ])
 }
 
-fn create_payout_tx(funding_tx: &Transaction, escrow_address: &Address, payout_address: &Address) -> Result<Transaction> {
+pub fn create_token_pair_script(oracle_pubkey: &PublicKey, pairs: Vec<(Txid, Vec<u8>)>) -> TgScript {
+    let mut script = TgScript(vec!());
+    let oracle_pubkey_bytes = oracle_pubkey.to_bytes();
+    use crate::script::TgOpcode::*;
+    script.0.push(OP_PUSHDATA1(oracle_pubkey_bytes.len().try_into().unwrap(), oracle_pubkey_bytes));
+    let fragments: Vec<Vec<TgOpcode>> = pairs.iter().enumerate().map(|(i, (txid, token))| { 
+        let last = i == pairs.len() - 1;
+        token_branch_fragment(txid, token, last)
+    }).collect();
+    script.0.extend(nest_fragments(fragments));
+    script.0.push(OP_VERIFYSIG);
+    script.0.push(OP_VALIDATE);
+    script
+}
+
+fn nest_fragments(fragments: Vec<Vec<TgOpcode>>) -> Vec<TgOpcode> {
+    let (f, fs) = fragments.split_last().unwrap();
+    if fs.is_empty() {
+        f.to_owned()
+    } else {
+        let (f2, fs) = fs.split_last().unwrap();
+        let (op, ops) = f2.split_last().unwrap();
+        let nested = match op {
+            TgOpcode::OP_IF(true_branch, None) => TgOpcode::OP_IF(true_branch.to_owned(), Some(TgScript(f.to_owned()))),
+            _ => panic!("can't nest this script fragment"),
+        };
+        let mut ops = ops.to_owned();
+        ops.push(nested);
+        let mut fs = fs.to_owned();
+        fs.push(ops);
+        nest_fragments(fs)
+    }
+}
+
+fn token_branch_fragment(txid: &Txid, token: &[u8], last: bool) -> Vec<crate::script::TgOpcode> {
+    use crate::script::TgOpcode::*;
+    vec![
+        OP_PUSHDATA1(txid.len().try_into().unwrap(), Vec::from(txid.as_ref())),
+        OP_PUSHTXID,
+        OP_EQUAL,
+        OP_IF(
+            TgScript(vec![
+                OP_PUSHDATA1(token.len().try_into().unwrap(), Vec::from(token)),
+            ]),
+            if last { Some(TgScript(vec!(OP_0))) } else { None },
+        ),
+    ]
+}
+
+pub fn create_payout_tx(funding_tx: &Transaction, escrow_address: &Address, payout_address: &Address) -> Result<Transaction> {
 
 // TODO: need to standardize this with builder-implementation in player wallet
     let (input, amount) = funding_tx.output

@@ -47,10 +47,7 @@ use crate::{
         parser::tg_script,
         TgScript,
     },
-    wallet::{
-        create_escrow_address,
-        create_payout_script,
-    },
+    wallet::create_escrow_address,
     mock::{
         NETWORK,
         CONTRACT_VERSION,
@@ -157,7 +154,13 @@ impl Contract {
 
     pub fn validate(&self) -> Result<()> {
         self.validate_funding_tx()?;
-        self.validate_payout_script()?;
+// TODO: the validation here is that the script is the expected one,
+// e.g. the correct script for a specific contract or contract type
+// the script might depend on data not made explicit in the contract,
+// e.g. a list of tokens coinciding with payout transactions
+// therefore validation in this sense is not always possible without
+// data from another party and such validation should occur elsewhere
+//        self.validate_payout_script()?;
         self.validate_sigs()?;
         Ok(())
     }
@@ -170,19 +173,19 @@ impl Contract {
 
 // TODO: payout addresses would need to be included in contract for this validation to carry
 // through with flexible payout addresses, e.g. not derived from player pubkey
-    fn validate_payout_script(&self) -> Result<()> {
-        let payout_script = create_payout_script(
-            &create_escrow_address(&self.p1_pubkey, &self.p2_pubkey, &self.arbiter_pubkey, NETWORK).unwrap(),
-            &self.p1_payout_address,
-            &self.p2_payout_address,
-            &self.funding_tx.clone().extract_tx(),
-        );
-        if self.payout_script != payout_script {
-            Err(Error::Adhoc("invalid payout script"))
-        } else {
-            Ok(())
-        }
-    }
+//    fn validate_payout_script(&self) -> Result<()> {
+//        let payout_script = create_payout_script(
+//            &create_escrow_address(&self.p1_pubkey, &self.p2_pubkey, &self.arbiter_pubkey, NETWORK).unwrap(),
+//            &self.p1_payout_address,
+//            &self.p2_payout_address,
+//            &self.funding_tx.clone().extract_tx(),
+//        );
+//        if self.payout_script != payout_script {
+//            Err(Error::Adhoc("invalid payout script"))
+//        } else {
+//            Ok(())
+//        }
+//    }
 
     fn validate_sigs(&self) -> Result<()> {
         let secp = Secp256k1::new();
