@@ -272,15 +272,17 @@ pub fn create_payout_script(escrow_address: &Address, p1_payout_address: &Addres
     use crate::script::TgOpcode::*;
     TgScript(vec![         
         OP_PUSHDATA1(pubkey_bytes.len().try_into().unwrap(), pubkey_bytes.clone()),
+// p1 payout
         OP_PUSHDATA1(txid1.len().try_into().unwrap(), Vec::from(txid1)),
         OP_PUSHTXID,
         OP_EQUAL,
         OP_IF(
             TgScript(vec![
-// wasteful in this case but this handles the case of the generic token in place of a matching txid
+// wasteful in this case (could use OP_DUP above) but this handles the case of the generic token in place of the payout txid
                 OP_PUSHDATA1(txid1.len().try_into().unwrap(), Vec::from(txid1)),
             ]),
             Some(TgScript(vec![
+// p2 payout
                 OP_PUSHDATA1(txid2.len().try_into().unwrap(), Vec::from(txid2)),
                 OP_PUSHTXID,
                 OP_EQUAL,
@@ -288,6 +290,7 @@ pub fn create_payout_script(escrow_address: &Address, p1_payout_address: &Addres
                     TgScript(vec![
                         OP_PUSHDATA1(txid2.len().try_into().unwrap(), Vec::from(txid2)),
                     ]),
+// unknown payout tx
                     Some(TgScript(vec![OP_0])),
                 ),
             ]))
@@ -302,11 +305,12 @@ pub fn create_token_pair_script(oracle_pubkey: &PublicKey, pairs: Vec<(Txid, Vec
     let oracle_pubkey_bytes = oracle_pubkey.to_bytes();
     use crate::script::TgOpcode::*;
     script.0.push(OP_PUSHDATA1(oracle_pubkey_bytes.len().try_into().unwrap(), oracle_pubkey_bytes));
-    let fragments: Vec<Vec<TgOpcode>> = pairs.iter().enumerate().map(|(i, (txid, token))| { 
+    let fragments = pairs.iter().enumerate().map(|(i, (txid, token))| { 
         let last = i == pairs.len() - 1;
         token_branch_fragment(txid, token, last)
     }).collect();
     script.0.extend(nest_fragments(fragments));
+// TODO: move OP_VERIFYSIG to the end
     script.0.push(OP_VERIFYSIG);
     script.0.push(OP_VALIDATE);
     script
@@ -321,7 +325,7 @@ fn nest_fragments(fragments: Vec<Vec<TgOpcode>>) -> Vec<TgOpcode> {
         let (op, ops) = f2.split_last().unwrap();
         let nested = match op {
             TgOpcode::OP_IF(true_branch, None) => TgOpcode::OP_IF(true_branch.to_owned(), Some(TgScript(f.to_owned()))),
-            _ => panic!("can't nest this script fragment"),
+            _ => panic!("can't nest this script fragment: op is {:?}", op),
         };
         let mut ops = ops.to_owned();
         ops.push(nested);

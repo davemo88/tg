@@ -8,7 +8,6 @@ use bdk::bitcoin::{
         All,
     },
 };
-use log::debug;
 use crate::{
     Result,
     Error,
@@ -51,7 +50,7 @@ impl TgScriptEnv {
 // TODO: ensure payout_tx is signed by the same player making the request
 // TODO: ensure payout_tx is not already in the blockchain (but then who cares?)
 
-        let payout = self.payout.as_ref().unwrap().clone();
+        let payout = self.payout.clone().ok_or(Error::Adhoc("no payout"))?;
 //confirm payout script hash sigs on contract
 // TODO: check funding_tx is signed by the correct parties and in the blockchain
 //        if payout.contract.state() != ContractState::Live {
@@ -59,13 +58,10 @@ impl TgScriptEnv {
 //            return Err(Error::Adhoc("invalid payout request - contract is uncertified"))
 //        }
 //push script sig to stack then evaluate the payout script
-        if payout.script_sig.is_some() {
-            let sig_bytes = payout.script_sig.unwrap().serialize_der().to_vec();
-            debug!("pushing script sig: {:?}", sig_bytes.len());
-            self.stack.push(sig_bytes);
-        } else {
-            return Err(Error::Adhoc("no script sig"));
-        };
+        self.stack.push(payout
+            .script_sig.ok_or(Error::Adhoc("no script sig"))?
+            .serialize_der()
+            .to_vec());
 
         let _result = self.eval(payout.contract.payout_script.clone());
 
@@ -249,7 +245,6 @@ impl TgScriptInterpreter for TgScriptEnv {
     }
 
     fn op_verifysig(&mut self) {
-
         let msg_bytes = self.stack.pop().unwrap();
         let pubkey_bytes = self.stack.pop().unwrap();
         let sig_bytes = self.stack.pop().unwrap();
