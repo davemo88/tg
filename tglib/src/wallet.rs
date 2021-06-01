@@ -301,7 +301,7 @@ pub fn create_payout_script(escrow_address: &Address, p1_payout_address: &Addres
 }
 
 pub fn create_token_pair_script(oracle_pubkey: &PublicKey, pairs: Vec<(Txid, Vec<u8>)>) -> TgScript {
-    let mut script = TgScript(vec!());
+    let mut script = TgScript(vec![]);
     let oracle_pubkey_bytes = oracle_pubkey.to_bytes();
     use crate::script::TgOpcode::*;
     script.0.push(OP_PUSHDATA1(oracle_pubkey_bytes.len().try_into().unwrap(), oracle_pubkey_bytes));
@@ -310,10 +310,24 @@ pub fn create_token_pair_script(oracle_pubkey: &PublicKey, pairs: Vec<(Txid, Vec
         token_branch_fragment(txid, token, last)
     }).collect();
     script.0.extend(nest_fragments(fragments));
-// TODO: move OP_VERIFYSIG to the end
     script.0.push(OP_VERIFYSIG);
     script.0.push(OP_VALIDATE);
     script
+}
+
+fn token_branch_fragment(txid: &Txid, token: &[u8], last: bool) -> Vec<crate::script::TgOpcode> {
+    use crate::script::TgOpcode::*;
+    vec![
+        OP_PUSHDATA1(txid.len().try_into().unwrap(), Vec::from(txid.as_ref())),
+        OP_PUSHTXID,
+        OP_EQUAL,
+        OP_IF(
+            TgScript(vec![
+                OP_PUSHDATA1(token.len().try_into().unwrap(), Vec::from(token)),
+            ]),
+            if last { Some(TgScript(vec!(OP_0))) } else { None },
+        ),
+    ]
 }
 
 fn nest_fragments(fragments: Vec<Vec<TgOpcode>>) -> Vec<TgOpcode> {
@@ -333,21 +347,6 @@ fn nest_fragments(fragments: Vec<Vec<TgOpcode>>) -> Vec<TgOpcode> {
         fs.push(ops);
         nest_fragments(fs)
     }
-}
-
-fn token_branch_fragment(txid: &Txid, token: &[u8], last: bool) -> Vec<crate::script::TgOpcode> {
-    use crate::script::TgOpcode::*;
-    vec![
-        OP_PUSHDATA1(txid.len().try_into().unwrap(), Vec::from(txid.as_ref())),
-        OP_PUSHTXID,
-        OP_EQUAL,
-        OP_IF(
-            TgScript(vec![
-                OP_PUSHDATA1(token.len().try_into().unwrap(), Vec::from(token)),
-            ]),
-            if last { Some(TgScript(vec!(OP_0))) } else { None },
-        ),
-    ]
 }
 
 pub fn create_payout_tx(funding_tx: &Transaction, escrow_address: &Address, payout_address: &Address) -> Result<Transaction> {
