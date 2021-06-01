@@ -147,7 +147,7 @@ impl DB {
 
     pub fn all_payouts(&self) -> Result<Vec<PayoutRecord>> {
         let mut stmt = self.conn.prepare("SELECT * FROM payout")?;
-        let payout_iter = stmt.query_map(params![], |row| {
+        let payout_iter = stmt.query_map([], |row| {
             Ok(PayoutRecord {
                 cxid: row.get(0)?,
                 psbt: row.get(1)?,
@@ -163,7 +163,7 @@ impl DB {
     }
 
     pub fn get_payout(&self, cxid: &str) -> Option<PayoutRecord> {
-        let mut stmt = self.conn.prepare("SELECT * FROM payout where cxid = ?1").unwrap();
+        let mut stmt = self.conn.prepare("SELECT * FROM payout WHERE cxid = ?1").unwrap();
         let mut payout_iter = stmt.query_map(params![cxid], |row| {
             Ok(PayoutRecord {
                 cxid: row.get(0)?, 
