@@ -13,14 +13,24 @@ enum BaseballGameOutcome {
     Cancelled,
 }
 
+#[derive(Debug)]
 struct TeamRecord {
     id: i64,
     name: String,
 }
 
+#[derive(Debug)]
 struct OutcomeVariant {
     id: i64,
     name: String,
+}
+
+#[derive(Debug, Clone)]
+struct GameInfo {
+    home: String,
+    away: String,
+    date: String,
+    outcome_tokens: HashMap<String, String>,
 }
 
 impl std::fmt::Display for BaseballGameOutcome {
@@ -168,7 +178,7 @@ impl Db {
                     let game_id = self.get_game_id(&home_id, &away_id, &date)?;
                     for outcome in vec![BaseballGameOutcome::HomeWins, BaseballGameOutcome::AwayWins] {
                         self.insert_outcome(&game_id, &outcome_variant_map.get(&outcome.to_string()).unwrap(), 
-                            &get_outcome_token(&home_id, &away_id, &date, outcome))?;
+                            &get_outcome_token(&home, &away, &date, outcome))?;
                     }
                 },
                 Err(e) => println!("{:?}", e),
@@ -240,20 +250,134 @@ impl Db {
     }
 }
 
-fn get_outcome_token(home_id: &i64, away_id: &i64, date: &str, outcome: BaseballGameOutcome) -> String {
-    return hex::encode(format!("H{}A{}D{}O{}", home_id, away_id, date, outcome.to_string()))
+fn get_outcome_token(home: &str, away: &str, date: &str, outcome: BaseballGameOutcome) -> String {
+    return hex::encode(format!("H{}A{}D{}O{}", home, away, date, outcome.to_string()))
 }
 
 const ORIOLES_SCHEDULE_CSV_PATH: &'static str = "/home/hg/Downloads/EventTicketPromotionPrice.tiksrv";
 
-fn main() {
-    let mut db_path = std::env::current_dir().unwrap();
-    db_path.push("publisher.db");
-    let db = Db::new(&db_path).unwrap();
-    db.init().unwrap();
+use std::sync::mpsc::{channel, Sender};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
-    match db.load_schedule_csv(ORIOLES_SCHEDULE_CSV_PATH) {
-        Ok(_) => println!("loaded schedule successfully"),
-        Err(e) =>  println!("{:?}", e),
+type CachedGameInfo = Arc<RwLock<Vec<GameInfo>>>;
+
+async fn update_cached_game_info(cache: CachedGameInfo, db_tx: Sender<Job<Db>>) {
+
+    let (query_tx, query_rx) = tokio::sync::oneshot::channel::<Vec<GameInfo>>();
+
+    let query = move |db: &Db| {
+        let mut stmt = db.conn.prepare("
+            SELECT game.id, team1.name, team2.name, game.date, outcome_variant.name, token, hex
+            FROM game JOIN outcome ON game.id = outcome.game_id
+            JOIN outcome_variant ON outcome_variant.id = outcome.variant_id 
+            LEFT JOIN signature ON signature.outcome_id = outcome.id
+            JOIN team AS team1 ON game.home_id = team1.id
+            JOIN team AS team2 on game.away_id = team2.id
+        ").unwrap();
+        
+        let mut map = HashMap::<i64, GameInfo>::new();
+
+        println!("running query");
+
+        let _rows = stmt.query_map([], |row| { 
+            let game_id = row.get(0)?;
+            match map.get_mut(&game_id) {
+                None => {
+                    let mut outcome_tokens = HashMap::<String, String>::new();
+                    outcome_tokens.insert(row.get(4)?, row.get(5)?);
+                    let info = GameInfo {
+                        home: row.get(1)?,
+                        away: row.get(2)?,
+                        date: row.get(3)?,
+                        outcome_tokens,
+                    };
+                    map.insert(game_id, info);
+                }
+                Some(info) => {
+                    info.outcome_tokens.insert(row.get(4)?, row.get(5)?);
+                }
+            }
+            Ok(())
+        });
+
+        println!("new cache: {:?}", map);
+        let _r = query_tx.send(map.values().cloned().collect());
     };
+
+    let _r = db_tx.send(Box::new(query));
+
+    let new_cache = query_rx.await.unwrap();
+    println!("new cache: {:?}", new_cache);
+    let mut w = cache.write().await; 
+    *w = new_cache;
+}
+
+type Job<T> = Box<dyn FnOnce(&T) + Send >;
+
+#[tokio::main]
+async fn main() {
+
+// sqlite thread
+    let (db_tx, db_rx) = channel::<Job<Db>>();
+
+    let join_handle = std::thread::spawn(move || {
+        let mut db_path = std::env::current_dir().unwrap();
+        db_path.push("publisher.db");
+        let db = Db::new(&db_path).expect("couldn't open db");
+        db.init().unwrap();
+
+        match db.load_schedule_csv(ORIOLES_SCHEDULE_CSV_PATH) {
+            Ok(_) => println!("loaded schedule successfully"),
+            Err(e) =>  println!("{:?}", e),
+        };
+
+        loop {
+            match db_rx.recv() {
+                Ok(x) => x(&db),
+                Err(e) => {
+                    println!("recv error: {:?}", e);
+                    break
+                },
+            }
+        }
+    });
+
+    let cached_game_info: CachedGameInfo = Arc::new(RwLock::new(vec!()));
+    update_cached_game_info(cached_game_info.clone(), db_tx.clone()).await;
+    
+    loop {
+        let r1 = cached_game_info.read().await;
+//        println!("cached game info: {:?}", r1);
+    }
+
+//    let sql = "SELECT * FROM team WHERE name = ?";
+//    let params = "Orioles";
+//
+//    let (query_tx, query_rx) = tokio::sync::oneshot::channel::<Vec<Result<TeamRecord>>>();
+//
+//    let some_query = move |db: &Db| {
+//        let mut stmt = match db.conn.prepare(&sql) {
+//            Ok(stmt) => stmt,
+//            Err(e) => panic!("couldn't prepare sql statement: {:?}", e)
+//        };
+//        let rows = stmt.query_map(params!(params), |row| { 
+//            Ok(TeamRecord { 
+//                id: row.get(0)?, 
+//                name: row.get(1)?, 
+//            })
+//        }).unwrap().collect::<Vec<Result<TeamRecord>>>();
+//
+//        let _r = query_tx.send(rows);
+//    };
+//
+//    let _r = db_tx.send(Box::new(some_query));
+//
+//    let rows = query_rx.await.unwrap();
+//    
+//    drop(db_tx);
+//
+//    let _r = join_handle.join();
+//
+//    println!("{:?}", rows);
 }
