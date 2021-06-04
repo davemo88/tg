@@ -1,9 +1,14 @@
 use std::collections::{HashMap, HashSet};
-use std::iter::FromIterator;
 use rusqlite::{params, Connection, Result};
 use serde::{Serialize, Deserialize};
-use simple_logger::SimpleLogger;
-use warp::{Filter, Reply, Rejection};
+//use simple_logger::SimpleLogger;
+use warp::Filter;
+ 
+use tglib::{
+    bdk::bitcoin::secp256k1::Signature,
+    bdk::bitcoin::PublicKey,
+    JsonResponse,
+};
 
 #[derive(Debug)]
 enum BaseballGameOutcome {
@@ -252,7 +257,7 @@ use std::sync::mpsc::{channel, Sender};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct GameInfo {
     home: String,
     away: String,
@@ -309,6 +314,44 @@ async fn update_cached_game_info(cache: CachedGameInfo, db_tx: Sender<Job<Db>>) 
     *w = new_cache;
 }
 
+async fn get_game_info_handler(cache: CachedGameInfo) -> std::result::Result<impl warp::Reply, warp::Rejection> {
+    Ok(serde_json::to_string(&JsonResponse::success(Some(cache.read().await.clone()))).unwrap())
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct AddSignatureBody {
+    outcome_id: i64,
+    sig_hex: String,
+}
+
+async fn add_signature_handler(body: AddSignatureBody, db_tx: Sender<Job<Db>>, _cache: CachedGameInfo) -> std::result::Result<impl warp::Reply, warp::Rejection> {
+    let sig = match Signature::from_der(&hex::decode(&body.sig_hex).unwrap()) {
+        Ok(sig) => sig,
+        Err(_e) => return Err(warp::reject()),
+    };
+    let (query_tx, query_rx) = tokio::sync::oneshot::channel::<Option<String>>();
+// get corresponding token
+    let query = move |db: &Db| {
+        let mut stmt = db.conn.prepare("SELECT token FROM outcome WHERE outcome.id = ?").unwrap();
+        let token: Option<String> = match stmt.query_row(params!(body.outcome_id), |row| Ok(row.get(0).unwrap())) {
+            Ok(token) => Some(token),
+            Err(e) => None,
+        };
+        query_tx.send(token);
+    };
+    db_tx.send(Box::new(query));
+    let token = match query_rx.await.unwrap() {
+        Some(token) => token,
+        None => return Err(warp::reject()),
+    };
+// validate signature on token
+// if valid
+// insert signature
+// refresh cache
+// else reject
+    Ok(warp::http::StatusCode::OK)
+}
+
 type Job<T> = Box<dyn FnOnce(&T) + Send >;
 
 #[tokio::main]
@@ -317,7 +360,7 @@ async fn main() {
 // sqlite thread
     let (db_tx, db_rx) = channel::<Job<Db>>();
 
-    let join_handle = std::thread::spawn(move || {
+    let _join_handle = std::thread::spawn(move || {
         let mut db_path = std::env::current_dir().unwrap();
         db_path.push("publisher.db");
         let db = Db::new(&db_path).expect("couldn't open db");
@@ -342,41 +385,24 @@ async fn main() {
     let cached_game_info: CachedGameInfo = Arc::new(RwLock::new(vec!()));
     update_cached_game_info(cached_game_info.clone(), db_tx.clone()).await;
     
-    loop {
-        let r1 = cached_game_info.read().await;
-        if !r1.is_empty() {
-            println!("updated cached game info: {:?}", r1);
-            break
-        }
-    }
+    let db_tx = warp::any().map(move || db_tx.clone());
+    let cached_game_info = warp::any().map(move || cached_game_info.clone());
 
-//    let sql = "SELECT * FROM team WHERE name = ?";
-//    let params = "Orioles";
-//
-//    let (query_tx, query_rx) = tokio::sync::oneshot::channel::<Vec<Result<TeamRecord>>>();
-//
-//    let some_query = move |db: &Db| {
-//        let mut stmt = match db.conn.prepare(&sql) {
-//            Ok(stmt) => stmt,
-//            Err(e) => panic!("couldn't prepare sql statement: {:?}", e)
-//        };
-//        let rows = stmt.query_map(params!(params), |row| { 
-//            Ok(TeamRecord { 
-//                id: row.get(0)?, 
-//                name: row.get(1)?, 
-//            })
-//        }).unwrap().collect::<Vec<Result<TeamRecord>>>();
-//
-//        let _r = query_tx.send(rows);
-//    };
-//
-//    let _r = db_tx.send(Box::new(some_query));
-//
-//    let rows = query_rx.await.unwrap();
-//    
-    drop(db_tx);
-//
-    let _r = join_handle.join();
-//
-//    println!("{:?}", rows);
+    let get_game_info = warp::path("game-info")
+        .and(cached_game_info.clone())
+        .and_then(get_game_info_handler);
+
+    let add_signature = warp::path("signature")
+        .and(warp::post())
+        .and(warp::body::json())
+        .and(db_tx.clone())
+        .and(cached_game_info.clone())
+        .and_then(move |body, db_tx, cache| async move {
+            add_signature_handler(body, db_tx, cache).await
+        });
+
+    let routes = get_game_info
+        .or(add_signature);
+
+    warp::serve(routes).run(([0, 0, 0, 0], 6000)).await;
 }
