@@ -25,14 +25,6 @@ struct OutcomeVariant {
     name: String,
 }
 
-#[derive(Debug, Clone)]
-struct GameInfo {
-    home: String,
-    away: String,
-    date: String,
-    outcome_tokens: HashMap<String, String>,
-}
-
 impl std::fmt::Display for BaseballGameOutcome {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}", self)
@@ -260,6 +252,14 @@ use std::sync::mpsc::{channel, Sender};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+#[derive(Debug, Clone)]
+struct GameInfo {
+    home: String,
+    away: String,
+    date: String,
+    outcome_tokens: HashMap<String, (String, Option<String>)>,
+}
+
 type CachedGameInfo = Arc<RwLock<Vec<GameInfo>>>;
 
 async fn update_cached_game_info(cache: CachedGameInfo, db_tx: Sender<Job<Db>>) {
@@ -267,25 +267,23 @@ async fn update_cached_game_info(cache: CachedGameInfo, db_tx: Sender<Job<Db>>) 
     let (query_tx, query_rx) = tokio::sync::oneshot::channel::<Vec<GameInfo>>();
 
     let query = move |db: &Db| {
-        let mut stmt = db.conn.prepare("
-            SELECT game.id, team1.name, team2.name, game.date, outcome_variant.name, token, hex
+        let mut stmt = db.conn.prepare(
+            "SELECT game.id, team1.name, team2.name, game.date, outcome_variant.name, token, hex
             FROM game JOIN outcome ON game.id = outcome.game_id
             JOIN outcome_variant ON outcome_variant.id = outcome.variant_id 
             LEFT JOIN signature ON signature.outcome_id = outcome.id
             JOIN team AS team1 ON game.home_id = team1.id
-            JOIN team AS team2 on game.away_id = team2.id
-        ").unwrap();
+            JOIN team AS team2 on game.away_id = team2.id"
+        ).unwrap();
         
         let mut map = HashMap::<i64, GameInfo>::new();
 
-        println!("running query");
-
-        let _rows = stmt.query_map([], |row| { 
+        let _rows: Vec<Result<()>> = stmt.query_map([], |row| { 
             let game_id = row.get(0)?;
             match map.get_mut(&game_id) {
                 None => {
-                    let mut outcome_tokens = HashMap::<String, String>::new();
-                    outcome_tokens.insert(row.get(4)?, row.get(5)?);
+                    let mut outcome_tokens = HashMap::<String, (String, Option<String>)>::new();
+                    outcome_tokens.insert(row.get(4)?, (row.get(5)?, row.get(6)?));
                     let info = GameInfo {
                         home: row.get(1)?,
                         away: row.get(2)?,
@@ -295,20 +293,18 @@ async fn update_cached_game_info(cache: CachedGameInfo, db_tx: Sender<Job<Db>>) 
                     map.insert(game_id, info);
                 }
                 Some(info) => {
-                    info.outcome_tokens.insert(row.get(4)?, row.get(5)?);
+                    info.outcome_tokens.insert(row.get(4)?, (row.get(5)?, row.get(6)?));
                 }
             }
             Ok(())
-        });
+        }).unwrap().collect();
 
-        println!("new cache: {:?}", map);
         let _r = query_tx.send(map.values().cloned().collect());
     };
 
     let _r = db_tx.send(Box::new(query));
 
     let new_cache = query_rx.await.unwrap();
-    println!("new cache: {:?}", new_cache);
     let mut w = cache.write().await; 
     *w = new_cache;
 }
@@ -348,7 +344,10 @@ async fn main() {
     
     loop {
         let r1 = cached_game_info.read().await;
-//        println!("cached game info: {:?}", r1);
+        if !r1.is_empty() {
+            println!("updated cached game info: {:?}", r1);
+            break
+        }
     }
 
 //    let sql = "SELECT * FROM team WHERE name = ?";
@@ -375,9 +374,9 @@ async fn main() {
 //
 //    let rows = query_rx.await.unwrap();
 //    
-//    drop(db_tx);
+    drop(db_tx);
 //
-//    let _r = join_handle.join();
+    let _r = join_handle.join();
 //
 //    println!("{:?}", rows);
 }
