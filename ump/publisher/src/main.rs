@@ -36,6 +36,7 @@ impl std::fmt::Display for BaseballGameOutcome {
     }
 }
 
+#[derive(Debug)]
 pub struct Db {
     pub conn: Connection,
 }
@@ -253,7 +254,7 @@ fn get_outcome_token(home: &str, away: &str, date: &str, outcome: BaseballGameOu
 
 const ORIOLES_SCHEDULE_CSV_PATH: &'static str = "/home/hg/Downloads/EventTicketPromotionPrice.tiksrv";
 
-use std::sync::mpsc::{channel, Sender};
+use tokio::sync::mpsc::{channel, Sender};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -267,7 +268,7 @@ struct GameInfo {
 
 type CachedGameInfo = Arc<RwLock<Vec<GameInfo>>>;
 
-async fn update_cached_game_info(cache: CachedGameInfo, db_tx: Sender<Job<Db>>) {
+async fn update_cached_game_info(cache: CachedGameInfo, db_tx: &Sender<Job<Db>>) {
 
     let (query_tx, query_rx) = tokio::sync::oneshot::channel::<Vec<GameInfo>>();
 
@@ -307,7 +308,7 @@ async fn update_cached_game_info(cache: CachedGameInfo, db_tx: Sender<Job<Db>>) 
         let _r = query_tx.send(map.values().cloned().collect());
     };
 
-    let _r = db_tx.send(Box::new(query));
+    let _r = db_tx.send(Box::new(query)).await;
 
     let new_cache = query_rx.await.unwrap();
     let mut w = cache.write().await; 
@@ -335,11 +336,14 @@ async fn add_signature_handler(body: AddSignatureBody, db_tx: Sender<Job<Db>>, _
         let mut stmt = db.conn.prepare("SELECT token FROM outcome WHERE outcome.id = ?").unwrap();
         let token: Option<String> = match stmt.query_row(params!(body.outcome_id), |row| Ok(row.get(0).unwrap())) {
             Ok(token) => Some(token),
-            Err(e) => None,
+            Err(_e) => None,
         };
-        query_tx.send(token);
+        query_tx.send(token).unwrap();
     };
-    db_tx.send(Box::new(query));
+    match db_tx.send(Box::new(query)).await {
+        Ok(()) => (),
+        Err(_e) => panic!("send error"),
+    };
     let token = match query_rx.await.unwrap() {
         Some(token) => token,
         None => return Err(warp::reject()),
@@ -352,13 +356,20 @@ async fn add_signature_handler(body: AddSignatureBody, db_tx: Sender<Job<Db>>, _
     Ok(warp::http::StatusCode::OK)
 }
 
-type Job<T> = Box<dyn FnOnce(&T) + Send >;
+type Job<T> = Box<dyn FnOnce(&T) + Send>;
+
+fn with_sender<T: Send>(
+    sender: Sender<T>,
+) -> impl Filter<Extract = (Sender<T>,), Error = std::convert::Infallible> + Clone
+{
+    warp::any().map(move || sender.clone())
+}
 
 #[tokio::main]
 async fn main() {
 
 // sqlite thread
-    let (db_tx, db_rx) = channel::<Job<Db>>();
+    let (db_tx, mut db_rx) = channel::<Job<Db>>(100);
 
     let _join_handle = std::thread::spawn(move || {
         let mut db_path = std::env::current_dir().unwrap();
@@ -372,10 +383,9 @@ async fn main() {
         };
 
         loop {
-            match db_rx.recv() {
-                Ok(x) => x(&db),
-                Err(e) => {
-                    println!("recv error: {:?}", e);
+            match db_rx.blocking_recv() {
+                Some(x) => x(&db),
+                None => {
                     break
                 },
             }
@@ -383,9 +393,11 @@ async fn main() {
     });
 
     let cached_game_info: CachedGameInfo = Arc::new(RwLock::new(vec!()));
-    update_cached_game_info(cached_game_info.clone(), db_tx.clone()).await;
+    update_cached_game_info(cached_game_info.clone(), &db_tx).await;
+
+    println!("cached {:?}", cached_game_info.read().await);
     
-    let db_tx = warp::any().map(move || db_tx.clone());
+//    let db_tx = warp::any().map(move || db_tx.clone());
     let cached_game_info = warp::any().map(move || cached_game_info.clone());
 
     let get_game_info = warp::path("game-info")
@@ -395,10 +407,10 @@ async fn main() {
     let add_signature = warp::path("signature")
         .and(warp::post())
         .and(warp::body::json())
-        .and(db_tx.clone())
+        .and(with_sender(db_tx.clone()))
         .and(cached_game_info.clone())
-        .and_then(move |body, db_tx, cache| async move {
-            add_signature_handler(body, db_tx, cache).await
+        .and_then(move |body, db, cache| async move {
+            add_signature_handler(body, db, cache).await
         });
 
     let routes = get_game_info
