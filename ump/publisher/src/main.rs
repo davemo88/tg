@@ -1,13 +1,17 @@
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use rusqlite::{params, Connection, Result};
 use serde::{Serialize, Deserialize};
+use tokio::sync::mpsc::{channel, Sender};
+use tokio::sync::RwLock;
 //use simple_logger::SimpleLogger;
 use warp::Filter;
  
 use tglib::{
-    bdk::bitcoin::secp256k1::Signature,
+    bdk::bitcoin::secp256k1::{Message, Signature, Secp256k1},
     bdk::bitcoin::PublicKey,
     JsonResponse,
+    mock::referee_pubkey,
 };
 
 #[derive(Debug)]
@@ -254,10 +258,6 @@ fn get_outcome_token(home: &str, away: &str, date: &str, outcome: BaseballGameOu
 
 const ORIOLES_SCHEDULE_CSV_PATH: &'static str = "/home/hg/Downloads/EventTicketPromotionPrice.tiksrv";
 
-use tokio::sync::mpsc::{channel, Sender};
-use std::sync::Arc;
-use tokio::sync::RwLock;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct GameInfo {
     home: String,
@@ -325,16 +325,17 @@ struct AddSignatureBody {
     sig_hex: String,
 }
 
-async fn add_signature_handler(body: AddSignatureBody, db_tx: Sender<Job<Db>>, _cache: CachedGameInfo) -> std::result::Result<impl warp::Reply, warp::Rejection> {
+async fn add_signature_handler(body: AddSignatureBody, db_tx: Sender<Job<Db>>, cache: CachedGameInfo) -> std::result::Result<impl warp::Reply, warp::Rejection> {
     let sig = match Signature::from_der(&hex::decode(&body.sig_hex).unwrap()) {
         Ok(sig) => sig,
         Err(_e) => return Err(warp::reject()),
     };
     let (query_tx, query_rx) = tokio::sync::oneshot::channel::<Option<String>>();
 // get corresponding token
+    let outcome_id = body.outcome_id;
     let query = move |db: &Db| {
         let mut stmt = db.conn.prepare("SELECT token FROM outcome WHERE outcome.id = ?").unwrap();
-        let token: Option<String> = match stmt.query_row(params!(body.outcome_id), |row| Ok(row.get(0).unwrap())) {
+        let token: Option<String> = match stmt.query_row(params!(outcome_id), |row| Ok(row.get(0).unwrap())) {
             Ok(token) => Some(token),
             Err(_e) => None,
         };
@@ -348,11 +349,31 @@ async fn add_signature_handler(body: AddSignatureBody, db_tx: Sender<Job<Db>>, _
         Some(token) => token,
         None => return Err(warp::reject()),
     };
+
+    let pubkey = referee_pubkey();
+    let secp = Secp256k1::new();
 // validate signature on token
-// if valid
+    match secp.verify(&Message::from_slice(&hex::decode(token).unwrap()).unwrap(), &sig, &pubkey.key) {
+        Ok(()) => {
+            let (query_tx, query_rx) = tokio::sync::oneshot::channel::<Result<()>>();
 // insert signature
+            let query = move |db: &Db| {
+                db.conn.execute("INSERT INTO signature (outcome_id, hex) VALUES (?1, ?2)", params!(body.outcome_id, body.sig_hex)).unwrap();
+                query_tx.send(Ok(())).unwrap();
+            };
+            let _r = db_tx.send(Box::new(query)).await; 
 // refresh cache
+            match query_rx.await.unwrap() {
+                Ok(()) => update_cached_game_info(cache, &db_tx).await,
+                Err(_) => return Err(warp::reject()),
+            }
+        },
 // else reject
+        Err(e) => {
+            println!("{:?}", e);
+            return Err(warp::reject())
+        }
+    }
     Ok(warp::http::StatusCode::OK)
 }
 
@@ -395,7 +416,7 @@ async fn main() {
     let cached_game_info: CachedGameInfo = Arc::new(RwLock::new(vec!()));
     update_cached_game_info(cached_game_info.clone(), &db_tx).await;
 
-    println!("cached {:?}", cached_game_info.read().await);
+//    println!("cached {:?}", cached_game_info.read().await);
     
 //    let db_tx = warp::any().map(move || db_tx.clone());
     let cached_game_info = warp::any().map(move || cached_game_info.clone());
