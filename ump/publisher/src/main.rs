@@ -9,7 +9,6 @@ use warp::Filter;
  
 use tglib::{
     bdk::bitcoin::secp256k1::{Message, Signature, Secp256k1},
-    bdk::bitcoin::PublicKey,
     JsonResponse,
     mock::referee_pubkey,
 };
@@ -356,9 +355,9 @@ async fn add_signature_handler(body: AddSignatureBody, db_tx: Sender<Job<Db>>, c
     match secp.verify(&Message::from_slice(&hex::decode(token).unwrap()).unwrap(), &sig, &pubkey.key) {
         Ok(()) => {
             let (query_tx, query_rx) = tokio::sync::oneshot::channel::<Result<()>>();
-// insert signature
+// insert signature.unwrap()
             let query = move |db: &Db| {
-                db.conn.execute("INSERT INTO signature (outcome_id, hex) VALUES (?1, ?2)", params!(body.outcome_id, body.sig_hex)).unwrap();
+                db.insert_signature(&body.outcome_id, &body.sig_hex).unwrap();
                 query_tx.send(Ok(())).unwrap();
             };
             let _r = db_tx.send(Box::new(query)).await; 
@@ -418,7 +417,6 @@ async fn main() {
 
 //    println!("cached {:?}", cached_game_info.read().await);
     
-//    let db_tx = warp::any().map(move || db_tx.clone());
     let cached_game_info = warp::any().map(move || cached_game_info.clone());
 
     let get_game_info = warp::path("game-info")
@@ -430,9 +428,10 @@ async fn main() {
         .and(warp::body::json())
         .and(with_sender(db_tx.clone()))
         .and(cached_game_info.clone())
-        .and_then(move |body, db, cache| async move {
-            add_signature_handler(body, db, cache).await
-        });
+        .and_then(add_signature_handler);
+//        .and_then(move |body, db, cache| async move {
+//            add_signature_handler(body, db, cache).await
+//        });
 
     let routes = get_game_info
         .or(add_signature);
