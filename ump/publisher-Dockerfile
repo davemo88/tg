@@ -1,0 +1,7 @@
+FROM rust:buster
+
+ADD publisher/ publisher/
+
+RUN cargo build --manifest-path=publisher/Cargo.toml
+
+CMD ["cargo", "run", "--manifest-path", "publisher/Cargo.toml"]

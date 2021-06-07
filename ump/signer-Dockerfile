@@ -1,0 +1,7 @@
+FROM rust:buster
+
+ADD signer/ signer/
+
+RUN cargo build --manifest-path=signer/Cargo.toml
+
+CMD ["cargo", "run", "--manifest-path", "signer/Cargo.toml"]

@@ -1,5 +1,5 @@
 [package]
-name = "publisher"
+name = "ump"
 version = "0.1.0"
 authors = ["d <d@kasofsk.xyz>"]
 edition = "2018"
@@ -7,12 +7,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ump = { path = "../ump" }
-rusqlite = "^0.25"
-warp = "^0.3"
-tokio = { version = "^1", features = ["full"] }
-futures = "^0.3"
-csv = "1.1"
 serde = { version = "1", features = ["derive"] }
-serde_json = "^1"
-simple_logger = "^1"
+bitcoin = "0.26.0"
+hex = "0.4.3"

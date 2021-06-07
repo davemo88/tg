@@ -1,0 +1,14 @@
+version: "3.8"
+services:
+  ump-publisher:
+    build:
+        context: .
+        dockerfile: publisher-Dockerfile
+    ports:
+      - "6000:6000"
+  ump-signer:
+    build: 
+        context: .
+        dockerfile: signer-Dockerfile
+volumes:
+  logvolume01: {}

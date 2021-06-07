@@ -1,25 +1,26 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use rusqlite::{params, Connection, Result};
-use serde::{Serialize, Deserialize};
 use tokio::sync::mpsc::{channel, Sender};
 use tokio::sync::RwLock;
 //use simple_logger::SimpleLogger;
 use warp::Filter;
- 
-use tglib::{
-    bdk::bitcoin::secp256k1::{Message, Signature, Secp256k1},
-    JsonResponse,
-    mock::referee_pubkey,
-};
 
-#[derive(Debug)]
-enum BaseballGameOutcome {
-    HomeWins,
-    AwayWins,
-    Tie,
-    Cancelled,
-}
+use ump::{
+    bitcoin::secp256k1::{Message, Signature, Secp256k1},
+    bitcoin::hashes::{
+        Hash as BitcoinHash,
+        HashEngine,
+        sha256::Hash as ShaHash,
+        sha256::HashEngine as ShaHashEngine,
+    },
+    hex,
+    AddSignatureBody,
+    BaseballGameOutcome,
+    GameInfo,
+    JsonResponse,
+    ump_pubkey,
+};
 
 #[derive(Debug)]
 struct TeamRecord {
@@ -31,12 +32,6 @@ struct TeamRecord {
 struct OutcomeVariant {
     id: i64,
     name: String,
-}
-
-impl std::fmt::Display for BaseballGameOutcome {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
 }
 
 #[derive(Debug)]
@@ -173,7 +168,7 @@ impl Db {
         for (away, home, date) in games {
             let away_id = teams_map.get(&away).unwrap(); 
             let home_id = teams_map.get(&home).unwrap(); 
-            println!("inserting game: home: {} away: {} date: {}", away_id, home_id, date);
+//            println!("inserting game: home: {} away: {} date: {}", away_id, home_id, date);
             match self.insert_game(home_id, away_id, &date) {
                 Ok(_) => {
                     let game_id = self.get_game_id(&home_id, &away_id, &date)?;
@@ -182,7 +177,7 @@ impl Db {
                             &get_outcome_token(&home, &away, &date, outcome))?;
                     }
                 },
-                Err(e) => println!("{:?}", e),
+                Err(_e) => ()//println!("{:?}", _e),
             }
         }
 
@@ -252,18 +247,22 @@ impl Db {
 }
 
 fn get_outcome_token(home: &str, away: &str, date: &str, outcome: BaseballGameOutcome) -> String {
-    return hex::encode(format!("H{}A{}D{}O{}", home, away, date, outcome.to_string()))
+    let mut engine = ShaHashEngine::default();
+    engine.input(format!("H{}A{}D{}O{}", home, away, date, outcome.to_string()).as_bytes());
+    let hash: &[u8] = &ShaHash::from_engine(engine);
+    hex::encode(hash)
+    
 }
 
 const ORIOLES_SCHEDULE_CSV_PATH: &'static str = "/home/hg/Downloads/EventTicketPromotionPrice.tiksrv";
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct GameInfo {
-    home: String,
-    away: String,
-    date: String,
-    outcome_tokens: HashMap<String, (String, Option<String>)>,
-}
+//#[derive(Debug, Clone, Serialize, Deserialize)]
+//pub struct GameInfo {
+//    home: String,
+//    away: String,
+//    date: String,
+//    outcome_tokens: HashMap<String, (String, Option<String>)>,
+//}
 
 type CachedGameInfo = Arc<RwLock<Vec<GameInfo>>>;
 
@@ -273,7 +272,7 @@ async fn update_cached_game_info(cache: CachedGameInfo, db_tx: &Sender<Job<Db>>)
 
     let query = move |db: &Db| {
         let mut stmt = db.conn.prepare(
-            "SELECT game.id, team1.name, team2.name, game.date, outcome_variant.name, token, hex
+            "SELECT game.id, team1.name, team2.name, game.date, outcome_variant.name, token, hex, outcome.id
             FROM game JOIN outcome ON game.id = outcome.game_id
             JOIN outcome_variant ON outcome_variant.id = outcome.variant_id 
             LEFT JOIN signature ON signature.outcome_id = outcome.id
@@ -287,8 +286,8 @@ async fn update_cached_game_info(cache: CachedGameInfo, db_tx: &Sender<Job<Db>>)
             let game_id = row.get(0)?;
             match map.get_mut(&game_id) {
                 None => {
-                    let mut outcome_tokens = HashMap::<String, (String, Option<String>)>::new();
-                    outcome_tokens.insert(row.get(4)?, (row.get(5)?, row.get(6)?));
+                    let mut outcome_tokens = HashMap::<String, (i64, String, Option<String>)>::new();
+                    outcome_tokens.insert(row.get(4)?, (row.get(7)?, row.get(5)?, row.get(6)?));
                     let info = GameInfo {
                         home: row.get(1)?,
                         away: row.get(2)?,
@@ -298,7 +297,7 @@ async fn update_cached_game_info(cache: CachedGameInfo, db_tx: &Sender<Job<Db>>)
                     map.insert(game_id, info);
                 }
                 Some(info) => {
-                    info.outcome_tokens.insert(row.get(4)?, (row.get(5)?, row.get(6)?));
+                    info.outcome_tokens.insert(row.get(4)?, (row.get(7)?, row.get(5)?, row.get(6)?));
                 }
             }
             Ok(())
@@ -316,12 +315,6 @@ async fn update_cached_game_info(cache: CachedGameInfo, db_tx: &Sender<Job<Db>>)
 
 async fn get_game_info_handler(cache: CachedGameInfo) -> std::result::Result<impl warp::Reply, warp::Rejection> {
     Ok(serde_json::to_string(&JsonResponse::success(Some(cache.read().await.clone()))).unwrap())
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct AddSignatureBody {
-    outcome_id: i64,
-    sig_hex: String,
 }
 
 async fn add_signature_handler(body: AddSignatureBody, db_tx: Sender<Job<Db>>, cache: CachedGameInfo) -> std::result::Result<impl warp::Reply, warp::Rejection> {
@@ -348,11 +341,11 @@ async fn add_signature_handler(body: AddSignatureBody, db_tx: Sender<Job<Db>>, c
         Some(token) => token,
         None => return Err(warp::reject()),
     };
-
-    let pubkey = referee_pubkey();
+    
+    let ump_pubkey = ump_pubkey();
     let secp = Secp256k1::new();
 // validate signature on token
-    match secp.verify(&Message::from_slice(&hex::decode(token).unwrap()).unwrap(), &sig, &pubkey.key) {
+    match secp.verify(&Message::from_slice(&hex::decode(token).unwrap()).unwrap(), &sig, &ump_pubkey.key) {
         Ok(()) => {
             let (query_tx, query_rx) = tokio::sync::oneshot::channel::<Result<()>>();
 // insert signature.unwrap()
