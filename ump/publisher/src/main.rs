@@ -142,6 +142,7 @@ impl Db {
         ", params![outcome_id, hex])
     }
 
+// TODO: load schedule from API instead
     fn load_schedule_csv(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let mut rdr = csv::Reader::from_reader(std::fs::File::open(path)?);
         let mut games = vec![];
