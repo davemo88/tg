@@ -15,6 +15,7 @@ use ump::{
 
 pub const UMP_PRIVKEY: &'static str = "L52hw8to1fdBj9eP8HESBNrfcbehxvKU1vsqWjmHJavxNEi9q91i";
 const PUBLISHER_URL: &'static str = "http://0.0.0.0:6000";
+const ORIOLES_TEAM_ID: u64 = 110; 
 
 #[derive(Debug)]
 struct GameOutcome {
@@ -50,7 +51,7 @@ fn main() {
     let today = Local::today();
     let yesterday = today - Duration::days(1);
 
-    let response = get_schedule(yesterday, today).unwrap().text().unwrap();
+    let response = get_schedule(yesterday, today, None).unwrap().text().unwrap();
 
     let schedule: MlbSchedule = serde_json::from_str(&response).unwrap();
 
@@ -74,14 +75,12 @@ fn main() {
 
     let new_outcomes = game_info.iter().filter_map(|info| {
         if let Some(outcome) = game_outcomes.iter().find(|outcome| {
-//            println!("home: {:?}", outcome.home.split_whitespace().last().unwrap());
-//            println!("away: {:?}", outcome.away.split_whitespace().last().unwrap());
+// BUG: team names from csv don't match those from mlb api
 // TODO: get all data from mlb api so this doesn't happen
-            info.home == outcome.home.split_whitespace().last().unwrap() &&
-            info.away == outcome.away.split_whitespace().last().unwrap() &&
-            Local.from_local_date(&NaiveDate::parse_from_str(&info.date,"%m/%d/%y").unwrap()).unwrap() == outcome.date &&
+            info.home == outcome.home && //.split_whitespace().last().unwrap() &&
+            info.away == outcome.away && //.split_whitespace().last().unwrap() &&
+            Local.from_local_date(&NaiveDate::parse_from_str(&info.date,"%Y-%m-%d").unwrap()).unwrap() == outcome.date &&
             info.outcome_tokens.values().all(|(_outcome_id, _token, sig)| sig.is_none())
-//            outcome.date == NaiveDate::parse_from_str(info.date, "
         }) {
             Some((outcome, info))
         } else {

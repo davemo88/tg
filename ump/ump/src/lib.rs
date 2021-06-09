@@ -81,23 +81,21 @@ pub mod mlb_api {
     use chrono::{Date, Local};
 
     const BASE_URL: &'static str = "https://statsapi.mlb.com/api";
-    const VERSION: &'static str = "1";
-    const ORIOLES_TEAM_ID: u64 = 110; 
-    //const ORIOLES_LEAGUE_ID: u64 = 103; 
-    
-    const SPORT_ID: u64 = 1;
+    const VERSION: &'static str = "v1";
+    const SPORT_ID: i64 = 1;
+
+    pub fn request_url(resource: &str, params: Option<&str>) -> String {
+        format!("{}/{}/{}/?sportId={}{}",
+            BASE_URL,
+            VERSION,
+            resource,
+            SPORT_ID,
+            params.unwrap_or_default(),
+        )
+    }
+
     /*
         "schedule": {
-            "url": BASE_URL + "{ver}/schedule",
-            "path_params": {
-                "ver": {
-                    "type": "str",
-                    "default": "v1",
-                    "leading_slash": False,
-                    "trailing_slash": False,
-                    "required": True,
-                }
-            },
             "query_params": [
                 "scheduleType",
                 "eventTypes",
@@ -118,17 +116,31 @@ pub mod mlb_api {
             "required_params": [["sportId"], ["gamePk"], ["gamePks"]],
         }
     */
+
     pub fn get_schedule (
-    //    team: Option<u64>,
         start_date: Date<Local>,
         end_date: Date<Local>,
-    //    opponent: Option<u64>,
-    //    game_id: Option<u64>
+        team: Option<i64>,
+    //    opponent: Option<i64>,
+    //    game_id: Option<i64>
     ) -> Result<reqwest::blocking::Response, reqwest::Error> {
-        let url = format!("{}/v{}/schedule/?sportId={}&teamId={}&startDate={}&endDate={}", BASE_URL, VERSION, SPORT_ID, ORIOLES_TEAM_ID, 
-            format_date(&start_date), 
-            format_date(&end_date));
+//        let url = format!("{}/v{}/schedule/?sportId={}&startDate={}&endDate={}{}", BASE_URL, VERSION, SPORT_ID, 
+//            format_date(&start_date), 
+//            format_date(&end_date),
+//            if let Some(team) = team { format!("&teamId={}", team) } else { String::default() });
+        let url = request_url(
+            "schedule", 
+            Some(&format!("&startDate={}&endDate={}{}",
+                format_date(&start_date), 
+                format_date(&end_date),
+                if let Some(team) = team { format!("&teamId={}", team) } else { String::default() }))
+            );
+
         reqwest::blocking::get(url)
+    }
+
+    pub fn get_teams() -> Result<reqwest::blocking::Response, reqwest::Error> {
+        reqwest::blocking::get(request_url("teams", None))
     }
     
     fn format_date(date: &Date<Local>) -> String {
@@ -148,6 +160,8 @@ pub mod mlb_api {
     
     #[derive(Debug, Deserialize, Clone)]
     pub struct MlbGame {
+        #[serde(rename = "gamePk")]
+        pub id: i64, 
         pub teams: MlbGameTeams,
     }
     
@@ -166,8 +180,13 @@ pub mod mlb_api {
     
     #[derive(Debug, Deserialize, Clone)]
     pub struct MlbTeam {
-        pub id: u64,
+        pub id: i64,
         pub name: String,
+    }
+    
+    #[derive(Debug, Deserialize, Clone)]
+    pub struct MlbTeams {
+        pub teams: Vec<MlbTeam>,
     }
 
 }
