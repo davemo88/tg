@@ -75,10 +75,8 @@ fn main() {
 
     let new_outcomes = game_info.iter().filter_map(|info| {
         if let Some(outcome) = game_outcomes.iter().find(|outcome| {
-// BUG: team names from csv don't match those from mlb api
-// TODO: get all data from mlb api so this doesn't happen
-            info.home == outcome.home && //.split_whitespace().last().unwrap() &&
-            info.away == outcome.away && //.split_whitespace().last().unwrap() &&
+            info.home == outcome.home &&
+            info.away == outcome.away &&
             Local.from_local_date(&NaiveDate::parse_from_str(&info.date,"%Y-%m-%d").unwrap()).unwrap() == outcome.date &&
             info.outcome_tokens.values().all(|(_outcome_id, _token, sig)| sig.is_none())
         }) {

@@ -149,51 +149,6 @@ impl Db {
         ", params![outcome_id, hex])
     }
 
-// TODO: load schedule from API instead
-//    fn load_schedule_csv(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
-//        let mut rdr = csv::Reader::from_reader(std::fs::File::open(path)?);
-//        let mut games = vec![];
-////        let mut teams = HashSet::<String>::new();
-//        for result in rdr.deserialize() {
-//            let record: HashMap<String, String> = result?;
-////            println!("{:?}", record);
-//            let game_teams = record.get("SUBJECT").unwrap()
-//                .split(" at ").collect::<Vec<&str>>();
-//            let (home, away) = (game_teams[1].to_owned(), game_teams[0].to_owned());
-//            let date = record.get("START DATE").unwrap().to_owned();
-//    
-////            teams.insert(away.to_owned());
-////            teams.insert(home.to_owned());
-//            games.push((away, home, date));
-//        }
-//
-////        println!("num teams: {}, num games: {}", teams.len(), games.len());
-//        println!("num games: {}", games.len());
-//
-////        self.insert_new_teams(teams)?;
-//        let teams_map = self.teams_map()?;
-//        let outcome_variant_map = self.get_outcome_variant_map()?;
-//
-//        for (away, home, date) in games {
-//            let away_id = teams_map.get(&away).unwrap(); 
-//            let home_id = teams_map.get(&home).unwrap(); 
-////            println!("inserting game: home: {} away: {} date: {}", away_id, home_id, date);
-//            match self.insert_game(game_id, home_id, away_id, &date) {
-//                Ok(_) => {
-//                    let game_id = self.get_game_id(&home_id, &away_id, &date)?;
-//                    for outcome in vec![BaseballGameOutcome::HomeWins, BaseballGameOutcome::AwayWins] {
-//                        self.insert_outcome(&game_id, &outcome_variant_map.get(&outcome.to_string()).unwrap(), 
-//                            &get_outcome_token(&home, &away, &date, outcome))?;
-//                    }
-//                },
-//                Err(_e) => ()//println!("{:?}", _e),
-//            }
-//        }
-//
-//        Ok(())
-//    
-//    }
-
     fn load_schedule(&self, start_date: Date<Local>, end_date: Date<Local>) -> std::result::Result<(), Box<dyn std::error::Error>> {
 
         let outcome_variant_map = self.get_outcome_variant_map()?;
@@ -231,49 +186,6 @@ impl Db {
         Ok(())
     }
 
-//    fn insert_new_teams(&self, teams: HashSet<String>) -> Result<()> {
-//    
-//        let mut stmt = self.conn.prepare("SELECT name FROM team")?;
-//        let known_teams: Vec<String> = stmt
-//            .query_map([], |row| { Ok(row.get(0)?) })?
-//            .map(|name| name.unwrap()).collect();
-//
-//        let new_teams: Vec<&String> = teams.iter().filter(|team| !known_teams.contains(team)).collect();
-//
-//        for new_team in new_teams {
-//            self.insert_team(new_team)?;
-//        }
-//        
-//        Ok(())
-//    }
-
-//    fn teams_map(&self) -> Result<HashMap<String, i64>> {
-//        let mut stmt = self.conn.prepare("SELECT id, name FROM team")?;
-//        let rows = stmt.query_map([], |row| { 
-//            Ok( TeamRecord { 
-//                id: row.get(0)?, 
-//                name: row.get(1)? 
-//            })
-//        })?;
-//    
-//        let mut map = HashMap::new();
-//        for row in rows {
-//            let row = row.unwrap();
-//            map.insert(row.name, row.id);
-//        }
-//        Ok(map)
-//    }
-//
-//    fn get_game_id(&self, home_id: &i64, away_id: &i64, date: &str) -> Result<i64> {
-//        let mut stmt = self.conn.prepare(
-//            "SELECT id FROM game WHERE home_id = ? AND away_id = ? AND date = ?;"
-//        )?;
-//        let game_id: i64 = stmt.query_row(
-//            params![home_id, away_id, date],
-//            |row| { Ok(row.get(0)?) })?;
-//        Ok(game_id)
-//    }
-
     fn get_outcome_variant_map(&self) -> Result<HashMap<String,i64>> {
         let mut stmt = self.conn.prepare("SELECT id, name FROM outcome_variant")?;
         let rows = stmt.query_map([], |row| { 
@@ -298,16 +210,6 @@ fn get_outcome_token(home: &str, away: &str, date: &str, outcome: BaseballGameOu
     let hash: &[u8] = &ShaHash::from_engine(engine);
     hex::encode(hash)
 }
-
-//const ORIOLES_SCHEDULE_CSV_PATH: &'static str = "/home/hg/Downloads/EventTicketPromotionPrice.tiksrv";
-
-//#[derive(Debug, Clone, Serialize, Deserialize)]
-//pub struct GameInfo {
-//    home: String,
-//    away: String,
-//    date: String,
-//    outcome_tokens: HashMap<String, (String, Option<String>)>,
-//}
 
 type CachedGameInfo = Arc<RwLock<Vec<GameInfo>>>;
 
@@ -461,7 +363,7 @@ async fn main() {
     let cached_game_info: CachedGameInfo = Arc::new(RwLock::new(vec!()));
     update_cached_game_info(cached_game_info.clone(), &db_tx).await;
 
-    println!("cached {:?}", cached_game_info.read().await);
+//    println!("cached {:?}", cached_game_info.read().await);
     
     let cached_game_info = warp::any().map(move || cached_game_info.clone());
 
