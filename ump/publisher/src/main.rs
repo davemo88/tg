@@ -221,7 +221,19 @@ async fn update_cached_game_info(cache: CachedGameInfo, db_tx: &Sender<Job<Db>>)
 
     let query = move |db: &Db| {
         let mut stmt = db.conn.prepare(
-            "SELECT game.id, outcome.id, home.id, home.name, home.location, away.id, away.name, away.location, game.date, outcome_variant.name, token, hex
+            "SELECT 
+                game.id                 AS game_id, 
+                outcome.id              AS outcome_id, 
+                home.id                 AS home_id, 
+                home.name               AS home_name, 
+                home.location           AS home_location, 
+                away.id                 AS away_id, 
+                away.name               AS away_name, 
+                away.location           AS away_location, 
+                game.date               AS date, 
+                outcome_variant.name    AS outcome_variant, 
+                token                   AS token, 
+                hex                     AS sig_hex
             FROM game JOIN outcome ON game.id = outcome.game_id
             JOIN outcome_variant ON outcome_variant.id = outcome.variant_id 
             LEFT JOIN signature ON signature.outcome_id = outcome.id
@@ -232,30 +244,30 @@ async fn update_cached_game_info(cache: CachedGameInfo, db_tx: &Sender<Job<Db>>)
         let mut map = HashMap::<i64, GameInfo>::new();
 
         let _rows: Vec<Result<()>> = stmt.query_map([], |row| { 
-            let game_id = row.get(0)?;
+            let game_id = row.get("game_id")?;
             match map.get_mut(&game_id) {
                 None => {
                     let mut outcome_tokens = HashMap::<String, (i64, String, Option<String>)>::new();
 // outcome variant -> outcome_id, token, hex
-                    outcome_tokens.insert(row.get(9)?, (row.get(1)?, row.get(10)?, row.get(11)?));
+                    outcome_tokens.insert(row.get("outcome_variant")?, (row.get("outcome_id")?, row.get("token")?, row.get("sig_hex")?));
                     let info = GameInfo {
                         home: Team {
-                            id: row.get(2)?,
-                            name: row.get(3)?,
-                            location: row.get(4)? 
+                            id: row.get("home_id")?,
+                            name: row.get("home_name")?,
+                            location: row.get("home_location")? 
                         },
                         away: Team {
-                            id: row.get(5)?,
-                            name: row.get(6)?,
-                            location: row.get(7)? 
+                            id: row.get("away_id")?,
+                            name: row.get("away_name")?,
+                            location: row.get("away_location")? 
                         },
-                        date: row.get(8)?,
+                        date: row.get("date")?,
                         outcome_tokens,
                     };
                     map.insert(game_id, info);
                 }
                 Some(info) => {
-                    info.outcome_tokens.insert(row.get(9)?, (row.get(1)?, row.get(10)?, row.get(11)?));
+                    info.outcome_tokens.insert(row.get("outcome_variant")?, (row.get("outcome_id")?, row.get("token")?, row.get("sig_hex")?));
                 }
             }
             Ok(())
