@@ -19,8 +19,8 @@ const ORIOLES_TEAM_ID: u64 = 110;
 
 #[derive(Debug)]
 struct GameOutcome {
-    home: String,
-    away: String,
+    home: i64,
+    away: i64,
     date: Date<Local>,
     outcome: BaseballGameOutcome,
 }
@@ -37,8 +37,8 @@ fn get_game_outcomes(schedule: MlbSchedule) -> Vec<GameOutcome> {
             };
 
             Some(GameOutcome {
-                home: game.teams.home.team.name.clone(),
-                away: game.teams.away.team.name.clone(),
+                home: game.teams.home.team.id,
+                away: game.teams.away.team.id,
                 date: Local.from_utc_date(&NaiveDate::parse_from_str(&date.date, "%Y-%m-%d").unwrap()),
                 outcome,
             })
@@ -75,8 +75,8 @@ fn main() {
 
     let new_outcomes = game_info.iter().filter_map(|info| {
         if let Some(outcome) = game_outcomes.iter().find(|outcome| {
-            info.home == outcome.home &&
-            info.away == outcome.away &&
+            info.home.id == outcome.home &&
+            info.away.id == outcome.away &&
             Local.from_local_date(&NaiveDate::parse_from_str(&info.date,"%Y-%m-%d").unwrap()).unwrap() == outcome.date &&
             info.outcome_tokens.values().all(|(_outcome_id, _token, sig)| sig.is_none())
         }) {

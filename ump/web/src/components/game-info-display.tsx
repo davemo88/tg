@@ -1,5 +1,7 @@
 import React from 'react';
 import { GameInfo, Winner } from '../datatypes';
+import Typography from '@material-ui/core/Typography';
+import { TeamAvatar } from '../components/team-avatar';
 import { WinnerDisplay } from './winner-display';
 
 type GameInfoDisplayProps = {
@@ -19,27 +21,24 @@ const vsStyle = {
 
 export const GameInfoDisplay = (props: GameInfoDisplayProps) => {
     return (
-        <div>
+        <div style={{
+            backgroundColor: "LightGrey",
+            margin: 10,
+        }}>
+            <div>
+                <Typography align='center' variant='h6'>{props.info.date}</Typography>
+            </div>
             <div style={displayStyle}>
-                <div>
-                    <b>{props.info.home}</b>
-                </div>
-                <TokenDisplay token={props.info.home_token} />
+                <TeamAvatar team={props.info.home} />
             </div>
             <div style={vsStyle}>
                 <div>
-                    VS.
-                </div>
-                <div>
-                    {props.info.date}
+                    VS
                 </div>
             </div>
             <div style={displayStyle}>
-                <div>
-                <b>{props.info.away}</b></div>
-               <TokenDisplay token={props.info.away_token} />
+                <TeamAvatar team={props.info.away} />
             </div>
-            <WinnerDisplay info={props.info} />
         </div>
     )
 }

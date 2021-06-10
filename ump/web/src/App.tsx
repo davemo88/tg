@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import logo from './logo.svg';
-import './App.css';
+//import logo from './logo.svg';
+//import './App.css';
+import CssBaseline from '@material-ui/core/CssBaseline';
+import Container from '@material-ui/core/Container';
 import { GameInfo } from './datatypes';
 import { GameInfoList } from './components/game-info-list';
 
@@ -35,7 +37,7 @@ function App() {
                         sig: winner_sig ? winner_sig[1]: null,
                     };
                     
-                }));
+                }).sort((a: GameInfo,b: GameInfo) => (a.date < b.date)));
             })
             .catch((e) => {
                 console.error(Error(e));
@@ -50,25 +52,19 @@ function App() {
         return <div>Loading...</div>
     } else {
         return (
-            <div className="App">
-                <header className="App-header">
-                    <GameInfoList infos={infos} />
-                </header>
-            </div>
+            <React.Fragment>
+                <CssBaseline />
+                <div className="App" style={{backgroundColor: "Black"}}>
+                    <Container>
+                        <header className="App-header">
+                            <GameInfoList infos={infos} />
+                        </header>
+                    </Container>
+                </div>
+            </React.Fragment>
         );
     }
 
 }
-//                    <GameInfoList infos={[
-//                        {
-//                            date: "Tomorrow",
-//                            home: "Bluebirds",
-//                            home_token: "flasdalfdfja122",
-//                            away: "Taco Masters",
-//                            away_token: "fsdlfk784skfjas",
-//                            winner: null,
-//                            sig: "234mflk89123flkf"
-//                        }
-//                    ]} />
 
 export default App;

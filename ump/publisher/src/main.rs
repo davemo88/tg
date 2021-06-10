@@ -20,6 +20,7 @@ use ump::{
     BaseballGameOutcome,
     GameInfo,
     JsonResponse,
+    Team,
     ump_pubkey,
     mlb_api::{
         MlbSchedule,
@@ -70,7 +71,8 @@ impl Db {
             "BEGIN;
                 CREATE TABLE IF NOT EXISTS team (
                     id                  INTEGER PRIMARY KEY,  
-                    name                TEXT UNIQUE
+                    name                TEXT UNIQUE,
+                    location            TEXT
                 );
                 CREATE TABLE IF NOT EXISTS game (
                     id                  INTEGER PRIMARY KEY,  
@@ -121,11 +123,11 @@ impl Db {
         ) 
     }
 
-    fn insert_team(&self, id: &i64, name: &str) -> Result<usize> {
+    fn insert_team(&self, id: &i64, name: &str, location: &str) -> Result<usize> {
         self.conn.execute("
-            INSERT INTO team (id, name) VALUES 
-            (?1, ?2)
-        ", params![id, name])
+            INSERT INTO team (id, name, location) VALUES 
+            (?1, ?2, ?3)
+        ", params![id, name, location])
     }
     
     fn insert_game(&self, game_id: &i64, home_id: &i64, away_id: &i64, date: &str) -> Result<usize> {
@@ -181,7 +183,7 @@ impl Db {
         let response = get_teams()?.text()?;
         let teams: MlbTeams = serde_json::from_str(&response)?;
         for team in teams.teams {
-            self.insert_team(&team.id, &team.name)?;
+            self.insert_team(&team.id, &team.name, &team.location)?;
         }
         Ok(())
     }
@@ -219,12 +221,12 @@ async fn update_cached_game_info(cache: CachedGameInfo, db_tx: &Sender<Job<Db>>)
 
     let query = move |db: &Db| {
         let mut stmt = db.conn.prepare(
-            "SELECT game.id, team1.name, team2.name, game.date, outcome_variant.name, token, hex, outcome.id
+            "SELECT game.id, outcome.id, home.id, home.name, home.location, away.id, away.name, away.location, game.date, outcome_variant.name, token, hex
             FROM game JOIN outcome ON game.id = outcome.game_id
             JOIN outcome_variant ON outcome_variant.id = outcome.variant_id 
             LEFT JOIN signature ON signature.outcome_id = outcome.id
-            JOIN team AS team1 ON game.home_id = team1.id
-            JOIN team AS team2 on game.away_id = team2.id"
+            JOIN team AS home ON game.home_id = home.id
+            JOIN team AS away on game.away_id = away.id"
         ).unwrap();
         
         let mut map = HashMap::<i64, GameInfo>::new();
@@ -234,17 +236,26 @@ async fn update_cached_game_info(cache: CachedGameInfo, db_tx: &Sender<Job<Db>>)
             match map.get_mut(&game_id) {
                 None => {
                     let mut outcome_tokens = HashMap::<String, (i64, String, Option<String>)>::new();
-                    outcome_tokens.insert(row.get(4)?, (row.get(7)?, row.get(5)?, row.get(6)?));
+// outcome variant -> outcome_id, token, hex
+                    outcome_tokens.insert(row.get(9)?, (row.get(1)?, row.get(10)?, row.get(11)?));
                     let info = GameInfo {
-                        home: row.get(1)?,
-                        away: row.get(2)?,
-                        date: row.get(3)?,
+                        home: Team {
+                            id: row.get(2)?,
+                            name: row.get(3)?,
+                            location: row.get(4)? 
+                        },
+                        away: Team {
+                            id: row.get(5)?,
+                            name: row.get(6)?,
+                            location: row.get(7)? 
+                        },
+                        date: row.get(8)?,
                         outcome_tokens,
                     };
                     map.insert(game_id, info);
                 }
                 Some(info) => {
-                    info.outcome_tokens.insert(row.get(4)?, (row.get(7)?, row.get(5)?, row.get(6)?));
+                    info.outcome_tokens.insert(row.get(9)?, (row.get(1)?, row.get(10)?, row.get(11)?));
                 }
             }
             Ok(())

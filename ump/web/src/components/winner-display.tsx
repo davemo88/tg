@@ -12,15 +12,12 @@ const sigStyle = {
 export const WinnerDisplay = (props: WinnerDisplayProps) => {
     if (props.info.winner !== null) {
         return (
-            <div>
+            <div style={{display: 'inline-block'}}>
                 <div>
                     Winner    
                 </div>
                 <div>
                     <b>{get_winner_name(props.info)}</b> 
-                </div>
-                <div style={sigStyle}>
-                    <b>sig: {props.info.sig}</b> 
                 </div>
             </div>
 

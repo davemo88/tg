@@ -24,11 +24,17 @@ impl std::fmt::Display for BaseballGameOutcome {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Team {
+    pub id: i64,
+    pub name: String,
+    pub location: String,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameInfo {
-    pub home: String,
-    pub away: String,
+    pub home: Team,
+    pub away: Team,
     pub date: String,
     pub outcome_tokens: HashMap<String, (i64, String, Option<String>)>,
 }
@@ -77,7 +83,7 @@ pub fn ump_pubkey() -> PublicKey {
 
 pub mod mlb_api {
     use reqwest;
-    use serde::Deserialize;
+    use serde::{Serialize, Deserialize};
     use chrono::{Date, Local};
 
     const BASE_URL: &'static str = "https://statsapi.mlb.com/api";
@@ -173,13 +179,22 @@ pub mod mlb_api {
     
     #[derive(Debug, Deserialize, Clone)]
     pub struct MlbGameTeam {
-        pub team: MlbTeam,
+        pub team: MlbScheduleTeam,
         #[serde(rename = "isWinner")]
         pub is_winner: Option<bool>,
     }
     
-    #[derive(Debug, Deserialize, Clone)]
+    #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct MlbTeam {
+        pub id: i64,
+        #[serde(rename = "teamName")]
+        pub name: String,
+        #[serde(rename = "locationName")]
+        pub location: String,
+    }
+
+    #[derive(Debug, Deserialize, Clone)]
+    pub struct MlbScheduleTeam {
         pub id: i64,
         pub name: String,
     }
@@ -188,5 +203,4 @@ pub mod mlb_api {
     pub struct MlbTeams {
         pub teams: Vec<MlbTeam>,
     }
-
 }
