@@ -14,7 +14,7 @@ use ump::{
 };
 
 pub const UMP_PRIVKEY: &'static str = "L52hw8to1fdBj9eP8HESBNrfcbehxvKU1vsqWjmHJavxNEi9q91i";
-const PUBLISHER_URL: &'static str = "http://0.0.0.0:6000";
+const PUBLISHER_URL: &'static str = "http://0.0.0.0:6969";
 const ORIOLES_TEAM_ID: u64 = 110; 
 
 #[derive(Debug)]

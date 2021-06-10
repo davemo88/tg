@@ -369,7 +369,8 @@ async fn main() {
 
     let get_game_info = warp::path("game-info")
         .and(cached_game_info.clone())
-        .and_then(get_game_info_handler);
+        .and_then(get_game_info_handler)
+        .with(warp::cors().allow_any_origin());
 
     let add_signature = warp::path("signature")
         .and(warp::post())
@@ -381,5 +382,5 @@ async fn main() {
     let routes = get_game_info
         .or(add_signature);
 
-    warp::serve(routes).run(([0, 0, 0, 0], 6000)).await;
+    warp::serve(routes).run(([0, 0, 0, 0], 6969)).await;
 }
