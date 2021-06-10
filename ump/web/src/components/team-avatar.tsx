@@ -15,8 +15,8 @@ export const TeamAvatar = (props: TeamAvatarProps) => {
           flexDirection: "column"
         }}>
             <img src="https://via.placeholder.com/80" alt="logo" />    
-            <Typography variant='body2'>{props.team.location}</Typography>
-            <Typography variant='body2'>{props.team.name}</Typography>
+            <Typography variant='body1'>{props.team.location}</Typography>
+            <Typography variant='body1'>{props.team.name}</Typography>
         </div>
     )
 }

@@ -15,7 +15,7 @@ export const GameInfoList = (props: GameInfoListProps) => {
             flexDirection: "column",
             alignItems: "center",
         }}>
-            <Typography align='center' variant='h3'>
+            <Typography align='center' variant='h4'>
                 <div style={{color: "White"}}>
                     Games
                 </div>

@@ -24,20 +24,30 @@ export const GameInfoDisplay = (props: GameInfoDisplayProps) => {
         <div style={{
             backgroundColor: "LightGrey",
             margin: 10,
-        }}>
-            <div>
-                <Typography align='center' variant='h6'>{props.info.date}</Typography>
-            </div>
-            <div style={displayStyle}>
-                <TeamAvatar team={props.info.home} />
-            </div>
-            <div style={vsStyle}>
-                <div>
-                    VS
+            width: "90%",
+            display: "flex",
+            alignItems: "center",
+            flexDirection: "column",
+            maxWidth: 420,
+       }}>
+            <div style={{
+                display: "flex",
+                alignItems: "center",
+            }}>
+                <div style={displayStyle}>
+                    <TeamAvatar team={props.info.home} />
+                </div>
+                <div style={vsStyle}>
+                    <div>
+                        VS
+                    </div>
+                </div>
+                <div style={displayStyle}>
+                    <TeamAvatar team={props.info.away} />
                 </div>
             </div>
-            <div style={displayStyle}>
-                <TeamAvatar team={props.info.away} />
+            <div>
+                <Typography align='center' variant='body2'>{props.info.date}</Typography>
             </div>
         </div>
     )
