@@ -54,7 +54,7 @@ function App() {
         return (
             <React.Fragment>
                 <CssBaseline />
-                <div className="App" style={{backgroundColor: "Black"}}>
+                <div className="App">
                     <Container>
                         <header className="App-header">
                             <GameInfoList infos={infos} />

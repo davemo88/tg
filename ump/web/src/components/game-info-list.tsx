@@ -10,19 +10,13 @@ type GameInfoListProps = {
 
 export const GameInfoList = (props: GameInfoListProps) => {
     return (
-        <div style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-        }}>
+        <Box display="flex" flexDirection="column" alignItems="center">
             <Typography align='center' variant='h4'>
-                <div style={{color: "White"}}>
-                    Games
-                </div>
+                Games
             </Typography>
             {props.infos.map((info, index) => {
                 return <GameInfoDisplay info={info} />
             })}
-        </div>
+        </Box>
     )
 }

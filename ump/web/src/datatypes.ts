@@ -2,6 +2,8 @@
 
 export type Winner = "home"|"away"|null;
 
+export type RelativeLoc = "home"|"away";
+
 export type Team = {
     id: number,
     name: string,
