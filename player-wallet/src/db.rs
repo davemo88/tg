@@ -25,6 +25,9 @@ impl DB {
 
     pub fn create_tables(&self) -> Result<()> {
         self.conn.execute_batch(
+// needed to add contract metadata:
+// token payout metadata: cxid, token, token desc, txid, payout address
+// many to one from token payout metadata to contract
             "BEGIN;
                 CREATE TABLE IF NOT EXISTS player (
                     name              TEXT PRIMARY KEY
@@ -42,6 +45,13 @@ impl DB {
                     cxid            TEXT PRIMARY KEY,
                     psbt            TEXT NOT NULL,
                     sig             TEXT NOT NULL,
+                    FOREIGN KEY(cxid) REFERENCES contract(cxid)
+                CREATE TABLE IF NOT EXISTS token (
+                    cxid            TEXT PRIMARY KEY,
+                    token           TEXT UNIQUE NOT NULL,
+                    token_desc      TEXT NOT NULL,
+                    txid            TEXT NOT NULL,
+                    payout_address  TEXT NOT NULL,
                     FOREIGN KEY(cxid) REFERENCES contract(cxid)
                 );
             COMMIT;"

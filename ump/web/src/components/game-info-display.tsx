@@ -29,13 +29,14 @@ const TeamBox = styled(Box)({
 })
 
 const GameInfoCard = styled(Card)({
-     backgroundColor: "LightGrey",
-     margin: 10,
-     width: "90%",
-     display: "flex",
-     alignItems: "center",
-     flexDirection: "column",
-     maxWidth: 420,
+    backgroundColor: "LightGrey",
+    margin: 10,
+    padding: 3,
+    width: "90%",
+    display: "flex",
+    alignItems: "center",
+    flexDirection: "column",
+    maxWidth: 420,
 });
 
 const gameTeamColor = (relLoc: RelativeLoc, winner: Winner) => {
@@ -52,12 +53,14 @@ export const GameInfoDisplay = (props: GameInfoDisplayProps) => {
         <GameInfoCard>
             <Box>
                 <TeamBox style={{backgroundColor: gameTeamColor("home", props.info.winner)}}>
+                    <Typography align='center' variant='body2'>Home</Typography>
                     <TeamAvatar team={props.info.home} />
                 </TeamBox>
                 <VsBox>
                     <VsTypo>VS</VsTypo>
                 </VsBox>
                 <TeamBox style={{backgroundColor: gameTeamColor("away", props.info.winner)}}>
+                    <Typography align='center' variant='body2'>Away</Typography>
                     <TeamAvatar team={props.info.away} />
                 </TeamBox>
             </Box>
@@ -65,7 +68,7 @@ export const GameInfoDisplay = (props: GameInfoDisplayProps) => {
             <Button 
                 onClick={() => setCollapsed(!collapsed)}
             >
-                { props.info.winner ? "Show Signature" : "Show Tokens" }
+        { collapsed ? "Show" : "Hide" } Contract Info
             </Button> 
             <Collapse in={!collapsed}>
                 <GameInfoDetails info={props.info} />

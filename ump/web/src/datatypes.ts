@@ -17,7 +17,17 @@ export type GameInfo = {
     away: Team,
     away_token: string,
     winner: Winner,
-    sig?: string,
+    sig: string | null,
+}
+
+export type TokenMetadata = {
+    token: string,
+    desc: string,
+}
+
+export type EventMetadata = {
+    desc: string,
+    tokenMetadata: TokenMetadata[],
 }
 
 export interface JsonResponse {
