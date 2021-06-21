@@ -55,7 +55,6 @@ fn main() {
 
     let schedule: MlbSchedule = serde_json::from_str(&response).unwrap();
 
-    println!("Orioles Schedule for {} - {}", today.format("%Y-%m-%d"), yesterday.format("%Y-%d-%m"));
     for date in schedule.dates.iter() {
         println!("{:?}", date);
     }
