@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Typography from '@material-ui/core/Typography';
 import Card from '@material-ui/core/Card';
+import Paper from '@material-ui/core/Paper';
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
 import Collapse from '@material-ui/core/Collapse';
@@ -39,6 +40,13 @@ const GameInfoCard = styled(Card)({
     maxWidth: 420,
 });
 
+const DetailsPaper = styled(Paper)({
+    backgroundColor: 'DarkGrey',
+    padding: 5,
+    margin: 5,
+    maxWidth: 400,
+})
+
 const gameTeamColor = (relLoc: RelativeLoc, winner: Winner) => {
     if (winner === null) {
         return 'default'
@@ -71,7 +79,9 @@ export const GameInfoDisplay = (props: GameInfoDisplayProps) => {
         { collapsed ? "Show" : "Hide" } Contract Info
             </Button> 
             <Collapse in={!collapsed}>
-                <GameInfoDetails info={props.info} />
+                <DetailsPaper>
+                    <pre style={{ whiteSpace: "pre-wrap", wordWrap: "break-word"}}>{JSON.stringify(props.info, null, 2)}</pre>
+                </DetailsPaper>
             </Collapse>
         </GameInfoCard>
     )
@@ -85,25 +95,5 @@ const getWinnerName = (info: GameInfo) => {
             return info.home.name
         default:
             return null
-    }
-}
-
-const GameInfoDetails = (props: GameInfoDisplayProps) => {
-    if (props.info.winner) {
-        return( 
-            <Box style={{ maxWidth: 400 }}>
-                <Typography>{getWinnerName(props.info)} won:</Typography>
-                <Typography style={{ wordWrap: "break-word" }}>{props.info.sig}</Typography>
-            </Box>
-        )            
-    } else {
-        return(
-            <Box style={{ maxWidth: 400 }}>
-                <Typography>{props.info.home.name} win:</Typography>
-                <Typography style={{ wordWrap: "break-word" }}>{props.info.home_token}</Typography>
-                <Typography>{props.info.away.name} win:</Typography>
-                <Typography style={{ wordWrap: "break-word" }}>{props.info.away_token}</Typography>
-            </Box>
-        )
     }
 }
