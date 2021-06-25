@@ -57,6 +57,7 @@ impl Db {
         match self.init_outcome_variants() {
             Ok(_) => (),
             Err(rusqlite::Error::SqliteFailure(code, Some(msg))) => {
+//TODO: get rid of this or move it into the called function
                 if msg != "UNIQUE constraint failed: outcome_variant.name" {
                     return Err(rusqlite::Error::SqliteFailure(code, Some(msg)))
                 }

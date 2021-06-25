@@ -20,14 +20,36 @@ export type GameInfo = {
     sig: string | null,
 }
 
-export type TokenMetadata = {
-    token: string,
+export type Outcome = {
     desc: string,
+    token: string,
+    sig?: string,
 }
 
-export type EventMetadata = {
+export type Event = {
     desc: string,
-    tokenMetadata: TokenMetadata[],
+    outcomes: Outcome[],
+}
+
+export const toEvent = (info: GameInfo) => {
+    let home_wins: Outcome = {
+        desc: `${info.home.name} win`,
+        token: info.home_token,
+    };
+    let away_wins: Outcome = {
+        desc: `${info.away.name} win`,
+        token: info.away_token,
+    };
+    if ((info.winner === "home") && (info.sig !== null)) {
+        home_wins.sig = info.sig;
+    } else if ((info.winner === "away") && (info.sig !== null)) {
+        away_wins.sig = info.sig;
+    }
+    let event: Event = {
+        desc: `${info.away.name} at ${info.home.name} on ${info.date}`,
+        outcomes: [home_wins, away_wins],
+    }
+    return event
 }
 
 export interface JsonResponse {

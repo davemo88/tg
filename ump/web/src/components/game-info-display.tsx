@@ -7,7 +7,7 @@ import Button from '@material-ui/core/Button';
 import Collapse from '@material-ui/core/Collapse';
 import { styled } from '@material-ui/core/styles';
 import { TeamAvatar } from '../components/team-avatar';
-import { GameInfo, Winner, RelativeLoc } from '../datatypes';
+import { GameInfo, Winner, RelativeLoc, toEvent } from '../datatypes';
 
 type GameInfoDisplayProps = {
     info: GameInfo,
@@ -27,6 +27,7 @@ const VsTypo = styled(Typography)({
 const TeamBox = styled(Box)({
     display: 'inline-block',
     margin: '10px',
+    minWidth: 120,
 })
 
 const GameInfoCard = styled(Card)({
@@ -76,11 +77,11 @@ export const GameInfoDisplay = (props: GameInfoDisplayProps) => {
             <Button 
                 onClick={() => setCollapsed(!collapsed)}
             >
-        { collapsed ? "Show" : "Hide" } Contract Info
+        { collapsed ? "Show" : "Hide" } Event Details
             </Button> 
             <Collapse in={!collapsed}>
                 <DetailsPaper>
-                    <pre style={{ whiteSpace: "pre-wrap", wordWrap: "break-word"}}>{JSON.stringify(props.info, null, 2)}</pre>
+                    <pre style={{ whiteSpace: "pre-wrap", wordWrap: "break-word"}}>{JSON.stringify(toEvent(props.info), null, 2)}</pre>
                 </DetailsPaper>
             </Collapse>
         </GameInfoCard>

@@ -49,7 +49,7 @@ impl DB {
                 CREATE TABLE IF NOT EXISTS token (
                     cxid            TEXT PRIMARY KEY,
                     token           TEXT UNIQUE NOT NULL,
-                    token_desc      TEXT NOT NULL,
+                    desc            TEXT NOT NULL,
                     txid            TEXT NOT NULL,
                     payout_address  TEXT NOT NULL,
                     FOREIGN KEY(cxid) REFERENCES contract(cxid)
@@ -157,7 +157,7 @@ impl DB {
 
     pub fn all_payouts(&self) -> Result<Vec<PayoutRecord>> {
         let mut stmt = self.conn.prepare("SELECT * FROM payout")?;
-        let payout_iter = stmt.query_map([], |row| {
+        let payout_iter = stmt.query_map(params![], |row| {
             Ok(PayoutRecord {
                 cxid: row.get(0)?,
                 psbt: row.get(1)?,
