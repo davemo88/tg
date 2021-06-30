@@ -46,6 +46,7 @@ impl DB {
                     psbt            TEXT NOT NULL,
                     sig             TEXT NOT NULL,
                     FOREIGN KEY(cxid) REFERENCES contract(cxid)
+                );
                 CREATE TABLE IF NOT EXISTS token (
                     cxid            TEXT PRIMARY KEY,
                     token           TEXT UNIQUE NOT NULL,

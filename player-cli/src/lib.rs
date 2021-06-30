@@ -427,6 +427,17 @@ pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
                     .help("amount")
                     .required(true)
                     .takes_value(true))
+                .arg(Arg::with_name("event")
+                    .index(4)
+                    .help("event in json format")
+                    .required(false)
+                    .requires("event-payouts")
+                    .takes_value(true))
+                .arg(Arg::with_name("event-payouts")
+                    .index(5)
+                    .help("which player to pay for each event outcome. player order should coincide with outcome order in event")
+                    .required(false)
+                    .multiple(true))
                 .arg(Arg::with_name("desc")
                     .short("d")
                     .long("desc")
@@ -525,8 +536,18 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                     p1_name: PlayerName(a.value_of("player-1").unwrap().to_string()),
                     p2_name: PlayerName(a.value_of("player-2").unwrap().to_string()),
                     amount: Amount::from_sat(a.value_of("amount").unwrap().parse::<u64>().unwrap()),
+                    event: match a.value_of("event") {
+                        Some(e) => Some(serde_json::from_str(e).unwrap()),
+                        None => None,
+                    },
+                    event_payouts: match a.values_of("event-payouts") {
+                        Some(p) => Some(p.collect::<Vec<&str>>().iter().map(|player| {
+                            PlayerName(player.to_string()) 
+                        }).collect()),
+                        None => None,
+                    },
                     desc: match a.value_of("desc") {
-                        Some(d) => Some(String::from(d)),
+                        Some(d) => Some(d.into()),
                         None => None,
                     } 
                 }) {

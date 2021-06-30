@@ -77,6 +77,7 @@ use tglib::{
 use crate::{
     Result,
     Error,
+    Event,
     player::PlayerNameClient,
     arbiter::ArbiterClient,
     db::DB,
@@ -187,6 +188,38 @@ impl PlayerWallet {
         let db = DB::new(&db_path).unwrap();
         let _r = db.create_tables().unwrap();
         db
+    }
+
+    pub fn create_event_contract(&self, p1_name: &PlayerName, p2_name: &PlayerName, p2_contract_info: PlayerContractInfo, amount: Amount, arbiter_pubkey: PublicKey, event: Event, event_payouts: Vec<PlayerName>) -> Result<Contract> {
+        if event.outcomes.len() != event_payouts.len() {
+            return Err(Error::Adhoc("not enough payouts specified for event"))
+        }
+        let p1_pubkey = self.get_escrow_pubkey();
+        let escrow_address = create_escrow_address(&p1_pubkey, &p2_contract_info.escrow_pubkey, &arbiter_pubkey, self.network).unwrap();
+        let funding_tx = self.create_funding_tx(&p2_contract_info, amount, &escrow_address)?;
+        let p1_payout_address = self.offline_wallet().get_new_address()?;
+        let payout_txs: std::collections::HashMap<&PlayerName, Transaction> = 
+            [
+                (p1_name, create_payout_tx(&funding_tx.clone().extract_tx(), &escrow_address, &p1_payout_address).unwrap()),
+                (p2_name, create_payout_tx(&funding_tx.clone().extract_tx(), &escrow_address, &p2_contract_info.payout_address).unwrap()),
+            ].iter().cloned().collect();
+
+        let tx_token_pairs: Vec<(tglib::bdk::bitcoin::Txid, Vec<u8>)> = event.outcomes.iter().enumerate().map(|(i, outcome)| {
+            let txid = payout_txs.get(event_payouts.get(i).unwrap()).unwrap().txid();
+            let token_bytes = tglib::hex::decode(&outcome.token).unwrap();
+            (txid, token_bytes)
+        }).collect();
+        let tx_token_script = create_token_pair_script(&referee_pubkey(), tx_token_pairs);
+
+        Ok(Contract::new(
+            p1_pubkey,
+            p2_contract_info.escrow_pubkey,
+            arbiter_pubkey,
+            p1_payout_address,
+            p2_contract_info.payout_address,
+            funding_tx,
+            tx_token_script,
+        ))
     }
 
     pub fn create_contract(&self, p2_contract_info: PlayerContractInfo, amount: Amount, arbiter_pubkey: PublicKey ) -> Result<Contract> {

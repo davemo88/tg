@@ -52,7 +52,7 @@ use tglib::{
     mock::PAYOUT_VERSION,
 };
 use crate::{
-//    Result as PwResult,
+    Event,
     Error,
     db::PlayerRecord,
     wallet::PlayerWallet,
@@ -111,9 +111,21 @@ pub trait DocumentUI<T> {
     fn delete(&self, cxid: &str) -> Result<()>;
 }
 
+#[derive(Debug)]
 pub enum NewDocumentParams {
-    NewContractParams { p1_name: PlayerName, p2_name: PlayerName, amount: Amount, desc: Option<String> },
-    NewPayoutParams { cxid: String, p1_amount: Amount, p2_amount: Amount },
+    NewContractParams { 
+        p1_name: PlayerName, 
+        p2_name: PlayerName, 
+        amount: Amount, 
+        event: Option<Event>,
+        event_payouts: Option<Vec<PlayerName>>,
+        desc: Option<String>,  
+    },
+    NewPayoutParams { 
+        cxid: String, 
+        p1_amount: Amount,
+        p2_amount: Amount 
+    },
 }
 
 pub enum SignDocumentParams {
@@ -224,8 +236,10 @@ impl PlayerUI for PlayerWallet {
 
 impl DocumentUI<ContractRecord> for PlayerWallet {
     fn new(&self, params: NewDocumentParams) -> Result<ContractRecord> {
-        let (p1_name, p2_name, amount, desc) = match params {
-            NewDocumentParams::NewContractParams { p1_name, p2_name, amount, desc } => (p1_name, p2_name, amount, desc),
+
+        println!("params: {:?}", params);
+        let (p1_name, p2_name, amount, event, event_payouts, desc) = match params {
+            NewDocumentParams::NewContractParams { p1_name, p2_name, amount, event, event_payouts, desc } => (p1_name, p2_name, amount, event, event_payouts, desc),
             _ => return Err(Error::Adhoc("invalid params").into()),
         };
 
@@ -248,7 +262,10 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
         };
 
 // TODO: could fail if amount is too large
-        let contract = self.create_contract(p2_contract_info, amount, arbiter_pubkey)?;
+        let contract = match event {
+            Some(event) => self.create_event_contract(&p1_name, &p2_name, p2_contract_info, amount, arbiter_pubkey, event, event_payouts.unwrap())?,
+            None => self.create_contract(p2_contract_info, amount, arbiter_pubkey)?,
+        };
 
         let contract_record = ContractRecord {
             cxid: hex::encode(contract.cxid()),
