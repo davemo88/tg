@@ -59,6 +59,7 @@ const gameTeamColor = (relLoc: RelativeLoc, winner: Winner) => {
 
 export const GameInfoDisplay = (props: GameInfoDisplayProps) => {
     const [collapsed, setCollapsed] = useState(true);
+    const event_json = JSON.stringify(toEvent(props.pubkey, props.info), null, 2);
     return (
         <GameInfoCard>
             <Box>
@@ -75,15 +76,18 @@ export const GameInfoDisplay = (props: GameInfoDisplayProps) => {
                 </TeamBox>
             </Box>
             <Typography align='center' variant='body2'>{props.info.date}</Typography>
-            <Button 
-                onClick={() => setCollapsed(!collapsed)}
-            >
+            <Button onClick={() => setCollapsed(!collapsed)} >
         { collapsed ? "Show" : "Hide" } Event Details
             </Button> 
             <Collapse in={!collapsed}>
-                <DetailsPaper>
-                    <pre style={{ whiteSpace: "pre-wrap", wordWrap: "break-word"}}>{JSON.stringify(toEvent(props.pubkey, props.info), null, 2)}</pre>
-                </DetailsPaper>
+                <Box display="flex" alignItems="center" flexDirection="column">
+                    <DetailsPaper>
+                        <pre style={{ whiteSpace: "pre-wrap", wordWrap: "break-word"}}>{event_json}</pre>
+                    </DetailsPaper>
+                    <Button onClick={() => {navigator.clipboard.writeText(event_json)}} >
+                        Copy Event Details
+                    </Button> 
+                </Box>
             </Collapse>
         </GameInfoCard>
     )
