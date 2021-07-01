@@ -5,6 +5,7 @@ import { GameInfo } from '../datatypes';
 import { GameInfoDisplay } from '../components/game-info-display';
 
 type GameInfoListProps = {
+    pubkey: string,
     infos: GameInfo[],
 }
 
@@ -15,7 +16,7 @@ export const GameInfoList = (props: GameInfoListProps) => {
                 Games
             </Typography>
             {props.infos.map((info, index) => {
-                return <GameInfoDisplay info={info} />
+                return <GameInfoDisplay pubkey={props.pubkey} info={info} />
             })}
         </Box>
     )

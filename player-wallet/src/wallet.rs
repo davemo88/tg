@@ -209,7 +209,7 @@ impl PlayerWallet {
             let token_bytes = tglib::hex::decode(&outcome.token).unwrap();
             (txid, token_bytes)
         }).collect();
-        let tx_token_script = create_token_pair_script(&referee_pubkey(), tx_token_pairs);
+        let tx_token_script = create_token_pair_script(&event.pubkey, tx_token_pairs);
 
         Ok(Contract::new(
             p1_pubkey,

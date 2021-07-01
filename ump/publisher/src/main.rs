@@ -22,6 +22,7 @@ use ump::{
     JsonResponse,
     Team,
     ump_pubkey,
+    UMP_PUBKEY,
     mlb_api::{
         MlbSchedule,
         MlbTeams,
@@ -403,7 +404,13 @@ async fn main() {
         .and(cached_game_info.clone())
         .and_then(add_signature_handler);
 
+    let get_ump_pubkey = warp::path("ump-pubkey")
+        .map(|| serde_json::to_string(&JsonResponse::success(Some(UMP_PUBKEY))).unwrap())
+        .with(warp::cors().allow_any_origin());
+
+
     let routes = get_game_info
+        .or(get_ump_pubkey)
         .or(add_signature);
 
     warp::serve(routes).run(([0, 0, 0, 0], 6969)).await;

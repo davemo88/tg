@@ -262,7 +262,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
         };
 
 // TODO: could fail if amount is too large
-        let contract = match event {
+        let contract = match event.clone() {
             Some(event) => self.create_event_contract(&p1_name, &p2_name, p2_contract_info, amount, arbiter_pubkey, event, event_payouts.unwrap())?,
             None => self.create_contract(p2_contract_info, amount, arbiter_pubkey)?,
         };
@@ -272,7 +272,10 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
             p1_name,
             p2_name,
             hex: hex::encode(contract.to_bytes()),
-            desc: desc.unwrap_or_default(),
+            desc: match event {
+                Some(event) => event.desc,
+                None => desc.unwrap_or_default(),
+            }
         };
 
         match self.db().insert_contract(contract_record.clone()) {

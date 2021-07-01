@@ -10,6 +10,7 @@ import { TeamAvatar } from '../components/team-avatar';
 import { GameInfo, Winner, RelativeLoc, toEvent } from '../datatypes';
 
 type GameInfoDisplayProps = {
+    pubkey: string,
     info: GameInfo,
 }
 
@@ -81,7 +82,7 @@ export const GameInfoDisplay = (props: GameInfoDisplayProps) => {
             </Button> 
             <Collapse in={!collapsed}>
                 <DetailsPaper>
-                    <pre style={{ whiteSpace: "pre-wrap", wordWrap: "break-word"}}>{JSON.stringify(toEvent(props.info), null, 2)}</pre>
+                    <pre style={{ whiteSpace: "pre-wrap", wordWrap: "break-word"}}>{JSON.stringify(toEvent(props.pubkey, props.info), null, 2)}</pre>
                 </DetailsPaper>
             </Collapse>
         </GameInfoCard>

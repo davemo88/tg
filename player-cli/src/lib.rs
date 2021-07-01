@@ -432,6 +432,7 @@ pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
                     .help("event in json format")
                     .required(false)
                     .requires("event-payouts")
+                    .conflicts_with("desc")
                     .takes_value(true))
                 .arg(Arg::with_name("event-payouts")
                     .index(5)
@@ -441,7 +442,6 @@ pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
                 .arg(Arg::with_name("desc")
                     .short("d")
                     .long("desc")
-                    .value_name("DESC")
                     .help("description")
                     .takes_value(true)),
             SubCommand::with_name("import").about("import contract")
