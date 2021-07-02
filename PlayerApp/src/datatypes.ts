@@ -85,3 +85,29 @@ export interface JsonResponse {
     data?: any,
     message?: string,
 }
+
+export type Outcome = {
+    desc: string,
+    token: string,
+    sig?: string,
+}
+
+const isOutcome = (outcome: any): boolean => {
+    return outcome
+        && outcome.desc && typeof(outcome.desc) == 'string'
+        && outcome.token && typeof(outcome.token) == 'string'
+}
+
+export type Event = {
+    desc: string,
+    pubkey: string,
+    outcomes: Outcome[],
+}
+
+export const isEvent = (event: any): boolean => {
+    return event 
+        && event.desc && typeof(event.desc) == 'string'
+        && event.pubkey && typeof(event.pubkey) == 'string'
+        && event.outcomes && Array.isArray(event.outcomes) 
+        && event.outcomes.every((outcome: any) => isOutcome(outcome))
+}

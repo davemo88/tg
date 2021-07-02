@@ -28,8 +28,8 @@ export type Outcome = {
 
 export type Event = {
     desc: string,
-    outcomes: Outcome[],
     pubkey: string,
+    outcomes: Outcome[],
 }
 
 export const toEvent = (pubkey: string, info: GameInfo) => {

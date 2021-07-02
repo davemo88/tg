@@ -1,11 +1,11 @@
 import React, { useEffect, useState, } from 'react';
 import { useDispatch } from 'react-redux';
-import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
+import { Alert, Modal, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
 import { styles } from '../../styles';
 
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, balanceSlice, newContract, } from '../../redux';
-import { Player, Contract, ContractStatus } from '../../datatypes';
+import { isEvent, Player, Contract, ContractStatus } from '../../datatypes';
 import { getPosted } from '../../wallet';
 
 import { Secret } from '../../secret';
@@ -24,12 +24,29 @@ export const NewContract = ({ navigation }) => {
     const [playerTwoName, setPlayerTwoName] = useState(playerTwos.length > 0 ? playerTwos[0].name : null);
     const [playerTwoPosted, setPlayerTwoPosted] = useState(0);
     const [creatingContract, setCreatingContract] = useState(false);
+    const [eventModalVisible, setEventModalVisible] = useState(false);
 
-    const valid = () => {
+    const [eventText, setEventText] = useState('');
+    const [eventTextError, setEventTextError] = useState<string|null>(null);
+    const [event, setEvent] = useState(null);
+
+    const amountValid = (): boolean => {
         if (parseInt(contractAmount) > 0) {
             return true
         }
         return false
+    }
+
+    const eventValid = (): boolean => {
+        try {
+            let maybeEvent = JSON.parse(eventText);
+            if (isEvent(maybeEvent)) {
+                return true;
+            }
+        } catch(e) {
+            console.error(Error(e));
+        }
+        return false;
     }
 
     useEffect(() => {
@@ -44,6 +61,83 @@ export const NewContract = ({ navigation }) => {
 
     return (
         <View style={styles.container}>
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={eventModalVisible}
+                onRequestClose={() => {
+                    Alert.alert("event modal closed");
+                    setEventModalVisible(!eventModalVisible);
+                }}
+            >
+                <View style={{
+                    flex: 1,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    marginTop: 22,
+                }}>
+                    <View style={{
+                        backgroundColor: "white",
+                        borderRadius: 20,
+                        alignItems: "center",
+                        shadowColor: "#000",
+                        shadowOffset: {
+                          width: 0,
+                          height: 2
+                        },
+                        shadowOpacity: 0.25,
+                        shadowRadius: 4,
+                        elevation: 5
+                    }}>
+                        <View style={{ backgroundColor: 'lightslategrey', alignItems: 'center', padding: 10, margin: 10 }}>
+                            <Text>Paste Event JSON Below</Text>
+                            <TextInput 
+                                value={eventText}
+                                onChangeText={(text) => {
+                                    setEventText(text);
+                                }}
+                                style={{ borderWidth: 1, width: 100, margin: 10, padding: 4 }}
+                            />
+                        </View>
+                        {
+                            eventTextError !== null && 
+                            <Text>{eventTextError}</Text>
+                        }
+                        <View style={{ margin: 10, flexDirection: 'row' }}>
+                            <View style={{ margin: 3 }}>
+                                <Button 
+                                    title="Submit" 
+                                    onPress={() => { 
+                                        setEventTextError(null);
+                                        if (eventValid()) {
+                                            setEvent(JSON.parse(eventText));
+                                            setEventModalVisible(!eventModalVisible)
+                                        } else {
+                                            setEventTextError("invalid event JSON");
+                                        }
+                                    }}
+                                />
+                            </View>
+                            <View style={{ margin: 3 }}>
+                                <Button 
+                                    title="Clear" 
+                                    onPress={() => {
+                                        setEventText('');
+                                        setEventTextError(null);
+                                        setEvent(null);
+                                    }}
+                                />
+                            </View>
+                            <View style={{ margin: 3 }}>
+                                <Button 
+                                    title="Cancel" 
+                                    onPress={() => setEventModalVisible(!eventModalVisible)}
+                                />
+                            </View>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
             <Text style={{ fontSize: 20 }}>Choose Player</Text>
             { playerTwoName !== null ? 
                 <PlayerSelector selectedPlayerName={playerTwoName} setSelectedPlayerName={setPlayerTwoName} playerNames={playerTwos.map((p: Player) => p.name)} allowRemoval={true} />
@@ -51,10 +145,16 @@ export const NewContract = ({ navigation }) => {
             }
             <Text>Posted Player Balance</Text>
             <Currency amount={playerTwoPosted} />
-            <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
+            <View style={{ margin: 10 }}>
                 <Button 
                     title="Add Player" 
                     onPress={() => navigation.navigate('Add Player') }
+                />
+            </View>
+            <View style={{ margin: 10 }}>
+                <Button 
+                    title="Use Event" 
+                    onPress={() => setEventModalVisible(!eventModalVisible)}
                 />
             </View>
             <View style={{ backgroundColor: 'lightslategrey', alignItems: 'center', padding: 10 }}>
@@ -71,7 +171,7 @@ export const NewContract = ({ navigation }) => {
             <View style={{ flexDirection: 'row', margin: 60 }}>
                 <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
                     <Button 
-                        disabled={(!valid() || creatingContract)}
+                        disabled={(!amountValid() || creatingContract)}
                         title="Create" 
                         onPress={() => {
                             setCreatingContract(true);

@@ -92,14 +92,3 @@ export const GameInfoDisplay = (props: GameInfoDisplayProps) => {
         </GameInfoCard>
     )
 }
-
-const getWinnerName = (info: GameInfo) => {
-    switch (info.winner) {
-        case "home":
-            return info.away.name
-        case "away":
-            return info.home.name
-        default:
-            return null
-    }
-}
