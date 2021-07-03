@@ -5,7 +5,7 @@ import { Alert, Modal, Image, Button, StyleSheet, Text, TextInput, View, } from 
 import { styles } from '../../styles';
 
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, balanceSlice, newContract, } from '../../redux';
-import { isEvent, Player, Contract, ContractStatus } from '../../datatypes';
+import { isEvent, Event, Player, Contract, ContractStatus } from '../../datatypes';
 import { getPosted } from '../../wallet';
 
 import { Secret } from '../../secret';
@@ -28,7 +28,9 @@ export const NewContract = ({ navigation }) => {
 
     const [eventText, setEventText] = useState('');
     const [eventTextError, setEventTextError] = useState<string|null>(null);
-    const [event, setEvent] = useState(null);
+    const [event, setEvent] = useState<Event|null>(null);
+
+    const [eventPayouts, setEventPayouts] = useState<string[]>([]);
 
     const amountValid = (): boolean => {
         if (parseInt(contractAmount) > 0) {
@@ -47,6 +49,16 @@ export const NewContract = ({ navigation }) => {
             console.error(Error(e));
         }
         return false;
+    }
+
+    const setPlayerTwo = (p2Name: string) => {
+        if (playerTwoName!== null) {
+            let p2Idx = eventPayouts.indexOf(playerTwoName);
+            if (p2Idx !== -1) {
+                eventPayouts[p2Idx] = p2Name;
+            }
+        }
+        setPlayerTwoName(p2Name);
     }
 
     useEffect(() => {
@@ -111,6 +123,9 @@ export const NewContract = ({ navigation }) => {
                                         setEventTextError(null);
                                         if (eventValid()) {
                                             setEvent(JSON.parse(eventText));
+                                            if (playerTwoName !== null) {
+                                                setEventPayouts([selectedPlayer.name, playerTwoName]);
+                                            }
                                             setEventModalVisible(!eventModalVisible)
                                         } else {
                                             setEventTextError("invalid event JSON");
@@ -140,7 +155,7 @@ export const NewContract = ({ navigation }) => {
             </Modal>
             <Text style={{ fontSize: 20 }}>Choose Player</Text>
             { playerTwoName !== null ? 
-                <PlayerSelector selectedPlayerName={playerTwoName} setSelectedPlayerName={setPlayerTwoName} playerNames={playerTwos.map((p: Player) => p.name)} allowRemoval={true} />
+                <PlayerSelector selectedPlayerName={playerTwoName} setSelectedPlayerName={setPlayerTwo} playerNames={playerTwos.map((p: Player) => p.name)} allowRemoval={true} />
                 : <Text>No Players</Text>
             }
             <Text>Posted Player Balance</Text>
@@ -151,13 +166,19 @@ export const NewContract = ({ navigation }) => {
                     onPress={() => navigation.navigate('Add Player') }
                 />
             </View>
-            <View style={{ margin: 10 }}>
-                <Button 
-                    title="Use Event" 
-                    onPress={() => setEventModalVisible(!eventModalVisible)}
-                />
+            <View style={{ alignItems: "center", margin: 10 }}>
+                <View style={{ maxWidth: 150 }}>
+                    <Button
+                        title="Use Event" 
+                        onPress={() => setEventModalVisible(!eventModalVisible)}
+                    />
+                </View>
+                {
+                    event !== null &&
+                    <EventInfo event={event} payouts={eventPayouts} setEventPayouts={setEventPayouts}/>
+                }
             </View>
-            <View style={{ backgroundColor: 'lightslategrey', alignItems: 'center', padding: 10 }}>
+            <View style={{ backgroundColor: 'lightslategrey', alignItems: 'center', padding: 10, flexDirection: 'row' }}>
                 <Text style={{ fontSize: 16 }}>Amount</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'lightslategrey', }}>
                     <TextInput
@@ -185,4 +206,43 @@ export const NewContract = ({ navigation }) => {
             </View>
         </View>
     );
+}
+
+type EventInfoProps = {
+    event: Event,
+    payouts: string[];
+    setEventPayouts: (payouts: string[]) => void,
+}
+
+
+const eventInfoStyles = StyleSheet.create({
+    payout: {
+        alignItems: "center",
+        minWidth: 100,
+    }
+})
+
+const EventInfo = (props: EventInfoProps) => {
+    return (
+        <View>
+            <Text>{props.event.desc}</Text>
+            <View style={{ justifyContent: "space-between", flexDirection: "row" }}>
+                <View style={eventInfoStyles.payout}>
+                    <Text>{props.event.outcomes[0].desc}</Text>
+                    <Text>{props.payouts[0]}</Text>
+                </View>
+                <Button 
+                    title="<>" 
+                    onPress={() => { 
+                        let payouts = props.payouts.reverse();
+                        props.setEventPayouts([...payouts]) 
+                    }} 
+                />
+                <View style={eventInfoStyles.payout}>
+                    <Text>{props.event.outcomes[1].desc}</Text>
+                    <Text>{props.payouts[1]}</Text>
+                </View>
+            </View>
+        </View>
+    )
 }
