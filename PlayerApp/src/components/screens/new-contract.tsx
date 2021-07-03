@@ -196,7 +196,7 @@ export const NewContract = ({ navigation }) => {
                         title="Create" 
                         onPress={() => {
                             setCreatingContract(true);
-                            dispatch(newContract(selectedPlayer.name, playerTwoName, parseInt(contractAmount)))
+                            dispatch(newContract(selectedPlayer.name, playerTwoName, parseInt(contractAmount), event, eventPayouts))
                                 .then(() => navigation.reset({ index:0, routes: [{ name: 'Home' }] }))
                                 .catch(error => console.error(error))
                                 .finally(() => setCreatingContract(false));
@@ -219,27 +219,34 @@ const eventInfoStyles = StyleSheet.create({
     payout: {
         alignItems: "center",
         minWidth: 100,
+    },
+    outcomeText: {
+        fontSize: 18 
     }
 })
 
 const EventInfo = (props: EventInfoProps) => {
     return (
-        <View>
-            <Text>{props.event.desc}</Text>
+        <View style={{ alignItems: "center"}}>
+            <Text style={{fontSize: 18}}>Event</Text>
+            <Text style={{fontSize: 20}}>{props.event.desc}</Text>
+            <Text style={{fontSize: 18}}>Outcomes</Text>
             <View style={{ justifyContent: "space-between", flexDirection: "row" }}>
                 <View style={eventInfoStyles.payout}>
-                    <Text>{props.event.outcomes[0].desc}</Text>
+                    <Text style={eventInfoStyles.outcomeText}>{props.event.outcomes[0].desc}</Text>
                     <Text>{props.payouts[0]}</Text>
                 </View>
-                <Button 
-                    title="<>" 
-                    onPress={() => { 
-                        let payouts = props.payouts.reverse();
-                        props.setEventPayouts([...payouts]) 
-                    }} 
-                />
+                <View style={{ margin: 5}}>
+                    <Button 
+                        title="<>" 
+                        onPress={() => { 
+                            let payouts = props.payouts.reverse();
+                            props.setEventPayouts([...payouts]) 
+                        }} 
+                    />
+                </View>
                 <View style={eventInfoStyles.payout}>
-                    <Text>{props.event.outcomes[1].desc}</Text>
+                    <Text style={eventInfoStyles.outcomeText}>{props.event.outcomes[1].desc}</Text>
                     <Text>{props.payouts[1]}</Text>
                 </View>
             </View>
