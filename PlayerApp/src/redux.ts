@@ -154,7 +154,7 @@ export const newContract = (p1Name: string, p2Name: string, sats: number, event?
             p1Sig: false,
             p2Sig: false,
             arbiterSig: false,
-            desc: "",
+            desc: contract.desc,
             txid: contract.txid,
             txStatus: TxStatus.Unbroadcast,
         }))
