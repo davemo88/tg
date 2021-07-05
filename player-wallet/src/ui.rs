@@ -54,7 +54,10 @@ use tglib::{
 use crate::{
     Event,
     Error,
-    db::PlayerRecord,
+    db::{
+        PlayerRecord,
+        TokenRecord,
+    },
     wallet::PlayerWallet,
 };
 
@@ -262,9 +265,12 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
         };
 
 // TODO: could fail if amount is too large
-        let contract = match event.clone() {
-            Some(event) => self.create_event_contract(&p1_name, &p2_name, p2_contract_info, amount, arbiter_pubkey, event, event_payouts.unwrap())?,
-            None => self.create_contract(p2_contract_info, amount, arbiter_pubkey)?,
+        let (contract, maybe_token_records): (Contract, Option<Vec<TokenRecord>>) = match &event {
+            Some(event) => {
+                let (contract, token_records) = self.create_event_contract(&p1_name, &p2_name, p2_contract_info, amount, arbiter_pubkey, event, &event_payouts.unwrap())?;
+                (contract, Some(token_records))
+            }
+            None => (self.create_contract(p2_contract_info, amount, arbiter_pubkey)?, None),
         };
 
         let contract_record = ContractRecord {
@@ -272,16 +278,31 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
             p1_name,
             p2_name,
             hex: hex::encode(contract.to_bytes()),
-            desc: match event {
-                Some(event) => event.desc,
+            desc: match &event {
+                Some(event) => event.desc.clone(),
                 None => desc.unwrap_or_default(),
             }
         };
 
         match self.db().insert_contract(contract_record.clone()) {
-            Ok(_) => Ok(contract_record),
-            Err(_) => Err(Error::Adhoc("couldn't create contract: db insertion failed").into()),
+            Ok(_) => (),
+            Err(_) => return Err(Error::Adhoc("couldn't create contract: db insertion failed").into()),
+        };
+
+        if let Some(token_records) = maybe_token_records {
+            for record in token_records {
+                println!("{:?}", record);
+                match self.db().insert_token(record) {
+                    Ok(_) => (),
+                    Err(e) => {
+                        println!("{:?}", e);
+                        return Err(Error::Adhoc("db insertion failed for token record").into())
+                    }
+                }
+            }
         }
+
+        Ok(contract_record)
     }
 
     fn import(&self, hex: &str) -> Result<()> {

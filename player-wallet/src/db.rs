@@ -14,6 +14,14 @@ pub struct PlayerRecord {
     pub name:       PlayerName,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TokenRecord {
+    pub cxid:           String,
+    pub player:         PlayerName,
+    pub token:          String,
+    pub desc:           String,
+}
+
 pub struct DB {
     pub conn: Connection,
 }
@@ -48,12 +56,13 @@ impl DB {
                     FOREIGN KEY(cxid) REFERENCES contract(cxid)
                 );
                 CREATE TABLE IF NOT EXISTS token (
-                    cxid            TEXT PRIMARY KEY,
-                    token           TEXT UNIQUE NOT NULL,
+                    cxid            TEXT NOT NULL,
+                    player          TEXT NOT NULL,
+                    token           TEXT NOT NULL,
                     desc            TEXT NOT NULL,
-                    txid            TEXT NOT NULL,
-                    payout_address  TEXT NOT NULL,
-                    FOREIGN KEY(cxid) REFERENCES contract(cxid)
+                    FOREIGN KEY(cxid) REFERENCES contract(cxid),
+                    FOREIGN KEY(player) REFERENCES player(name),
+                    PRIMARY KEY(cxid, token)
                 );
             COMMIT;"
         )
@@ -193,6 +202,13 @@ impl DB {
         self.conn.execute(
             "DELETE FROM payout WHERE cxid = ?1",
             params![cxid],
+        )
+    }
+
+    pub fn insert_token(&self, token_record: TokenRecord) -> Result<usize> {
+        self.conn.execute(
+            "INSERT INTO token (cxid, player, token, desc) VALUES (?1, ?2, ?3, ?4)",
+            params![token_record.cxid, token_record.player.0, token_record.token, token_record.desc],
         )
     }
 }

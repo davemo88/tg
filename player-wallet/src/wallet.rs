@@ -80,7 +80,10 @@ use crate::{
     Event,
     player::PlayerNameClient,
     arbiter::ArbiterClient,
-    db::DB,
+    db::{
+        DB,
+        TokenRecord,
+    },
     ui::PlayerUI,
 };
 
@@ -190,7 +193,7 @@ impl PlayerWallet {
         db
     }
 
-    pub fn create_event_contract(&self, p1_name: &PlayerName, p2_name: &PlayerName, p2_contract_info: PlayerContractInfo, amount: Amount, arbiter_pubkey: PublicKey, event: Event, event_payouts: Vec<PlayerName>) -> Result<Contract> {
+    pub fn create_event_contract(&self, p1_name: &PlayerName, p2_name: &PlayerName, p2_contract_info: PlayerContractInfo, amount: Amount, arbiter_pubkey: PublicKey, event: &Event, event_payouts: &Vec<PlayerName>) -> Result<(Contract, Vec<TokenRecord>)> {
         if event.outcomes.len() != event_payouts.len() {
             return Err(Error::Adhoc("not enough payouts specified for event"))
         }
@@ -210,8 +213,7 @@ impl PlayerWallet {
             (txid, token_bytes)
         }).collect();
         let tx_token_script = create_token_pair_script(&event.pubkey, tx_token_pairs);
-
-        Ok(Contract::new(
+        let contract = Contract::new(
             p1_pubkey,
             p2_contract_info.escrow_pubkey,
             arbiter_pubkey,
@@ -219,7 +221,22 @@ impl PlayerWallet {
             p2_contract_info.payout_address,
             funding_tx,
             tx_token_script,
-        ))
+        );
+
+        let cxid = tglib::hex::encode(contract.cxid());
+
+        let token_records = event_payouts.iter().cloned().enumerate().map(|(i, player)| {
+            let outcome = event.outcomes.get(i).unwrap();
+            
+            TokenRecord {
+                cxid: cxid.clone(),
+                player,
+                token: outcome.token.clone(),
+                desc: outcome.desc.clone(),
+            }
+        }).collect();
+
+        Ok((contract, token_records))
     }
 
     pub fn create_contract(&self, p2_contract_info: PlayerContractInfo, amount: Amount, arbiter_pubkey: PublicKey ) -> Result<Contract> {
