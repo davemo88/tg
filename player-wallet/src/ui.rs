@@ -259,10 +259,11 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
             }
         };
 
-        let arbiter_pubkey = match self.arbiter_client().get_escrow_pubkey() {
-            Ok(pubkey) => pubkey,
-            Err(_) => return Err(Error::Adhoc("can't create contract: couldn't get arbiter pubkey").into())
-        };
+        let arbiter_pubkey = self.arbiter_client().get_escrow_pubkey()?;
+//        let arbiter_pubkey = match self.arbiter_client().get_escrow_pubkey() {
+//            Ok(pubkey) => pubkey,
+//            Err(_) => return Err(Error::Adhoc("can't create contract: couldn't get arbiter pubkey").into())
+//        };
 
 // TODO: could fail if amount is too large
         let (contract, maybe_token_records): (Contract, Option<Vec<TokenRecord>>) = match &event {
@@ -284,21 +285,11 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
             }
         };
 
-        match self.db().insert_contract(contract_record.clone()) {
-            Ok(_) => (),
-            Err(_) => return Err(Error::Adhoc("couldn't create contract: db insertion failed").into()),
-        };
+        self.db().insert_contract(contract_record.clone())?;
 
         if let Some(token_records) = maybe_token_records {
             for record in token_records {
-                println!("{:?}", record);
-                match self.db().insert_token(record) {
-                    Ok(_) => (),
-                    Err(e) => {
-                        println!("{:?}", e);
-                        return Err(Error::Adhoc("db insertion failed for token record").into())
-                    }
-                }
+                self.db().insert_token(record)?;
             }
         }
 
