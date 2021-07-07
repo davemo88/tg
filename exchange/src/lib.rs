@@ -23,14 +23,46 @@ use tglib::{
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EventContract {
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Event {
+    pub desc: String,
+    pub oracle_pubkey: PublicKey,
+    pub outcomes: Vec<Outcome>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Outcome {
+    pub desc: String,
+    pub token: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContractRecord {
+    pub cxid:           String,
+    pub p1_name:        PlayerName,
+    pub p2_name:        PlayerName,
+    pub hex:            String,
+    pub desc:           String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TokenRecord {
+    pub cxid:           String,
+    pub player:         PlayerName,
+    pub token:          String,
+    pub desc:           String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct TokenContractRecord {
+    pub contract_record: ContractRecord,
+    pub p1_token: TokenRecord,
+    pub p2_token: TokenRecord,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SendContractBody {
-    pub contract: EventContract,
+    pub contract: TokenContractRecord,
     pub player_name: PlayerName,
 }
 
@@ -82,9 +114,9 @@ pub struct SetContractInfoBody {
 pub trait ExchangeService {
     fn set_contract_info(&self, info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<()>;
     fn get_contract_info(&self, player_name: PlayerName) -> Result<Option<PlayerContractInfo>>;
-    fn send_contract(&self, contract: EventContract, player_name: PlayerName) -> Result<()>;
+    fn send_contract(&self, contract: TokenContractRecord, player_name: PlayerName) -> Result<()>;
     fn send_payout(&self, payout: PayoutRecord, player_name: PlayerName) -> Result<()>;
     fn get_auth_token(&self, player_name: &PlayerName) -> Result<Vec<u8>>;
-    fn receive_contract(&self, auth: AuthTokenSig) -> Result<Option<EventContract>>;
+    fn receive_contract(&self, auth: AuthTokenSig) -> Result<Option<TokenContractRecord>>;
     fn receive_payout(&self, auth: AuthTokenSig) -> Result<Option<PayoutRecord>>;
 }

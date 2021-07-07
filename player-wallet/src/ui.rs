@@ -1,8 +1,11 @@
 use std::str::FromStr;
 use libexchange::{
+    Event,
     AuthTokenSig,
+    ContractRecord,
     ExchangeService,
     PlayerContractInfo,
+    TokenContractRecord,
 };
 use tglib::{
     bdk::{
@@ -50,12 +53,9 @@ use tglib::{
     mock::PAYOUT_VERSION,
 };
 use crate::{
-    Event,
     Error,
     db::{
-        ContractRecord,
         PlayerRecord,
-        TokenRecord,
     },
     wallet::PlayerWallet,
 };
@@ -119,9 +119,8 @@ pub enum NewDocumentParams {
         p1_name: PlayerName, 
         p2_name: PlayerName, 
         amount: Amount, 
-        event: Option<Event>,
-        event_payouts: Option<Vec<PlayerName>>,
-        desc: Option<String>,  
+        event: Event,
+        event_payouts: Vec<PlayerName>,
     },
     NewPayoutParams { 
         cxid: String, 
@@ -233,15 +232,14 @@ impl PlayerUI for PlayerWallet {
         let _r = self.exchange_client().set_contract_info(info, self.name_pubkey(), sig);
         Ok(())
     }
-
 }
 
-impl DocumentUI<ContractRecord> for PlayerWallet {
-    fn new(&self, params: NewDocumentParams) -> Result<ContractRecord> {
+impl DocumentUI<TokenContractRecord> for PlayerWallet {
+    fn new(&self, params: NewDocumentParams) -> Result<TokenContractRecord> {
 
         println!("params: {:?}", params);
-        let (p1_name, p2_name, amount, event, event_payouts, desc) = match params {
-            NewDocumentParams::NewContractParams { p1_name, p2_name, amount, event, event_payouts, desc } => (p1_name, p2_name, amount, event, event_payouts, desc),
+        let (p1_name, p2_name, amount, event, event_payouts) = match params {
+            NewDocumentParams::NewContractParams { p1_name, p2_name, amount, event, event_payouts } => (p1_name, p2_name, amount, event, event_payouts),
             _ => return Err(Error::Adhoc("invalid params").into()),
         };
 
@@ -265,34 +263,35 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
 //        };
 
 // TODO: could fail if amount is too large
-        let (contract, maybe_token_records): (Contract, Option<Vec<TokenRecord>>) = match &event {
-            Some(event) => {
-                let (contract, token_records) = self.create_event_contract(&p1_name, &p2_name, p2_contract_info, amount, arbiter_pubkey, event, &event_payouts.unwrap())?;
-                (contract, Some(token_records))
-            }
-            None => (self.create_contract(p2_contract_info, amount, arbiter_pubkey)?, None),
-        };
+        let (contract, token_records) = self.create_event_contract(
+            &p1_name, 
+            &p2_name, 
+            p2_contract_info, 
+            amount, 
+            arbiter_pubkey, 
+            &event, 
+            &event_payouts
+        )?;
 
         let contract_record = ContractRecord {
             cxid: hex::encode(contract.cxid()),
-            p1_name,
-            p2_name,
+            p1_name: p1_name.clone(),
+            p2_name: p2_name.clone(),
             hex: hex::encode(contract.to_bytes()),
-            desc: match &event {
-                Some(event) => event.desc.clone(),
-                None => desc.unwrap_or_default(),
-            }
+            desc: event.desc.clone(),
         };
 
         self.db().insert_contract(contract_record.clone())?;
 
-        if let Some(token_records) = maybe_token_records {
-            for record in token_records {
-                self.db().insert_token(record)?;
-            }
+        for record in token_records.iter().cloned() {
+            self.db().insert_token(record)?;
         }
 
-        Ok(contract_record)
+        Ok(TokenContractRecord {
+            contract_record,
+            p1_token: token_records.iter().cloned().find(|record| record.player == p1_name).unwrap().clone(),
+            p2_token: token_records.iter().cloned().find(|record| record.player == p2_name).unwrap().clone(),
+        })
     }
 
     fn import(&self, hex: &str) -> Result<()> {
@@ -335,8 +334,8 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
         }
     }
 
-    fn get(&self, cxid: &str) -> Option<ContractRecord> {
-        self.db().get_contract(&cxid)
+    fn get(&self, cxid: &str) -> Option<TokenContractRecord> {
+        self.db().get_token_contract(&cxid).ok()
     }
 
     fn sign(&self, params: SignDocumentParams, pw: Secret<String>) -> Result<()> {
@@ -362,19 +361,19 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
     }
 
     fn send(&self, cxid: &str) -> Result<()> {
-        let contract_record = DocumentUI::<ContractRecord>::get(self, cxid).ok_or(Error::Adhoc("unknown contract"))?;
+        let tcr = DocumentUI::<TokenContractRecord>::get(self, cxid).ok_or(Error::Adhoc("unknown contract"))?;
         self.exchange_client().send_contract(
-            contract_record.clone(),
-            self.get_other_player_name(&contract_record)?,
+            tcr.clone(),
+            self.get_other_player_name(&tcr.contract_record)?,
         )
     }
 
     fn receive(&self, player_name: PlayerName, pw: Secret<String>) -> Result<Option<String>> {
         let auth = self.get_auth(&player_name, pw)?;
         let received = self.exchange_client().receive_contract(auth)?;
-        if let Some(contract_record) = received {
-            self.db().insert_contract(contract_record.clone())?;
-            Ok(Some(contract_record.cxid))
+        if let Some(tcr) = received {
+            self.db().insert_token_contract(tcr.clone())?;
+            Ok(Some(tcr.contract_record.cxid))
         } else {
             Ok(None)
         }
@@ -407,8 +406,8 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
         }
     }
 
-    fn list(&self) -> Vec<ContractRecord> {
-        self.db().all_contracts().unwrap()
+    fn list(&self) -> Vec<TokenContractRecord> {
+        self.db().all_token_contracts().unwrap()
     }
 
     fn delete(&self, cxid: &str) -> Result<()> {
@@ -465,8 +464,8 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
             _ => return Err(Error::Adhoc("invalid params").into()),
         };
         let pr = self.db().get_payout(&cxid).ok_or(Error::Adhoc("unknown payout"))?;
-        let cr = DocumentUI::<ContractRecord>::get(self, &cxid).ok_or(Error::Adhoc("unknown contract"))?;
-        let contract = Contract::from_bytes(hex::decode(cr.hex)?)?;
+        let tcr = DocumentUI::<TokenContractRecord>::get(self, &cxid).ok_or(Error::Adhoc("unknown contract"))?;
+        let contract = Contract::from_bytes(hex::decode(tcr.contract_record.hex)?)?;
         let psbt: PartiallySignedTransaction = consensus::deserialize(&hex::decode(pr.psbt)?)?;
         let payout = Payout::new(contract, psbt);
         let psbt = self.sign_payout(payout, pw)?;
@@ -484,10 +483,10 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
 
     fn send(&self, cxid: &str) -> Result<()> {
         let payout_record = DocumentUI::<PayoutRecord>::get(self, cxid).ok_or(Error::Adhoc("unknown payout"))?;
-        let contract_record = DocumentUI::<ContractRecord>::get(self, cxid).ok_or(Error::Adhoc("unknown contract"))?;
+        let tcr = DocumentUI::<TokenContractRecord>::get(self, cxid).ok_or(Error::Adhoc("unknown contract"))?;
         self.exchange_client().send_payout(
             payout_record,
-            self.get_other_player_name(&contract_record)?
+            self.get_other_player_name(&tcr.contract_record.into())?
         )
     }
 

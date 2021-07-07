@@ -3,7 +3,12 @@ use std::{
     path::PathBuf,
     fs::File,
 };
-use libexchange::PlayerContractInfo;
+use libexchange::{
+    ContractRecord,
+    TokenRecord,
+    PlayerContractInfo,
+    Event,
+};
 use tglib::{
     bdk::{
         bitcoin::{
@@ -74,15 +79,10 @@ use tglib::{
 use crate::{
     Result,
     Error,
-    Event,
     player::PlayerNameClient,
     arbiter::ArbiterClient,
     exchange::ExchangeClient,
-    db::{
-        ContractRecord,
-        DB,
-        TokenRecord,
-    },
+    db::DB,
     ui::PlayerUI,
 };
 

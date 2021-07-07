@@ -3,6 +3,11 @@ use serde::{
     Serialize,
     Deserialize,
 };
+use libexchange::{
+    ContractRecord,
+    TokenRecord,
+    TokenContractRecord,
+};
 use tglib::{
     player::PlayerName,
     payout::PayoutRecord,
@@ -13,29 +18,41 @@ pub struct PlayerRecord {
     pub name:       PlayerName,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContractRecord {
-    pub cxid:           String,
-    pub p1_name:        PlayerName,
-    pub p2_name:        PlayerName,
-    pub hex:            String,
-    pub desc:           String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TokenRecord {
-    pub cxid:           String,
-    pub player:         PlayerName,
-    pub token:          String,
-    pub desc:           String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct TokenContractRecord {
-    pub contract_record: ContractRecord,
-    pub p1_token: TokenRecord,
-    pub p2_token: TokenRecord,
-}
+//#[derive(Debug, Clone, Serialize, Deserialize)]
+//pub struct ContractRecord {
+//    pub cxid:           String,
+//    pub p1_name:        PlayerName,
+//    pub p2_name:        PlayerName,
+//    pub hex:            String,
+//    pub desc:           String,
+//}
+//
+//impl From<&EventContract> for ContractRecord {
+//    fn from(event_contract: &EventContract) -> Self {
+//        ContractRecord {
+//            cxid: event_contract.cxid,
+//            p1_name: event_contract.p1_name,
+//            p2_name: event_contract.p2_name,
+//            hex: event_contract.contract_hex,
+//            desc: event_contract.event.desc,
+//        }
+//    }
+//}
+//
+//#[derive(Debug, Clone, Serialize, Deserialize)]
+//pub struct TokenRecord {
+//    pub cxid:           String,
+//    pub player:         PlayerName,
+//    pub token:          String,
+//    pub desc:           String,
+//}
+//
+//#[derive(Clone, Debug, Serialize, Deserialize)]
+//pub struct TokenContractRecord {
+//    pub contract_record: ContractRecord,
+//    pub p1_token: TokenRecord,
+//    pub p2_token: TokenRecord,
+//}
 
 pub struct DB {
     pub conn: Connection,
@@ -225,6 +242,55 @@ impl DB {
             "INSERT INTO token (cxid, player, token, desc) VALUES (?1, ?2, ?3, ?4)",
             params![token_record.cxid, token_record.player.0, token_record.token, token_record.desc],
         )
+    }
+
+    pub fn insert_token_contract(&self, tcr: TokenContractRecord) -> Result<usize> {
+        self.insert_contract(tcr.contract_record)?;
+        self.insert_token(tcr.p1_token)?;
+        self.insert_token(tcr.p2_token)?;
+        Ok(3)
+    }
+
+    pub fn get_token_contract(&self, cxid: &str) -> Result<TokenContractRecord> {
+        let mut stmt = self.conn.prepare("
+            SELECT 
+                cxid, 
+                p1_name, 
+                p2_name, 
+                hex, 
+                desc, 
+                p1token.token AS p1_token, 
+                p1token.desc AS p1_token_desc, 
+                p2token.token AS p2_token, 
+                p2token.desc AS p2_token_desc
+            FROM contract
+            JOIN token AS p1token ON contract.cxid = p1token.cxid AND contract.p1_name = p1token.player
+            JOIN token AS p2token ON contract.cxid = p2token.cxid AND contract.p2_name = p2token.player
+            WHERE cxid = ?)
+            ")?;
+        stmt.query_row(params![cxid], |row| {
+            Ok(TokenContractRecord {
+                contract_record: ContractRecord {
+                    cxid: row.get("cxid")?, 
+                    p1_name: PlayerName(row.get("p1_name")?),
+                    p2_name: PlayerName(row.get("p2_name")?),
+                    hex: row.get("hex")?,
+                    desc: row.get("desc")?,
+                },
+                p1_token: TokenRecord {
+                    cxid: row.get("cxid")?,
+                    player: PlayerName(row.get("p1_name")?),
+                    token: row.get("p1_token")?,
+                    desc: row.get("p1_token_desc")?,
+                },
+                p2_token: TokenRecord {
+                    cxid: row.get("cxid")?,
+                    player: PlayerName(row.get("p2_name")?),
+                    token: row.get("p2_token")?,
+                    desc: row.get("p2_token_desc")?,
+                },
+            })
+        })
     }
 
     pub fn all_token_contracts(&self) -> Result<Vec<TokenContractRecord>> {

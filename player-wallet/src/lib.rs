@@ -13,7 +13,6 @@ use std::{
     fmt,
     sync::Arc,
 };
-use serde::{Serialize, Deserialize};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -87,17 +86,4 @@ impl From<tglib::bdk::electrum_client::Error> for Error {
     fn from(error: tglib::bdk::electrum_client::Error) -> Self {
         Error::ElectrumClient(Arc::new(error))
     }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Event {
-    desc: String,
-    oracle_pubkey: tglib::bdk::bitcoin::PublicKey,
-    outcomes: Vec<Outcome>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Outcome {
-    desc: String,
-    token: String,
 }
