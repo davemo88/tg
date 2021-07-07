@@ -3,7 +3,15 @@ pub use chrono;
 pub use hex;
 pub use reqwest;
 use std::collections::HashMap;
-use bitcoin::PublicKey;
+use bitcoin::{
+    PublicKey,
+    hashes::{
+        Hash as BitcoinHash,
+        HashEngine,
+        sha256::Hash as ShaHash,
+        sha256::HashEngine as ShaHashEngine,
+    },
+};
 use serde::{Serialize, Deserialize};
 
 pub const UMP_PUBKEY: &'static str = "025c571f77d693246e64f01ef740064a0b024a228813c94ae7e1e4ee73e991e0ba";
@@ -19,8 +27,6 @@ pub enum BaseballGameOutcome {
 impl std::fmt::Display for BaseballGameOutcome {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}", self)
-        // or, alternatively:
-        // fmt::Debug::fmt(self, f)
     }
 }
 
@@ -79,6 +85,13 @@ pub enum Status {
 
 pub fn ump_pubkey() -> PublicKey {
     PublicKey::from_slice(&hex::decode(UMP_PUBKEY).unwrap()).unwrap()
+}
+
+pub fn get_outcome_token(home: &str, away: &str, date: &str, outcome: BaseballGameOutcome) -> String {
+    let mut engine = ShaHashEngine::default();
+    engine.input(format!("H{}A{}D{}O{}", home, away, date, outcome.to_string()).as_bytes());
+    let hash: &[u8] = &ShaHash::from_engine(engine);
+    hex::encode(hash)
 }
 
 pub mod mlb_api {

@@ -4,7 +4,6 @@ use serde::{
     Deserialize,
 };
 use tglib::{
-    contract::ContractRecord,
     player::PlayerName,
     payout::PayoutRecord,
 };
@@ -12,6 +11,16 @@ use tglib::{
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayerRecord {
     pub name:       PlayerName,
+}
+
+// TODO: add version
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContractRecord {
+    pub cxid:           String,
+    pub p1_name:        PlayerName,
+    pub p2_name:        PlayerName,
+    pub hex:            String,
+    pub desc:           String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,7 +33,7 @@ pub struct TokenRecord {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TokenContractRecord {
-    pub contract_record: tglib::contract::ContractRecord,
+    pub contract_record: ContractRecord,
     pub p1_token: TokenRecord,
     pub p2_token: TokenRecord,
 }
