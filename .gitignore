@@ -5,6 +5,7 @@ dev-seed.json
 dev-wallet/
 history.txt
 */target/
+target/
 ump/*/target/*
 */Cargo.lock
 testnet/

@@ -1,0 +1,11 @@
+[workspace]
+
+members = [
+    "tglib",
+    "rbtr-public",
+    "rbtr-private",
+    "nmc-id",
+    "exchange",
+    "player-wallet",
+    "player-cli",
+]
