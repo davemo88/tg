@@ -3,6 +3,7 @@ pub use rusqlite;
 
 pub mod arbiter;
 pub mod db;
+pub mod exchange;
 pub mod player;
 pub mod ui;
 pub mod wallet;

@@ -141,7 +141,6 @@ fn payout_psbt(input: &[u8]) ->IResult<&[u8], PartiallySignedTransaction> {
     Ok((input, psbt))
 }
 
-// TODO: add version
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PayoutRecord {
     pub cxid:           String,

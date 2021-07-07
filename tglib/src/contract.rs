@@ -6,7 +6,6 @@ use bdk::{
         Address,
         Amount,
         PublicKey,
-        blockdata::transaction::OutPoint,
         consensus::{
             self,
             encode::Decodable,
@@ -22,10 +21,7 @@ use bdk::{
             Secp256k1,
             Signature,
         },
-        util::psbt::{
-            Input,
-            PartiallySignedTransaction,
-        }
+        util::psbt::PartiallySignedTransaction,
     },
 };
 use nom::{
@@ -42,7 +38,6 @@ use nom::{
 use crate::{
     Result,
     Error,
-    player::PlayerName,
     script::{
         parser::tg_script,
         TgScript,
@@ -283,29 +278,4 @@ pub enum ContractState {
     Live,
     Resolved,
     Invalid,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PlayerContractInfo {
-    pub name: PlayerName,
-    pub escrow_pubkey: PublicKey,
-    pub change_address: Address,
-    pub payout_address: Address,
-    pub utxos: Vec<(OutPoint, u64, Input)>,
-}
-
-impl PlayerContractInfo {
-    pub fn hash(&self) -> Vec<u8> {
-        let mut engine = ShaHashEngine::default();
-        engine.input(self.name.0.as_bytes());
-        engine.input(&self.escrow_pubkey.to_bytes());
-        engine.input(&self.change_address.to_string().as_bytes());
-        for (outpoint, _, _) in self.utxos.clone() {
-            engine.input(outpoint.txid.as_inner());
-            engine.input(&Vec::from(outpoint.vout.to_be_bytes()));
-        }
-
-        let hash: &[u8] = &ShaHash::from_engine(engine);
-        Vec::from(hash)
-    }
 }

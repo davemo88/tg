@@ -13,7 +13,6 @@ pub struct PlayerRecord {
     pub name:       PlayerName,
 }
 
-// TODO: add version
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContractRecord {
     pub cxid:           String,

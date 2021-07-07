@@ -1,4 +1,9 @@
 use std::str::FromStr;
+use libexchange::{
+    AuthTokenSig,
+    ExchangeService,
+    PlayerContractInfo,
+};
 use tglib::{
     bdk::{
         blockchain::Blockchain,
@@ -24,15 +29,8 @@ use tglib::{
     },
     hex,
     secrecy::Secret,
-    arbiter::{
-        ArbiterService,
-        AuthTokenSig,
-    },
-    contract::{
-        Contract,
-        ContractRecord,
-        PlayerContractInfo,
-    },
+    arbiter::ArbiterService,
+    contract::Contract,
     payout::{
         Payout,
         PayoutRecord,
@@ -55,6 +53,7 @@ use crate::{
     Event,
     Error,
     db::{
+        ContractRecord,
         PlayerRecord,
         TokenRecord,
     },
@@ -74,7 +73,7 @@ pub trait WalletUI {
 
 impl PlayerWallet {
     fn get_auth(&self, player_name: &PlayerName, pw: Secret<String>) -> Result<AuthTokenSig> {
-        let token = self.arbiter_client().get_auth_token(&player_name)?;
+        let token = self.exchange_client().get_auth_token(&player_name)?;
         let sig = self.sign_message(
             Message::from_slice(&token).unwrap(), 
             DerivationPath::from_str(&format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX)).unwrap(),
@@ -231,7 +230,7 @@ impl PlayerUI for PlayerWallet {
 
         let sig = self.sign_message(Message::from_slice(&info.hash()).unwrap(), DerivationPath::from_str(&format!("m/{}/{}", NAME_SUBACCOUNT, NAME_KIX)).unwrap(), pw)?;
 
-        let _r = self.arbiter_client().set_contract_info(info, self.name_pubkey(), sig);
+        let _r = self.exchange_client().set_contract_info(info, self.name_pubkey(), sig);
         Ok(())
     }
 
@@ -252,7 +251,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
 
 // TODO: check if p2_name is registered, or just let the future contract info check fail
 // if p2 isn't registered, they couldn't have posted contract info
-        let p2_contract_info = match self.arbiter_client().get_contract_info(p2_name.clone())? {
+        let p2_contract_info = match self.exchange_client().get_contract_info(p2_name.clone())? {
             Some(info) => info,
             None => {
                 return Err(Error::Adhoc("can't create contract: couldn't fetch p2 contract info").into())
@@ -364,7 +363,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
 
     fn send(&self, cxid: &str) -> Result<()> {
         let contract_record = DocumentUI::<ContractRecord>::get(self, cxid).ok_or(Error::Adhoc("unknown contract"))?;
-        self.arbiter_client().send_contract(
+        self.exchange_client().send_contract(
             contract_record.clone(),
             self.get_other_player_name(&contract_record)?,
         )
@@ -372,7 +371,7 @@ impl DocumentUI<ContractRecord> for PlayerWallet {
 
     fn receive(&self, player_name: PlayerName, pw: Secret<String>) -> Result<Option<String>> {
         let auth = self.get_auth(&player_name, pw)?;
-        let received = self.arbiter_client().receive_contract(auth)?;
+        let received = self.exchange_client().receive_contract(auth)?;
         if let Some(contract_record) = received {
             self.db().insert_contract(contract_record.clone())?;
             Ok(Some(contract_record.cxid))
@@ -486,7 +485,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
     fn send(&self, cxid: &str) -> Result<()> {
         let payout_record = DocumentUI::<PayoutRecord>::get(self, cxid).ok_or(Error::Adhoc("unknown payout"))?;
         let contract_record = DocumentUI::<ContractRecord>::get(self, cxid).ok_or(Error::Adhoc("unknown contract"))?;
-        self.arbiter_client().send_payout(
+        self.exchange_client().send_payout(
             payout_record,
             self.get_other_player_name(&contract_record)?
         )
@@ -494,7 +493,7 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
 
     fn receive(&self, player_name: PlayerName, pw: Secret<String>) -> Result<Option<String>> {
         let auth = self.get_auth(&player_name, pw)?;
-        let received = self.arbiter_client().receive_payout(auth)?;
+        let received = self.exchange_client().receive_payout(auth)?;
         if let Some(payout_record) = received {
             let _changes = self.db().insert_payout(payout_record.clone())?;
             Ok(Some(payout_record.cxid))

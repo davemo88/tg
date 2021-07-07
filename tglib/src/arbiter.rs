@@ -10,15 +10,8 @@ use bdk::bitcoin::{
     util::psbt::PartiallySignedTransaction,
 };
 use crate::{
-    contract::{
-        Contract,
-        PlayerContractInfo,
-    },
-    payout::{
-        Payout,
-        PayoutRecord,
-    },
-    player::PlayerName,
+    contract::Contract,
+    payout::Payout,
 };
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -68,8 +61,8 @@ pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 pub trait ArbiterService {
     fn get_escrow_pubkey(&self) -> Result<PublicKey>;
     fn get_fee_address(&self) -> Result<Address>;
-    fn set_contract_info(&self, info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<()>;
-    fn get_contract_info(&self, player_name: PlayerName) -> Result<Option<PlayerContractInfo>>;
+//    fn set_contract_info(&self, info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<()>;
+//    fn get_contract_info(&self, player_name: PlayerName) -> Result<Option<PlayerContractInfo>>;
 //    fn send_contract(&self, contract: ContractRecord, player_name: PlayerName) -> Result<()>;
 //    fn send_payout(&self, payout: PayoutRecord, player_name: PlayerName) -> Result<()>;
 //    fn get_auth_token(&self, player_name: &PlayerName) -> Result<Vec<u8>>;
@@ -82,12 +75,12 @@ pub trait ArbiterService {
 }
 
 // TODO: should this use auth token sig scheme? probably
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SetContractInfoBody {
-    pub contract_info: PlayerContractInfo,
-    pub pubkey: PublicKey,
-    pub sig_hex: String,
-}
+//#[derive(Debug, Serialize, Deserialize)]
+//pub struct SetContractInfoBody {
+//    pub contract_info: PlayerContractInfo,
+//    pub pubkey: PublicKey,
+//    pub sig_hex: String,
+//}
 
 //#[derive(Debug, Serialize, Deserialize)]
 //pub struct SendContractBody {

@@ -3,6 +3,7 @@ use std::{
     path::PathBuf,
     fs::File,
 };
+use libexchange::PlayerContractInfo;
 use tglib::{
     bdk::{
         bitcoin::{
@@ -40,11 +41,7 @@ use tglib::{
     Result as TgResult,
     Error as TgError,
     arbiter::ArbiterService,
-    contract::{
-        Contract,
-        ContractRecord,
-        PlayerContractInfo,
-    },
+    contract::Contract,
     payout::Payout,
     player::PlayerName,
     wallet::{
@@ -80,7 +77,9 @@ use crate::{
     Event,
     player::PlayerNameClient,
     arbiter::ArbiterClient,
+    exchange::ExchangeClient,
     db::{
+        ContractRecord,
         DB,
         TokenRecord,
     },
@@ -93,16 +92,18 @@ pub struct PlayerWallet {
     pub electrum_url: String,
     pub name_url: String,
     pub arbiter_url: String,
+    pub exchange_url: String,
 }
 
 impl PlayerWallet {
-    pub fn new(wallet_dir: PathBuf, network: Network, electrum_url: String, name_url: String, arbiter_url: String) ->  Self {
+    pub fn new(wallet_dir: PathBuf, network: Network, electrum_url: String, name_url: String, arbiter_url: String, exchange_url: String) ->  Self {
         PlayerWallet {
             wallet_dir,
             network,
             electrum_url,
             name_url,
             arbiter_url,
+            exchange_url,
         }
     }
 
@@ -183,6 +184,10 @@ impl PlayerWallet {
 
     pub fn arbiter_client(&self) -> ArbiterClient {
         ArbiterClient::new(&self.arbiter_url)
+    }
+
+    pub fn exchange_client(&self) -> ExchangeClient {
+        ExchangeClient::new(&self.exchange_url)
     }
 
     pub fn db(&self) -> DB {
