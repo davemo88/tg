@@ -212,11 +212,12 @@ impl PlayerWallet {
             let token_bytes = tglib::hex::decode(&outcome.token).unwrap();
             (txid, token_bytes)
         }).collect();
-        let tx_token_script = create_token_pair_script(&event.pubkey, tx_token_pairs);
+        let tx_token_script = create_token_pair_script(&event.oracle_pubkey, tx_token_pairs);
         let contract = Contract::new(
             p1_pubkey,
             p2_contract_info.escrow_pubkey,
             arbiter_pubkey,
+            event.oracle_pubkey,
             p1_payout_address,
             p2_contract_info.payout_address,
             funding_tx,
@@ -252,7 +253,8 @@ impl PlayerWallet {
             (p1_payout_tx.txid(), p1_payout_tx.txid().to_vec()),
             (p2_payout_tx.txid(), p2_payout_tx.txid().to_vec()),
         ];
-        let tx_token_script = create_token_pair_script(&referee_pubkey(), tx_token_pairs);
+        let oracle_pubkey = referee_pubkey();
+        let tx_token_script = create_token_pair_script(&oracle_pubkey, tx_token_pairs);
         let payout_script = create_payout_script(&escrow_address, &p1_payout_address, &p2_contract_info.payout_address, &funding_tx.clone().extract_tx());
 
         assert_eq!(tx_token_script, payout_script);
@@ -261,6 +263,7 @@ impl PlayerWallet {
             p1_pubkey,
             p2_contract_info.escrow_pubkey,
             arbiter_pubkey,
+            oracle_pubkey,
             p1_payout_address,
             p2_contract_info.payout_address,
             funding_tx,

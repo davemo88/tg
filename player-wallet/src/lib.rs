@@ -91,7 +91,7 @@ impl From<tglib::bdk::electrum_client::Error> for Error {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Event {
     desc: String,
-    pubkey: tglib::bdk::bitcoin::PublicKey,
+    oracle_pubkey: tglib::bdk::bitcoin::PublicKey,
     outcomes: Vec<Outcome>,
 }
 

@@ -35,6 +35,7 @@ use tglib::{
     JsonResponse,
 };
 use player_wallet::{
+    db::TokenContractRecord,
     ui::{
         DocumentUI,
         NewDocumentParams,
@@ -57,6 +58,8 @@ pub struct ContractSummary {
     pub p2_sig:         bool,
     pub arbiter_sig:    bool,
     pub txid:           String,
+    pub p1_token_desc:  Option<String>,
+    pub p2_token_desc:  Option<String>,
 }
 
 impl From<&ContractRecord> for ContractSummary {
@@ -72,6 +75,28 @@ impl From<&ContractRecord> for ContractSummary {
             p2_sig: contract.sigs.len() > 1,
             arbiter_sig: contract.sigs.len() > 2,
             txid: contract.funding_tx.extract_tx().txid().to_string(),
+            p1_token_desc: None,
+            p2_token_desc: None,
+        }
+    }
+}
+
+impl From<&TokenContractRecord> for ContractSummary {
+    fn from(tcr: &TokenContractRecord) -> Self {
+        let cr = &tcr.contract_record;
+        let contract = Contract::from_bytes(hex::decode(&cr.hex).unwrap()).unwrap();
+        ContractSummary {
+            cxid: cr.cxid.clone(),
+            p1_name: cr.p1_name.clone(),
+            p2_name: cr.p2_name.clone(),
+            amount: contract.amount().unwrap().as_sat(),
+            desc: cr.desc.clone(),
+            p1_sig: !contract.sigs.is_empty(),
+            p2_sig: contract.sigs.len() > 1,
+            arbiter_sig: contract.sigs.len() > 2,
+            txid: contract.funding_tx.extract_tx().txid().to_string(),
+            p1_token_desc: Some(tcr.p1_token.desc.clone()),
+            p2_token_desc: Some(tcr.p2_token.desc.clone()),
         }
     }
 }
