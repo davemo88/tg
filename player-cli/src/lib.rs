@@ -937,11 +937,28 @@ mod test {
 
     const PW: &'static str = "boguspw";
 
+    const CONTRACT: &'static str = "{
+  \"desc\": \"Rays at Blue Jays on 2021-07-04\",
+  \"outcomes\": [
+    {
+      \"desc\": \"Blue Jays win\",
+      \"token\": \"74cd75ca2d2bf9254e9b841db85984c2f8d24689717f1b2dc56d86443f318f22\"
+    },
+    {
+      \"desc\": \"Rays win\",
+      \"token\": \"d07953a7bccd9fc214119282edd4f9d4bb527e1a222f9bb2c30b74dec8065b46\",
+      \"sig\": \"3045022100b44c5a42476453d1c4c1309663147580517a3136a84b686007ec7521923c44d0022004bbca1a64d2f71edbdc7aeb12c3768c9259abaaf2265d9e23ebbd28395fc2ab\"
+    }
+  ],
+  \"pubkey\": \"025c571f77d693246e64f01ef740064a0b024a228813c94ae7e1e4ee73e991e0ba\"
+}";
+
     fn conf() -> Conf {
         Conf {
             electrum_url: "tcp://localhost:60401".into(),
             name_url: "http://localhost:18420".into(),
             arbiter_url: "http://localhost:5000".into(),
+            exchange_url: "http://localhost:5050".into(),
         }
     }
     
