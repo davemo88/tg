@@ -13,6 +13,8 @@ export interface Contract {
     p2Sig:              boolean,
     arbiterSig:         boolean,
     txid:               string,
+    p1_token_desc:      string,
+    p2_token_desc:      string,
     txStatus:           TxStatus,
 }
 
@@ -86,6 +88,12 @@ export interface JsonResponse {
     message?: string,
 }
 
+export type Event = {
+    desc: string,
+    oracle_pubkey: string,
+    outcomes: Outcome[],
+}
+
 export type Outcome = {
     desc: string,
     token: string,
@@ -98,16 +106,10 @@ const isOutcome = (outcome: any): boolean => {
         && outcome.token && typeof(outcome.token) == 'string'
 }
 
-export type Event = {
-    desc: string,
-    pubkey: string,
-    outcomes: Outcome[],
-}
-
 export const isEvent = (event: any): boolean => {
     return event 
         && event.desc && typeof(event.desc) == 'string'
-        && event.pubkey && typeof(event.pubkey) == 'string'
+        && event.oracle_pubkey && typeof(event.oracle_pubkey) == 'string'
         && event.outcomes && Array.isArray(event.outcomes) 
         && event.outcomes.every((outcome: any) => isOutcome(outcome))
 }

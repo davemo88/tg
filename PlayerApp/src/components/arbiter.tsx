@@ -12,14 +12,10 @@ export const Arbiter = (props) => {
       <View style={{ alignItems: "center", padding: 2, margin: 2, }}>
         <Image
           style={styles.arbiterImage}
-          source={ARBITER_PICTURE_URL}
+          source={{uri: ARBITER_PICTURE_URL}}
         />
       </View>
-      <View style={{ backgroundColor: "slategrey", padding: 1, flexDirection: "row" }}>
-        <Image
-          style={{ height: 17, width: 17 }}
-          source="https://static-cdn.jtvnw.net/emoticons/v1/156787/1.0"
-        />
+      <View style={{ backgroundColor: "slategrey", padding: 1 }}>
         <Text>{ARBITER_NAME}</Text>
       </View>
     </View>

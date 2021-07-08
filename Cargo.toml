@@ -11,3 +11,5 @@ members = [
     "ump/publisher",
     "ump/signer",
 ]
+
+exclude = ["PlayerApp/rust"]

@@ -239,7 +239,7 @@ impl DB {
 
     pub fn insert_token(&self, token_record: TokenRecord) -> Result<usize> {
         self.conn.execute(
-            "INSERT INTO token (cxid, player, token, desc) VALUES (?1, ?2, ?3, ?4)",
+            "INSERT INTO token (cxid, player, token, desc) VALUES (?1, ?2, ?3, ?4) ON CONFLICT DO NOTHING",
             params![token_record.cxid, token_record.player.0, token_record.token, token_record.desc],
         )
     }

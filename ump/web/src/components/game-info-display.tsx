@@ -84,9 +84,19 @@ export const GameInfoDisplay = (props: GameInfoDisplayProps) => {
                     <DetailsPaper>
                         <pre style={{ whiteSpace: "pre-wrap", wordWrap: "break-word"}}>{event_json}</pre>
                     </DetailsPaper>
-                    <Button onClick={() => {navigator.clipboard.writeText(event_json)}} >
+                    <Button onClick={() => navigator.clipboard.writeText(event_json)} >
                         Copy Event Details
                     </Button> 
+                    {
+                        props.info.sig && 
+                        <Button onClick={() => {
+                            if (props.info.sig !== null) {
+                                navigator.clipboard.writeText(props.info.sig)
+                            }
+                        }} >
+                            Copy Sig
+                        </Button> 
+                    }
                 </Box>
             </Collapse>
         </GameInfoCard>

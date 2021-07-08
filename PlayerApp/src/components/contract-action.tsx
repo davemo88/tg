@@ -164,8 +164,8 @@ const ActionLive = (props) => {
   return (
     <View>
       <Button 
-        title="Request Payout" 
-        onPress={() => props.navigation.push('Request Payout', { cxid: props.contract.cxid }) }
+        title="New Payout" 
+        onPress={() => props.navigation.push('New Payout', { cxid: props.contract.cxid }) }
       />
     </View>
   )

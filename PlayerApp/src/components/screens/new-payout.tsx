@@ -13,7 +13,7 @@ import { Arbiter } from '../arbiter';
 import { Currency } from '../currency';
 import { PlayerPortrait } from '../player-portrait';
 
-export const RequestPayout = ({ route, navigation }) => {
+export const NewPayout = ({ route, navigation }) => {
   const dispatch = useDispatch();
   const { cxid } = route.params;
   const contract = contractSelectors.selectById(store.getState(), cxid);
@@ -64,7 +64,7 @@ export const RequestPayout = ({ route, navigation }) => {
           />
         </View>
       </View>
-      <View style={{ padding: 5 }}>
+      <View style={{ padding: 5, alignItems: 'center' }}>
         <Text>Arbitrated Payout</Text>
         <Switch 
           onValueChange={toggleArbitration}
@@ -77,19 +77,19 @@ export const RequestPayout = ({ route, navigation }) => {
           <View>
             <Arbiter />
           </View>
-          <Text style={{ padding: 2 }}>Token</Text>
+          <Text style={{ padding: 2 }}>Paste Signed Token</Text>
           <TextInput
             value={arbitrationToken}
             onChangeText={text => setArbitrationToken(text)}
-            style={{ textAlign: 'center', borderWidth: 1, flex: 1, margin: 10, padding: 4, }}
+            style={{ borderWidth: 1, margin: 10, padding: 4, width: 120 }}
           />
         </View>
       }
       <View style={{ flexDirection: 'row' }}>
-        <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
+        <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
           <Button 
             disabled={!valid()}
-            title="Request" 
+            title="Create" 
             onPress={() => {
               setCreatingPayout(true);
               dispatch(newPayout(contract.cxid, p1Amount, p2Amount))

@@ -192,7 +192,7 @@ export const NewContract = ({ navigation }) => {
             <View style={{ flexDirection: 'row', margin: 60 }}>
                 <View style={{ flex: 1, margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
                     <Button 
-                        disabled={(!amountValid() || creatingContract)}
+                        disabled={(!amountValid() || !event || creatingContract)}
                         title="Create" 
                         onPress={() => {
                             setCreatingContract(true);

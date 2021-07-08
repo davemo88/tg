@@ -133,13 +133,9 @@ export const loadContracts = () => {
     }
 }
 
-export const newContract = (p1Name: string, p2Name: string, sats: number, event?: Event, eventPayouts?: string[]) => {
+export const newContract = (p1Name: string, p2Name: string, sats: number, event: Event, eventPayouts: string[]) => {
     return async (dispatch) => {
-        let command = `contract new "${p1Name}" "${p2Name}" ${sats}`;
-        if (event && eventPayouts) {
-            command = `${command} '${JSON.stringify(event, null, 1)}' "${eventPayouts[0]}" "${eventPayouts[1]}"`;
-            console.debug("contract new with event command:", command);
-        }
+        let command = `contract new "${p1Name}" "${p2Name}" ${sats} '${JSON.stringify(event, null, 1)}' "${eventPayouts[0]}" "${eventPayouts[1]}"`;
         let output = await PlayerWalletModule.call_cli(command); 
         let response = JSON.parse(output);
         if (response.status === "error") {
@@ -156,6 +152,8 @@ export const newContract = (p1Name: string, p2Name: string, sats: number, event?
             arbiterSig: false,
             desc: contract.desc,
             txid: contract.txid,
+            p1_token_desc: contract.p1_token_desc,
+            p2_token_desc: contract.p2_token_desc,
             txStatus: TxStatus.Unbroadcast,
         }))
     }
