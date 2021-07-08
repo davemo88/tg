@@ -347,7 +347,6 @@ async fn main() {
         .or(receive_payout)
         .or(auth_token);
 
-    println!("Hello, world!");
     let _ = tokio::join!(
         warp::serve(routes).run(([0, 0, 0, 0], 5050)),
         remove_stale_contract_info(),

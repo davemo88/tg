@@ -16,6 +16,12 @@ services:
         dockerfile: nmc-id-Dockerfile
     ports:
       - "18420:18420"
+  exchange:
+    build:
+        context: .
+        dockerfile: exchange-Dockerfile
+    ports:
+      - "5050:5050"
   redis:
     image: redis
   electrs:

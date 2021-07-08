@@ -1,0 +1,8 @@
+FROM rust:buster
+
+ADD tglib/ tglib/
+ADD exchange/ exchange/
+
+RUN cargo build --manifest-path=exchange/Cargo.toml
+
+CMD ["cargo", "run", "--manifest-path", "exchange/Cargo.toml"]

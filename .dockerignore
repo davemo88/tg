@@ -1,4 +1,6 @@
+target/
 tglib/target/
+exchange/target/
 rbtr-public/target/
 rbtr-private/target/
 player-wallet/target/
@@ -9,3 +11,7 @@ regtest/
 nmcd/
 PlayerApp/
 ump/
+docs/
+dev-wallet/
+dev-seed.json
+dev-app.db
