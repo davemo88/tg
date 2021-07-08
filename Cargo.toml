@@ -8,5 +8,6 @@ members = [
     "exchange",
     "player-wallet",
     "player-cli",
-    "PlayerApp/rust"
+    "ump/publisher",
+    "ump/signer",
 ]
