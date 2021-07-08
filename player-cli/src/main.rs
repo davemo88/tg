@@ -28,6 +28,7 @@ fn main() {
                     electrum_url: "tcp://localhost:60401".into(),
                     name_url: "http://localhost:18420".into(),
                     arbiter_url: "http://localhost:5000".into(),
+                    exchange_url: "http://localhost:5050".into(),
                 };
                 rl.add_history_entry(line.clone());
                 println!("{}", libcli::cli(line, conf));

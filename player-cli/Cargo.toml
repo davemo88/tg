@@ -17,6 +17,7 @@ path = "src/lib.rs"
 [dependencies]
 tglib = { path = "../tglib" }
 player-wallet = { path = "../player-wallet" }
+exchange = { path = "../exchange" }
 clap = "2"
 rustyline = "6.2.0"
 shell-words= "1.0"

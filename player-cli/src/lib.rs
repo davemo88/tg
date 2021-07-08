@@ -16,10 +16,8 @@ use tglib::{
     },
     hex,
     secrecy::Secret,
-    arbiter::ArbiterService,
     contract::{
         Contract,
-        ContractRecord,
     },
     payout::PayoutRecord,
     player::PlayerName,
@@ -34,8 +32,11 @@ use tglib::{
     },
     JsonResponse,
 };
+use libexchange::{
+    ExchangeService,
+    TokenContractRecord,
+};
 use player_wallet::{
-    db::TokenContractRecord,
     ui::{
         DocumentUI,
         NewDocumentParams,
@@ -58,27 +59,8 @@ pub struct ContractSummary {
     pub p2_sig:         bool,
     pub arbiter_sig:    bool,
     pub txid:           String,
-    pub p1_token_desc:  Option<String>,
-    pub p2_token_desc:  Option<String>,
-}
-
-impl From<&ContractRecord> for ContractSummary {
-    fn from(cr: &ContractRecord) -> Self {
-        let contract = Contract::from_bytes(hex::decode(&cr.hex).unwrap()).unwrap();
-        ContractSummary {
-            cxid: cr.cxid.clone(),
-            p1_name: cr.p1_name.clone(),
-            p2_name: cr.p2_name.clone(),
-            amount: contract.amount().unwrap().as_sat(),
-            desc: cr.desc.clone(),
-            p1_sig: !contract.sigs.is_empty(),
-            p2_sig: contract.sigs.len() > 1,
-            arbiter_sig: contract.sigs.len() > 2,
-            txid: contract.funding_tx.extract_tx().txid().to_string(),
-            p1_token_desc: None,
-            p2_token_desc: None,
-        }
-    }
+    pub p1_token_desc:  String,
+    pub p2_token_desc:  String,
 }
 
 impl From<&TokenContractRecord> for ContractSummary {
@@ -95,8 +77,8 @@ impl From<&TokenContractRecord> for ContractSummary {
             p2_sig: contract.sigs.len() > 1,
             arbiter_sig: contract.sigs.len() > 2,
             txid: contract.funding_tx.extract_tx().txid().to_string(),
-            p1_token_desc: Some(tcr.p1_token.desc.clone()),
-            p2_token_desc: Some(tcr.p2_token.desc.clone()),
+            p1_token_desc: tcr.p1_token.desc.clone(),
+            p2_token_desc: tcr.p2_token.desc.clone(),
         }
     }
 }
@@ -118,8 +100,8 @@ impl PayoutSummary {
         fn get(player_wallet: &PlayerWallet, pr: &PayoutRecord) -> Option<PayoutSummary> {
             let psbt: PartiallySignedTransaction = consensus::deserialize(&hex::decode(&pr.psbt).unwrap()).unwrap();
             let txid = psbt.clone().extract_tx().txid().to_string();
-            let cr = DocumentUI::<ContractRecord>::get(player_wallet, &pr.cxid)?; 
-            let contract = Contract::from_bytes(hex::decode(cr.hex).unwrap()).unwrap();
+            let tcr = DocumentUI::<TokenContractRecord>::get(player_wallet, &pr.cxid)?; 
+            let contract = Contract::from_bytes(hex::decode(tcr.contract_record.hex).unwrap()).unwrap();
             let my_script_pubkey = Address::p2wpkh(&player_wallet.get_escrow_pubkey(), NETWORK).unwrap().script_pubkey();
             let my_amount = Amount::from_sat(psbt.global.unsigned_tx.output.iter().filter_map(|txout| if txout.script_pubkey == my_script_pubkey { Some(txout.value) } else { None}).sum());
             let contract_amount = contract.amount().ok()?;
@@ -200,6 +182,7 @@ pub struct Conf {
     pub electrum_url: String,
     pub name_url: String,
     pub arbiter_url: String,
+    pub exchange_url: String,
 }
 
 pub fn cli(line: String, conf: Conf) -> String {
@@ -254,7 +237,7 @@ pub fn cli(line: String, conf: Conf) -> String {
                 }
             };
 
-            let wallet = PlayerWallet::new(wallet_dir, NETWORK, conf.electrum_url, conf.name_url, conf.arbiter_url);
+            let wallet = PlayerWallet::new(wallet_dir, NETWORK, conf.electrum_url, conf.name_url, conf.arbiter_url, conf.exchange_url);
             match c {
                 "balance" => match wallet.balance() {
                     Ok(balance) => if a.is_present("json-output") {
@@ -405,7 +388,7 @@ pub fn player_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                     format!("{:?}", e)
                 }
             }
-            "posted" => match wallet.arbiter_client().get_contract_info(PlayerName(a.value_of("name").unwrap().to_string())) {
+            "posted" => match wallet.exchange_client().get_contract_info(PlayerName(a.value_of("name").unwrap().to_string())) {
                 Ok(Some(info)) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::success(Some(info.utxos.iter().map(|(_, sats, _)| sats).sum::<u64>()))).unwrap()
                 } else {
@@ -455,20 +438,13 @@ pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
                 .arg(Arg::with_name("event")
                     .index(4)
                     .help("event in json format")
-                    .required(false)
-                    .requires("event-payouts")
-                    .conflicts_with("desc")
+                    .required(true)
                     .takes_value(true))
                 .arg(Arg::with_name("event-payouts")
                     .index(5)
                     .help("which player to pay for each event outcome. player order should coincide with outcome order in event")
-                    .required(false)
-                    .multiple(true))
-                .arg(Arg::with_name("desc")
-                    .short("d")
-                    .long("desc")
-                    .help("description")
-                    .takes_value(true)),
+                    .required(true)
+                    .multiple(true)),
             SubCommand::with_name("import").about("import contract")
                 .arg(Arg::with_name("contract-value")
                     .index(1)
@@ -555,31 +531,21 @@ pub fn contract_ui<'a, 'b>() -> App<'a, 'b> {
 pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &PlayerWallet) -> String {
     if let (c, Some(a)) = subcommand {
         match c {
-            "new" => match DocumentUI::<ContractRecord>::new(
+            "new" => match DocumentUI::<TokenContractRecord>::new(
                 wallet,
                 NewDocumentParams::NewContractParams {
                     p1_name: PlayerName(a.value_of("player-1").unwrap().to_string()),
                     p2_name: PlayerName(a.value_of("player-2").unwrap().to_string()),
                     amount: Amount::from_sat(a.value_of("amount").unwrap().parse::<u64>().unwrap()),
-                    event: match a.value_of("event") {
-                        Some(e) => Some(serde_json::from_str(e).unwrap()),
-                        None => None,
-                    },
-                    event_payouts: match a.values_of("event-payouts") {
-                        Some(p) => Some(p.collect::<Vec<&str>>().iter().map(|player| {
+                    event: serde_json::from_str(a.value_of("event").unwrap()).unwrap(),
+                    event_payouts: a.values_of("event-payouts").unwrap().collect::<Vec<&str>>().iter().map(|player| {
                             PlayerName(player.to_string()) 
-                        }).collect()),
-                        None => None,
-                    },
-                    desc: match a.value_of("desc") {
-                        Some(d) => Some(d.into()),
-                        None => None,
-                    } 
+                        }).collect(),
                 }) {
-                Ok(contract_record) => if a.is_present("json-output") {
-                    serde_json::to_string(&JsonResponse::success(Some(ContractSummary::from(&contract_record)))).unwrap()
+                Ok(tcr) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::success(Some(ContractSummary::from(&tcr)))).unwrap()
                 } else {
-                    format!("contract {} created", contract_record.cxid)
+                    format!("contract {} created", tcr.contract_record.cxid)
                 }
                 Err(e) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
@@ -587,20 +553,20 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                     format!("{:?}", e)
                 }
             }
-            "import" => match DocumentUI::<ContractRecord>::import(wallet, &a.value_of("contract-value").unwrap()) {
+            "import" => match DocumentUI::<TokenContractRecord>::import(wallet, &a.value_of("contract-value").unwrap()) {
 // TODO: print cxid of imported contract
                 Ok(()) => "contract imported".to_string(),
                 Err(e) => format!("{}", e),
             }
-            "export" => match DocumentUI::<ContractRecord>::export(wallet, &a.value_of("cxid").unwrap()) {
+            "export" => match DocumentUI::<TokenContractRecord>::export(wallet, &a.value_of("cxid").unwrap()) {
                 Some(hex) => hex,
                 None => "no such contract".to_string(),
             }
-            "details" => match DocumentUI::<ContractRecord>::get(wallet, a.value_of("cxid").unwrap()) {
-                Some(cr) => if a.is_present("json-output") {
-                    serde_json::to_string(&JsonResponse::success(Some(Contract::from_bytes(hex::decode(&cr.hex).unwrap()).unwrap()))).unwrap()
+            "details" => match DocumentUI::<TokenContractRecord>::get(wallet, a.value_of("cxid").unwrap()) {
+                Some(tcr) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::success(Some(Contract::from_bytes(hex::decode(&tcr.contract_record.hex).unwrap()).unwrap()))).unwrap()
                 } else {
-                    format!("{:?}", Contract::from_bytes(hex::decode(&cr.hex).unwrap()).unwrap())
+                    format!("{:?}", Contract::from_bytes(hex::decode(&tcr.contract_record.hex).unwrap()).unwrap())
                 }
                 None => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
@@ -608,7 +574,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                     "no such contract".to_string()
                 }
             }
-            "summary" => match DocumentUI::<ContractRecord>::get(wallet, a.value_of("cxid").unwrap()) {
+            "summary" => match DocumentUI::<TokenContractRecord>::get(wallet, a.value_of("cxid").unwrap()) {
                 Some(cr) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::success(Some(ContractSummary::from(&cr)))).unwrap()
                 } else {
@@ -620,7 +586,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                     "no such contract".to_string()
                 }
             }
-            "sign" => match DocumentUI::<ContractRecord>::sign(
+            "sign" => match DocumentUI::<TokenContractRecord>::sign(
                     wallet,
                     SignDocumentParams::SignContractParams {
                         cxid: a.value_of("cxid").unwrap().to_string(),
@@ -638,7 +604,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                     format!("{:?}", e)
                 }
             }
-            "send" => match DocumentUI::<ContractRecord>::send(wallet, a.value_of("cxid").unwrap()) {
+            "send" => match DocumentUI::<TokenContractRecord>::send(wallet, a.value_of("cxid").unwrap()) {
                 Ok(()) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
                 } else {
@@ -650,7 +616,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                     format!("{:?}", e)
                 }
             }
-            "receive" => match DocumentUI::<ContractRecord>::receive(
+            "receive" => match DocumentUI::<TokenContractRecord>::receive(
                 wallet, 
                 PlayerName(a.value_of("player-name").unwrap().to_string()),
                 Secret::new(a.value_of("password").unwrap().to_owned())) {
@@ -667,7 +633,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                     format!("{:?}", e)
                 }
             }
-            "submit" => match DocumentUI::<ContractRecord>::submit(wallet, a.value_of("cxid").unwrap()) {
+            "submit" => match DocumentUI::<TokenContractRecord>::submit(wallet, a.value_of("cxid").unwrap()) {
                 Ok(()) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
                 } else {
@@ -679,7 +645,7 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                     format!("{:?}", e)
                 }
             }
-            "broadcast" => match DocumentUI::<ContractRecord>::broadcast(wallet, a.value_of("cxid").unwrap()) {
+            "broadcast" => match DocumentUI::<TokenContractRecord>::broadcast(wallet, a.value_of("cxid").unwrap()) {
                 Ok(()) => if a.is_present("json-output") {
                     serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
                 } else {
@@ -691,15 +657,15 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                     format!("{:?}", e)
                 }
             }
-            "delete" => match DocumentUI::<ContractRecord>::delete(wallet, a.value_of("cxid").unwrap()) {
+            "delete" => match DocumentUI::<TokenContractRecord>::delete(wallet, a.value_of("cxid").unwrap()) {
                 Ok(()) => "contract deleted".to_string(),
                 Err(e) => format!("{}", e),
             }
             "list" => if a.is_present("json-output") {
-                let cs: Vec<ContractSummary> = DocumentUI::<ContractRecord>::list(wallet).iter().map(|cr| cr.into()).collect();
+                let cs: Vec<ContractSummary> = DocumentUI::<TokenContractRecord>::list(wallet).iter().map(|cr| cr.into()).collect();
                 serde_json::to_string(&JsonResponse::success(Some(cs))).unwrap()
             } else {
-                DocumentUI::<ContractRecord>::list(wallet).iter().map(|cr| format!("{:?}", ContractSummary::from(cr))).collect::<Vec<String>>().join("\n")
+                DocumentUI::<TokenContractRecord>::list(wallet).iter().map(|cr| format!("{:?}", ContractSummary::from(cr))).collect::<Vec<String>>().join("\n")
             }
             _ => {
                 format!("command '{}' is not implemented", c)

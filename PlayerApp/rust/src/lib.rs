@@ -29,6 +29,7 @@ pub unsafe extern "system" fn Java_com_playerapp_PlayerWalletModule_cli(env: JNI
         electrum_url: format!("tcp://{}:60401", LOCALHOST),
         name_url: format!("http://{}:18420", LOCALHOST),
         arbiter_url: format!("http://{}:5000", LOCALHOST),
+        exchange_url: format!("http://{}:5050", LOCALHOST),
     };
     let response = libcli::cli(command, conf);
     debug!("JNI response: {}", response);
