@@ -254,11 +254,11 @@ impl DB {
     pub fn get_token_contract(&self, cxid: &str) -> Result<TokenContractRecord> {
         let mut stmt = self.conn.prepare("
             SELECT 
-                cxid, 
-                p1_name, 
-                p2_name, 
-                hex, 
-                desc, 
+                contract.cxid, 
+                contract.p1_name, 
+                contract.p2_name, 
+                contract.hex, 
+                contract.desc, 
                 p1token.token AS p1_token, 
                 p1token.desc AS p1_token_desc, 
                 p2token.token AS p2_token, 
@@ -266,8 +266,7 @@ impl DB {
             FROM contract
             JOIN token AS p1token ON contract.cxid = p1token.cxid AND contract.p1_name = p1token.player
             JOIN token AS p2token ON contract.cxid = p2token.cxid AND contract.p2_name = p2token.player
-            WHERE cxid = ?)
-            ")?;
+            WHERE contract.cxid = ?1")?;
         stmt.query_row(params![cxid], |row| {
             Ok(TokenContractRecord {
                 contract_record: ContractRecord {
@@ -296,11 +295,11 @@ impl DB {
     pub fn all_token_contracts(&self) -> Result<Vec<TokenContractRecord>> {
         let mut stmt = self.conn.prepare("
             SELECT 
-                cxid, 
-                p1_name, 
-                p2_name, 
-                hex, 
-                desc, 
+                contract.cxid, 
+                contract.p1_name, 
+                contract.p2_name, 
+                contract.hex, 
+                contract.desc, 
                 p1token.token AS p1_token, 
                 p1token.desc AS p1_token_desc, 
                 p2token.token AS p2_token, 

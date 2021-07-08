@@ -28,11 +28,11 @@ export type Outcome = {
 
 export type Event = {
     desc: string,
-    pubkey: string,
+    oracle_pubkey: string,
     outcomes: Outcome[],
 }
 
-export const toEvent = (pubkey: string, info: GameInfo) => {
+export const toEvent = (oracle_pubkey: string, info: GameInfo) => {
     let home_wins: Outcome = {
         desc: `${info.home.name} win`,
         token: info.home_token,
@@ -49,7 +49,7 @@ export const toEvent = (pubkey: string, info: GameInfo) => {
     let event: Event = {
         desc: `${info.away.name} at ${info.home.name} on ${info.date}`,
         outcomes: [home_wins, away_wins],
-        pubkey,
+        oracle_pubkey,
     }
     return event
 }

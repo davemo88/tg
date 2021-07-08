@@ -947,10 +947,10 @@ mod test {
     },
     {
       \"desc\": \"Rays win\",
-      \"token\": \"d07953a7bccd9fc214119282edd4f9d4bb527e1a222f9bb2c30b74dec8065b46\",
+      \"token\": \"d07953a7bccd9fc214119282edd4f9d4bb527e1a222f9bb2c30b74dec8065b46\"
     }
   ],
-  \"pubkey\": \"025c571f77d693246e64f01ef740064a0b024a228813c94ae7e1e4ee73e991e0ba\"
+  \"oracle_pubkey\": \"025c571f77d693246e64f01ef740064a0b024a228813c94ae7e1e4ee73e991e0ba\"
 }";
 
     fn conf() -> Conf {
@@ -1078,6 +1078,7 @@ mod test {
 
         simple_logger::SimpleLogger::new()
             .with_level(tglib::log::LevelFilter::Debug)
+            .with_module_level("hyper", tglib::log::LevelFilter::Warn)
             .with_module_level("reqwest", tglib::log::LevelFilter::Warn)
             .with_module_level("sled", tglib::log::LevelFilter::Warn)
             .with_module_level("bdk", tglib::log::LevelFilter::Warn)
