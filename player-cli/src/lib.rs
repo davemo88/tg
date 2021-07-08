@@ -937,7 +937,7 @@ mod test {
 
     const PW: &'static str = "boguspw";
 
-    const CONTRACT: &'static str = "{
+    const EVENT: &'static str = "{
   \"desc\": \"Rays at Blue Jays on 2021-07-04\",
   \"outcomes\": [
     {
