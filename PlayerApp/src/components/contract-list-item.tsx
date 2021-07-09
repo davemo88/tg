@@ -1,11 +1,11 @@
 import React from 'react';
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
-import { getOtherPlayerName, getContractStatus } from '../dump';
+import { getOtherPlayerName, } from '../dump';
 import { styles } from '../styles';
 
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, } from '../redux';
-import { Player, Contract, ContractStatus, } from '../datatypes';
+import { Player, Contract } from '../datatypes';
 
 import { Currency } from './currency';
 import { PlayerPortrait } from './player-portrait';

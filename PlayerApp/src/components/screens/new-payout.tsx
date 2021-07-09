@@ -7,7 +7,7 @@ import { styles } from '../../styles';
 import { Secret } from '../../secret';
 
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, payoutSlice, newPayout, } from '../../redux';
-import { Player, Contract, Payout, ContractStatus } from '../../datatypes';
+import { Player, Contract, Payout } from '../../datatypes';
 
 import { Arbiter } from '../arbiter';
 import { Currency } from '../currency';

@@ -5,7 +5,7 @@ import { useDispatch } from 'react-redux';
 import PlayerWalletModule from './../../PlayerWallet';
 
 import { styles } from '../../styles';
-import { Player, Contract, ContractStatus } from '../../datatypes';
+import { Player, Contract } from '../../datatypes';
 import { store, playerSelectors } from '../../redux';
 import { postContractInfo, } from '../../wallet';
 import { Secret } from '../../secret';

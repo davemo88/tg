@@ -5,7 +5,7 @@ import { Alert, Modal, Image, Button, StyleSheet, Text, TextInput, View, } from 
 import { styles } from '../../styles';
 
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, balanceSlice, newContract, } from '../../redux';
-import { isEvent, Event, Player, Contract, ContractStatus } from '../../datatypes';
+import { isEvent, Event, Player, Contract } from '../../datatypes';
 import { getPosted } from '../../wallet';
 
 import { Secret } from '../../secret';

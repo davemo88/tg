@@ -5,7 +5,7 @@ import { styles } from '../styles';
 
 import { useDispatch } from 'react-redux';
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, removePlayer } from '../redux';
-import { Player, Contract, ContractStatus } from '../datatypes';
+import { Player, Contract } from '../datatypes';
 
 import { PlayerPortrait } from './player-portrait';
 

@@ -5,7 +5,7 @@ import { styles } from '../../styles';
 
 import { useDispatch } from 'react-redux';
 import { store, playerSlice, addPlayer} from '../../redux';
-import { Player, Contract, ContractStatus } from '../../datatypes';
+import { Player, Contract } from '../../datatypes';
 
 export const AddPlayer = ({ navigation }) => {
     const dispatch = useDispatch();
