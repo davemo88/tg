@@ -202,9 +202,9 @@ export const loadPayouts = () => {
 
 export const newPayout = (cxid: string, p1Amount: number, p2Amount: number) => {
     return async (dispatch) => {
-        console.log("new payout args:", cxid, p1Amount, p2Amount);
+        console.debug("new payout args:", cxid, p1Amount, p2Amount);
         let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli(`payout new ${cxid} ${p1Amount} ${p2Amount}`)); 
-        console.log("new payout response:", response);
+        console.debug("new payout response:", response);
         if (response.status === "error") {
             throw Error(response.message)
         }
@@ -216,7 +216,7 @@ export const newPayout = (cxid: string, p1Amount: number, p2Amount: number) => {
             p1Sig: false,
             p2Sig: false,
             arbiterSig: false,
-            scriptSig: "",
+            scriptSig: payout.scriptSig,
             txid: payout.txid,
             txStatus: TxStatus.Unbroadcast,
         }))

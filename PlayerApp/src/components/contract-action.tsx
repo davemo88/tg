@@ -221,9 +221,11 @@ const ActionPayoutSigned = (props) => {
 }
 
 const ActionPayoutReceived = (props) => {
+  let store = useStore();
+  const payout = payoutSelectors.selectById(store.getState(), props.contract.cxid);
   const [password, setPassword] = React.useState(new Secret(""));
-  const payout = payoutSelectors.selectAll(store.getState())
-    .filter((pr, i, a) => pr.cxid === props.contract.cxid ).pop();
+//  const payout = payoutSelectors.selectAll(store.getState())
+//    .filter((pr, i, a) => pr.cxid === props.contract.cxid ).pop();
   return (
     <View>
       <Text>Payout Received</Text>

@@ -15,9 +15,9 @@ export const getContractStatus = (contract: Contract ): ContractStatus => {
     if (allSigned) {
       switch (+contract.txStatus) {
           case TxStatus.Unbroadcast:
-              return ContractStatus.Certified;
+              return ContractStatus.Certified
           case TxStatus.Broadcast:
-              return ContractStatus.FundingTxBroadcast;
+              return ContractStatus.FundingTxBroadcast
           case TxStatus.Confirmed:
               break
       }
@@ -29,34 +29,35 @@ export const getContractStatus = (contract: Contract ): ContractStatus => {
         const payoutStatus = getPayoutStatus(payout);
         switch (+payoutStatus) {
           case PayoutStatus.Unsigned:
-            return ContractStatus.PayoutUnsigned;
+            return ContractStatus.PayoutUnsigned
           case PayoutStatus.WeSigned:
-            return ContractStatus.PayoutSigned;
+            return ContractStatus.PayoutSigned
           case PayoutStatus.TheySigned:
-            return ContractStatus.PayoutReceived;
+            return ContractStatus.PayoutReceived
           case PayoutStatus.Certified:
-            return ContractStatus.PayoutCertified;
+            return ContractStatus.PayoutCertified
           case PayoutStatus.Broadcast:
-            return ContractStatus.PayoutTxBroadcast;
+            return ContractStatus.PayoutTxBroadcast
           case PayoutStatus.Resolved:
-            return ContractStatus.Resolved;
+            return ContractStatus.Resolved
           case PayoutStatus.Invalid:
-            return ContractStatus.Live;
+            return ContractStatus.Live
         }
       }
       else {
-        return ContractStatus.Live;
+        return ContractStatus.Live
       }
     }
     else if (contract.p1Sig && contract.p2Sig) {
-      return ContractStatus.PlayersSigned;
+      return ContractStatus.PlayersSigned
     }
     else if ((contract.p1Sig || contract.p2Sig) && !contract.arbiterSig) {
-      return isContractSignedBy(contract, selectedPlayerName) ? ContractStatus.Signed: ContractStatus.Received;
+      return isContractSignedBy(contract, selectedPlayerName) ? ContractStatus.Signed: ContractStatus.Received
     }
     else {
       return isUnsigned(contract) ? ContractStatus.Unsigned : ContractStatus.Invalid;
     }
+    return ContractStatus.Invalid
 }
 
 export const getPayoutStatus = (payout: Payout ): PayoutStatus => {
@@ -83,7 +84,7 @@ export const getPayoutStatus = (payout: Payout ): PayoutStatus => {
     else if (isPayoutSignedBy(payout, selectedPlayerName)) {
       return PayoutStatus.WeSigned; 
     }
-    else if (isPayoutSignedBy(payout, getOtherPlayerName(selectedPlayerName, contract))) {
+    else if (contract && isPayoutSignedBy(payout, getOtherPlayerName(selectedPlayerName, contract))) {
       return PayoutStatus.TheySigned; 
     }
     else {
@@ -99,8 +100,12 @@ export const isContractSignedBy = (contract: Contract, playerName: string): bool
   )
 }
 
-export const isPayoutSignedBy = (payout:  Payout, playerName: string): boolean => {
+export const isPayoutSignedBy = (payout:  Payout, playerName?: string): boolean => {
   const contract = contractSelectors.selectById(store.getState(), payout.cxid);
+  if (!contract) {
+      console.error(Error("payout doesn't have a corresponding contract"));
+      return false
+  }
   return (
     ((contract.p1Name === playerName) && payout.p1Sig)
     ||

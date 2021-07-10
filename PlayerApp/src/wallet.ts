@@ -97,7 +97,7 @@ export const receiveContract = (name: string, password: Secret<string>) => {
                 throw Error(response.message);
             }
             let contract = response.data;
-            console.info("received contract:", contract);
+            console.debug("received contract:", contract);
             if (contractSelectors.selectById(getState(), cxid)) {
                 let action = {id: contract.cxid, changes: {
                     p1Sig: contract.p1Sig,
@@ -125,11 +125,17 @@ export const submitContract = (contract: Contract) => {
     }
 }
 
-export const createPayout = (contract: Contract) => {
-  store.dispatch
+export const deletePayout = (payout: Payout) => {
+    return async (dispatch) => {
+        let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli(`payout delete ${payout.cxid}`));
+        if (response.status === "error") {
+            throw Error(response.message);
+        }
+        return dispatch(payoutSlice.actions.payoutRemoved(payout.cxid))
+    }
 }
 
-export const signPayout = (payout: Payout, password: Secret<string>) => {
+export const signPayout = (payout: Payout, password: Secret<string>, tokenSig?: string) => {
     return async (dispatch, getState) => {
         const selectedPlayerName = getState().selectedPlayerName;
         let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`payout sign ${payout.cxid}`, password.expose_secret()));
