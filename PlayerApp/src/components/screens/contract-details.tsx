@@ -28,16 +28,18 @@ export const ContractDetails = ({ route, navigation }) => {
     <View style={styles.container}>
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'space-around', }}>
         <View style= {{flexDirection: 'row', justifyContent: 'space-between' }}>
-          <View style={{ flex: 1 }}>
+          <View style={{ alignItems: 'center', flex: 1 }}>
             <Text style={{ fontSize: 20 }}>Player One</Text>
             <PlayerPortrait name={playerOne.name} pictureUrl={playerOne.pictureUrl} />
+            <Text>{contract.p1TokenDesc}</Text>
           </View>
-          <View style={{ flex: 1 }}>
+          <View style={{ alignItems: 'center', flex: 1 }}>
             <Text style={{ fontSize: 20 }}>Player Two</Text>
             <PlayerPortrait name={playerTwo.name} pictureUrl={playerTwo.pictureUrl} />
+            <Text>{contract.p2TokenDesc}</Text>
           </View>
         </View>
-        <View style={{ justifyContent: 'center' }}>
+        <View style={{ margin: 10, flex:1 }}>
           <ContractSummary contract={contract} />
         </View>
       </View>

@@ -13,8 +13,8 @@ export interface Contract {
     p2Sig:              boolean,
     arbiterSig:         boolean,
     txid:               string,
-    p1_token_desc:      string,
-    p2_token_desc:      string,
+    p1TokenDesc:        string,
+    p2TokenDesc:        string,
     txStatus:           TxStatus,
 }
 

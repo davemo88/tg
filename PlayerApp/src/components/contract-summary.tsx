@@ -19,8 +19,8 @@ export const ContractSummary = (props) => {
   return(
     <View style={{ flex: 1 }}>
       <View style={{ alignItems: 'flex-start', padding: 2, }}>
-        <Text>Status</Text>
-        <Text style={{ fontSize: 15 }}>{ContractStatus[getContractStatus(props.contract)]}</Text>
+        <Text>{props.contract.desc}</Text>
+        <Text style={{ fontSize: 15 }}>Status: {ContractStatus[getContractStatus(props.contract)]}</Text>
       </View>
       <View style={{ flexDirection: 'row' }}>
         <View style={{ alignItems: 'flex-start', padding: 2 }}>

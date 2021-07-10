@@ -152,8 +152,8 @@ export const newContract = (p1Name: string, p2Name: string, sats: number, event:
             arbiterSig: false,
             desc: contract.desc,
             txid: contract.txid,
-            p1_token_desc: contract.p1_token_desc,
-            p2_token_desc: contract.p2_token_desc,
+            p1TokenDesc: contract.p1TokenDesc,
+            p2TokenDesc: contract.p2TokenDesc,
             txStatus: TxStatus.Unbroadcast,
         }))
     }
