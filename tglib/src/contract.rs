@@ -54,8 +54,11 @@ pub struct Contract {
     pub p1_pubkey:          PublicKey,
     pub p2_pubkey:          PublicKey,
     pub arbiter_pubkey:     PublicKey,
+// TODO: move to ContractRecord
     pub oracle_pubkey:      PublicKey,
+// TODO: remove to TokenRecord
     pub p1_payout_address:  Address,
+// TODO: remove to TokenRecord
     pub p2_payout_address:  Address,
     pub funding_tx:         PartiallySignedTransaction,
     pub payout_script:      TgScript,

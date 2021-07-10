@@ -43,13 +43,15 @@ pub struct ContractRecord {
     pub p2_name:        PlayerName,
     pub hex:            String,
     pub desc:           String,
+    pub oracle_pubkey:  String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TokenRecord {
     pub cxid:           String,
-    pub player:         PlayerName,
     pub token:          String,
+    pub player:         PlayerName,
+    pub address:        String,
     pub desc:           String,
 }
 
