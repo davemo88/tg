@@ -278,6 +278,7 @@ impl DocumentUI<TokenContractRecord> for PlayerWallet {
             p1_name: p1_name.clone(),
             p2_name: p2_name.clone(),
             hex: hex::encode(contract.to_bytes()),
+            oracle_pubkey: event.oracle_pubkey.to_string(),
             desc: event.desc.clone(),
         };
 
@@ -424,9 +425,8 @@ impl DocumentUI<PayoutRecord> for PlayerWallet {
             NewDocumentParams::NewPayoutParams { cxid, p1_amount, p2_amount } => (cxid, p1_amount, p2_amount),
             _ => return Err(Error::Adhoc("invalid params").into()),
         };
-        let contract_record = self.db().get_contract(&cxid).unwrap();
-        let contract = Contract::from_bytes(hex::decode(contract_record.hex).unwrap()).unwrap();
-        let payout = self.create_payout(&contract, p1_amount, p2_amount)?;
+        let tcr = self.db().get_token_contract(&cxid).unwrap();
+        let payout = self.create_payout(&tcr, p1_amount, p2_amount)?;
         let payout_record = PayoutRecord::from(payout);
         let _r = self.db().insert_payout(payout_record.clone());
         Ok(payout_record)

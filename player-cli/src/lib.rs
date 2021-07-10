@@ -1055,7 +1055,7 @@ mod test {
         println!("p1 creates contract");
         let response: JsonResponse<ContractSummary> = serde_json::from_str(&
             cli(format!("contract new {} {} 100000000 --wallet-dir {} '{}' {} {} --json-output", player1, player2, DIR_1, EVENT, player1, player2), conf())).unwrap();
-//        println!("contract new response: {:?}", response);
+        println!("contract new response: {:?}", response);
         let contract_summary = response.data.unwrap();
         let cxid = contract_summary.cxid;
         println!("p1 signs");

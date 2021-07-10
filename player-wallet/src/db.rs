@@ -18,42 +18,6 @@ pub struct PlayerRecord {
     pub name:       PlayerName,
 }
 
-//#[derive(Debug, Clone, Serialize, Deserialize)]
-//pub struct ContractRecord {
-//    pub cxid:           String,
-//    pub p1_name:        PlayerName,
-//    pub p2_name:        PlayerName,
-//    pub hex:            String,
-//    pub desc:           String,
-//}
-//
-//impl From<&EventContract> for ContractRecord {
-//    fn from(event_contract: &EventContract) -> Self {
-//        ContractRecord {
-//            cxid: event_contract.cxid,
-//            p1_name: event_contract.p1_name,
-//            p2_name: event_contract.p2_name,
-//            hex: event_contract.contract_hex,
-//            desc: event_contract.event.desc,
-//        }
-//    }
-//}
-//
-//#[derive(Debug, Clone, Serialize, Deserialize)]
-//pub struct TokenRecord {
-//    pub cxid:           String,
-//    pub player:         PlayerName,
-//    pub token:          String,
-//    pub desc:           String,
-//}
-//
-//#[derive(Clone, Debug, Serialize, Deserialize)]
-//pub struct TokenContractRecord {
-//    pub contract_record: ContractRecord,
-//    pub p1_token: TokenRecord,
-//    pub p2_token: TokenRecord,
-//}
-
 pub struct DB {
     pub conn: Connection,
 }
@@ -77,6 +41,7 @@ impl DB {
                     p1_name         TEXT NOT NULL,
                     p2_name         TEXT NOT NULL,
                     hex             TEXT NOT NULL,
+                    oracle_pubkey   TEXT NOT NULL,
                     desc            TEXT,
                     FOREIGN KEY(p1_name) REFERENCES player(name),
                     FOREIGN KEY(p2_name) REFERENCES player(name)
@@ -89,8 +54,9 @@ impl DB {
                 );
                 CREATE TABLE IF NOT EXISTS token (
                     cxid            TEXT NOT NULL,
-                    player          TEXT NOT NULL,
                     token           TEXT NOT NULL,
+                    player          TEXT NOT NULL,
+                    address         TEXT NOT NULL,
                     desc            TEXT NOT NULL,
                     FOREIGN KEY(cxid) REFERENCES contract(cxid),
                     FOREIGN KEY(player) REFERENCES player(name),
@@ -109,9 +75,9 @@ impl DB {
 
     pub fn insert_contract(&self, contract: ContractRecord) -> Result<usize> {
         self.conn.execute(
-            "INSERT INTO contract (cxid, p1_name, p2_name, hex, desc) VALUES (?1, ?2, ?3, ?4, ?5) 
-            ON CONFLICT (cxid) DO UPDATE SET p1_name=?2, p2_name=?3, hex=?4, desc=?5",
-            params![contract.cxid, contract.p1_name.0, contract.p2_name.0, contract.hex, contract.desc],
+            "INSERT INTO contract (cxid, p1_name, p2_name, hex, oracle_pubkey, desc) VALUES (?1, ?2, ?3, ?4, ?5, ?6) 
+            ON CONFLICT (cxid) DO UPDATE SET p1_name=?2, p2_name=?3, hex=?4, oracle_pubkey=?5, desc=?6",
+            params![contract.cxid, contract.p1_name.0, contract.p2_name.0, contract.hex, contract.oracle_pubkey, contract.desc],
         )
     }
 
@@ -145,7 +111,8 @@ impl DB {
                 p1_name: PlayerName(row.get(1)?),
                 p2_name: PlayerName(row.get(2)?),
                 hex: row.get(3)?,
-                desc: row.get(4)?,
+                oracle_pubkey: row.get(4)?,
+                desc: row.get(5)?,
             })
         })?;
 
@@ -164,7 +131,8 @@ impl DB {
                 p1_name: PlayerName(row.get(1)?),
                 p2_name: PlayerName(row.get(2)?),
                 hex: row.get(3)?,
-                desc: row.get(4)?,
+                oracle_pubkey: row.get(4)?,
+                desc: row.get(5)?,
             })
         }).unwrap();
         if let Some(cr) = contract_iter.next() {
@@ -239,8 +207,8 @@ impl DB {
 
     pub fn insert_token(&self, token_record: TokenRecord) -> Result<usize> {
         self.conn.execute(
-            "INSERT INTO token (cxid, player, token, desc) VALUES (?1, ?2, ?3, ?4) ON CONFLICT DO NOTHING",
-            params![token_record.cxid, token_record.player.0, token_record.token, token_record.desc],
+            "INSERT INTO token (cxid, token, player, address, desc) VALUES (?1, ?2, ?3, ?4, ?5) ON CONFLICT DO NOTHING",
+            params![token_record.cxid, token_record.token, token_record.player.0, token_record.address, token_record.desc],
         )
     }
 
@@ -252,89 +220,64 @@ impl DB {
     }
 
     pub fn get_token_contract(&self, cxid: &str) -> Result<TokenContractRecord> {
-        let mut stmt = self.conn.prepare("
-            SELECT 
-                contract.cxid, 
-                contract.p1_name, 
-                contract.p2_name, 
-                contract.hex, 
-                contract.desc, 
-                p1token.token AS p1_token, 
-                p1token.desc AS p1_token_desc, 
-                p2token.token AS p2_token, 
-                p2token.desc AS p2_token_desc
-            FROM contract
-            JOIN token AS p1token ON contract.cxid = p1token.cxid AND contract.p1_name = p1token.player
-            JOIN token AS p2token ON contract.cxid = p2token.cxid AND contract.p2_name = p2token.player
-            WHERE contract.cxid = ?1")?;
-        stmt.query_row(params![cxid], |row| {
-            Ok(TokenContractRecord {
-                contract_record: ContractRecord {
-                    cxid: row.get("cxid")?, 
-                    p1_name: PlayerName(row.get("p1_name")?),
-                    p2_name: PlayerName(row.get("p2_name")?),
-                    hex: row.get("hex")?,
-                    desc: row.get("desc")?,
-                },
-                p1_token: TokenRecord {
-                    cxid: row.get("cxid")?,
-                    player: PlayerName(row.get("p1_name")?),
-                    token: row.get("p1_token")?,
-                    desc: row.get("p1_token_desc")?,
-                },
-                p2_token: TokenRecord {
-                    cxid: row.get("cxid")?,
-                    player: PlayerName(row.get("p2_name")?),
-                    token: row.get("p2_token")?,
-                    desc: row.get("p2_token_desc")?,
-                },
-            })
-        })
+        let mut stmt = self.conn.prepare(&format!("{} WHERE contract.cxid = ?1", DB::select_token_contract_stmt()))?;
+        stmt.query_row(params![cxid], |row| { DB::tcr_from_row(row) })
     }
 
     pub fn all_token_contracts(&self) -> Result<Vec<TokenContractRecord>> {
-        let mut stmt = self.conn.prepare("
-            SELECT 
+        let mut stmt = self.conn.prepare(&DB::select_token_contract_stmt())?;
+        let records = stmt.query_map(params![], |row| {
+            DB::tcr_from_row(row)
+        })?.collect::<Vec<Result<TokenContractRecord>>>().into_iter().collect();
+        records
+    }
+
+    fn select_token_contract_stmt() -> String {
+        "SELECT 
                 contract.cxid, 
                 contract.p1_name, 
                 contract.p2_name, 
                 contract.hex, 
+                contract.oracle_pubkey, 
                 contract.desc, 
                 p1token.token AS p1_token, 
+                p1token.address AS p1_address, 
                 p1token.desc AS p1_token_desc, 
                 p2token.token AS p2_token, 
+                p2token.address AS p2_address, 
                 p2token.desc AS p2_token_desc
             FROM contract
             JOIN token AS p1token ON contract.cxid = p1token.cxid AND contract.p1_name = p1token.player
-            JOIN token AS p2token ON contract.cxid = p2token.cxid AND contract.p2_name = p2token.player
-            ")?;
-        let records = stmt.query_map(params![], |row| {
-            Ok(TokenContractRecord {
-                contract_record: ContractRecord {
-                    cxid: row.get("cxid")?, 
-                    p1_name: PlayerName(row.get("p1_name")?),
-                    p2_name: PlayerName(row.get("p2_name")?),
-                    hex: row.get("hex")?,
-                    desc: row.get("desc")?,
-                },
-                p1_token: TokenRecord {
-                    cxid: row.get("cxid")?,
-                    player: PlayerName(row.get("p1_name")?),
-                    token: row.get("p1_token")?,
-                    desc: row.get("p1_token_desc")?,
-                },
-                p2_token: TokenRecord {
-                    cxid: row.get("cxid")?,
-                    player: PlayerName(row.get("p2_name")?),
-                    token: row.get("p2_token")?,
-                    desc: row.get("p2_token_desc")?,
-                },
-            })
-        })?.collect::<Vec<Result<TokenContractRecord>>>().into_iter().collect();
-        records
+            JOIN token AS p2token ON contract.cxid = p2token.cxid AND contract.p2_name = p2token.player".to_string()
+    }
+
+    fn tcr_from_row(row: &rusqlite::Row) -> Result<TokenContractRecord> {
+        Ok(TokenContractRecord {
+            contract_record: ContractRecord {
+                cxid: row.get("cxid")?, 
+                p1_name: PlayerName(row.get("p1_name")?),
+                p2_name: PlayerName(row.get("p2_name")?),
+                hex: row.get("hex")?,
+                oracle_pubkey: row.get("oracle_pubkey")?,
+                desc: row.get("desc")?,
+            },
+            p1_token: TokenRecord {
+                cxid: row.get("cxid")?,
+                token: row.get("p1_token")?,
+                player: PlayerName(row.get("p1_name")?),
+                address: row.get("p1_address")?,
+                desc: row.get("p1_token_desc")?,
+            },
+            p2_token: TokenRecord {
+                cxid: row.get("cxid")?,
+                token: row.get("p2_token")?,
+                player: PlayerName(row.get("p2_name")?),
+                address: row.get("p2_address")?,
+                desc: row.get("p2_token_desc")?,
+            },
+        })
     }
 }
-
 
 #[cfg(test)]
 mod test {

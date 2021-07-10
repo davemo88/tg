@@ -183,11 +183,11 @@ pub trait EscrowWallet {
         if !matching_tx {
             return Err(Error::InvalidPayout("invalid payout tx"))
         }
-        let payout_address = payout.address()?;
-        if payout_address != payout.contract.p1_payout_address &&
-           payout_address != payout.contract.p2_payout_address {
-            return Err(Error::InvalidPayout("invalid recipient"))
-        }
+//        let payout_address = payout.address()?;
+//        if payout_address != payout.contract.p1_payout_address &&
+//           payout_address != payout.contract.p2_payout_address {
+//            return Err(Error::InvalidPayout("invalid recipient"))
+//        }
         if payout.psbt.inputs[0].partial_sigs.len() != 1 { //|| 
 // TODO: need to create psbt correctly.  options: 
 //  manually set values following bdk::wallet::Wallet::create_tx

@@ -1,4 +1,4 @@
-use std::str::FromStr;
+//use std::str::FromStr;
 use byteorder::{BigEndian, WriteBytesExt};
 use serde::{Serialize, Deserialize,};
 use bdk::{
@@ -55,11 +55,11 @@ pub struct Contract {
     pub p2_pubkey:          PublicKey,
     pub arbiter_pubkey:     PublicKey,
 // TODO: move to ContractRecord
-    pub oracle_pubkey:      PublicKey,
+//    pub oracle_pubkey:      PublicKey,
 // TODO: remove to TokenRecord
-    pub p1_payout_address:  Address,
+//    pub p1_payout_address:  Address,
 // TODO: remove to TokenRecord
-    pub p2_payout_address:  Address,
+//    pub p2_payout_address:  Address,
     pub funding_tx:         PartiallySignedTransaction,
     pub payout_script:      TgScript,
     pub sigs:               Vec<Signature>, 
@@ -67,15 +67,12 @@ pub struct Contract {
 }
 
 impl Contract {
-    pub fn new(p1_pubkey: PublicKey, p2_pubkey: PublicKey, arbiter_pubkey: PublicKey, oracle_pubkey: PublicKey, p1_payout_address: Address, p2_payout_address: Address, funding_tx: PartiallySignedTransaction, payout_script: TgScript) -> Self {
+    pub fn new(p1_pubkey: PublicKey, p2_pubkey: PublicKey, arbiter_pubkey: PublicKey, funding_tx: PartiallySignedTransaction, payout_script: TgScript) -> Self {
         Contract {
             version: CONTRACT_VERSION,
             p1_pubkey,
             p2_pubkey,
             arbiter_pubkey,
-            oracle_pubkey,
-            p1_payout_address,
-            p2_payout_address,
             funding_tx,
             payout_script,
             sigs: Vec::new(),
@@ -101,16 +98,16 @@ impl Contract {
         v.extend(self.p1_pubkey.to_bytes());
         v.extend(self.p2_pubkey.to_bytes());
         v.extend(self.arbiter_pubkey.to_bytes());
-        v.extend(self.oracle_pubkey.to_bytes());
+//        v.extend(self.oracle_pubkey.to_bytes());
 // 2 payout addresses
-        let p1_address_string = self.p1_payout_address.to_string();
-        let p1_address_bytes = p1_address_string.as_bytes();
-        v.write_u32::<BigEndian>(p1_address_bytes.len() as u32).unwrap();
-        v.extend(p1_address_bytes);
-        let p2_address_string = self.p2_payout_address.to_string();
-        let p2_address_bytes = p2_address_string.as_bytes();
-        v.write_u32::<BigEndian>(p2_address_bytes.len() as u32).unwrap();
-        v.extend(p2_address_bytes);
+//        let p1_address_string = self.p1_payout_address.to_string();
+//        let p1_address_bytes = p1_address_string.as_bytes();
+//        v.write_u32::<BigEndian>(p1_address_bytes.len() as u32).unwrap();
+//        v.extend(p1_address_bytes);
+//        let p2_address_string = self.p2_payout_address.to_string();
+//        let p2_address_bytes = p2_address_string.as_bytes();
+//        v.write_u32::<BigEndian>(p2_address_bytes.len() as u32).unwrap();
+//        v.extend(p2_address_bytes);
 // funding tx length  + bytes
         let funding_tx = consensus::serialize(&self.funding_tx);
         v.write_u32::<BigEndian>(funding_tx.len() as u32).unwrap();
@@ -212,22 +209,23 @@ pub fn contract(input: &[u8]) ->IResult<&[u8], Contract> {
         p1_pubkey, 
         p2_pubkey, 
         arbiter_pubkey, 
-        oracle_pubkey,
-        p1_payout_address,
-        p2_payout_address,
+//        oracle_pubkey,
+//        p1_payout_address,
+//        p2_payout_address,
         funding_tx, 
         payout_script, 
         sigs
-    )) = tuple((version, pubkey, pubkey, pubkey, pubkey, address, address, funding_tx, payout_script, sigs))(input)?; 
+//    )) = tuple((version, pubkey, pubkey, pubkey, pubkey, address, address, funding_tx, payout_script, sigs))(input)?; 
+    )) = tuple((version, pubkey, pubkey, pubkey, funding_tx, payout_script, sigs))(input)?; 
 
     let c = Contract {
         version,
         p1_pubkey,
         p2_pubkey,
         arbiter_pubkey,
-        oracle_pubkey,
-        p1_payout_address,
-        p2_payout_address,
+//        oracle_pubkey,
+//        p1_payout_address,
+//        p2_payout_address,
         funding_tx,
         payout_script,
         sigs,
@@ -246,11 +244,11 @@ fn pubkey(input: &[u8]) -> IResult<&[u8], PublicKey> {
     Ok((input, key))
 }
 
-fn address(input: &[u8]) -> IResult<&[u8], Address> {
-    let (input, b) = length_data(be_u32)(input)?;
-    let address = Address::from_str(&String::from_utf8(b.to_vec()).unwrap()).unwrap();
-    Ok((input, address))
-}
+//fn address(input: &[u8]) -> IResult<&[u8], Address> {
+//    let (input, b) = length_data(be_u32)(input)?;
+//    let address = Address::from_str(&String::from_utf8(b.to_vec()).unwrap()).unwrap();
+//    Ok((input, address))
+//}
 
 fn funding_tx(input: &[u8]) -> IResult<&[u8], PartiallySignedTransaction> {
     let (input, b) = length_data(be_u32)(input)?;

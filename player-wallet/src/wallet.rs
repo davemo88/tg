@@ -6,6 +6,7 @@ use std::{
 use libexchange::{
     ContractRecord,
     TokenRecord,
+    TokenContractRecord,
     PlayerContractInfo,
     Event,
 };
@@ -205,11 +206,15 @@ impl PlayerWallet {
         let p1_pubkey = self.get_escrow_pubkey();
         let escrow_address = create_escrow_address(&p1_pubkey, &p2_contract_info.escrow_pubkey, &arbiter_pubkey, self.network).unwrap();
         let funding_tx = self.create_funding_tx(&p2_contract_info, amount, &escrow_address)?;
-        let p1_payout_address = self.offline_wallet().get_new_address()?;
+        let payout_addresses: std::collections::HashMap<&PlayerName, Address> = 
+            [
+                (p1_name, self.offline_wallet().get_new_address()?),
+                (p2_name, p2_contract_info.payout_address),
+            ].iter().cloned().collect();
         let payout_txs: std::collections::HashMap<&PlayerName, Transaction> = 
             [
-                (p1_name, create_payout_tx(&funding_tx.clone().extract_tx(), &escrow_address, &p1_payout_address).unwrap()),
-                (p2_name, create_payout_tx(&funding_tx.clone().extract_tx(), &escrow_address, &p2_contract_info.payout_address).unwrap()),
+                (p1_name, create_payout_tx(&funding_tx.clone().extract_tx(), &escrow_address, &payout_addresses.get(p1_name).unwrap()).unwrap()),
+                (p2_name, create_payout_tx(&funding_tx.clone().extract_tx(), &escrow_address, &payout_addresses.get(p2_name).unwrap()).unwrap()),
             ].iter().cloned().collect();
 
         let tx_token_pairs: Vec<(tglib::bdk::bitcoin::Txid, Vec<u8>)> = event.outcomes.iter().enumerate().map(|(i, outcome)| {
@@ -222,9 +227,6 @@ impl PlayerWallet {
             p1_pubkey,
             p2_contract_info.escrow_pubkey,
             arbiter_pubkey,
-            event.oracle_pubkey,
-            p1_payout_address,
-            p2_contract_info.payout_address,
             funding_tx,
             tx_token_script,
         );
@@ -236,8 +238,9 @@ impl PlayerWallet {
             
             TokenRecord {
                 cxid: cxid.clone(),
-                player,
                 token: outcome.token.clone(),
+                player: player.clone(),
+                address: payout_addresses.get(&player).unwrap().to_string(),
                 desc: outcome.desc.clone(),
             }
         }).collect();
@@ -268,9 +271,9 @@ impl PlayerWallet {
             p1_pubkey,
             p2_contract_info.escrow_pubkey,
             arbiter_pubkey,
-            oracle_pubkey,
-            p1_payout_address,
-            p2_contract_info.payout_address,
+//            oracle_pubkey,
+//            p1_payout_address,
+//            p2_contract_info.payout_address,
             funding_tx,
             payout_script,
         ))
@@ -369,7 +372,8 @@ impl PlayerWallet {
 
     // TODO: refactor this to take p1_amount instead of payout address
     // and p2 gets the difference between p1_amount and the contract amount
-    pub fn create_payout(&self, contract: &Contract, p1_amount: Amount, p2_amount: Amount) -> Result<Payout> {
+    pub fn create_payout(&self, tcr: &TokenContractRecord, p1_amount: Amount, p2_amount: Amount) -> Result<Payout> {
+        let contract = Contract::from_bytes(tglib::hex::decode(tcr.contract_record.hex.clone()).unwrap()).unwrap();
         let contract_amount = contract.amount()?;
         if p1_amount + p2_amount != contract_amount {
             return Err(Error::Adhoc("payout amounts don't sum to contract amount"));
@@ -394,12 +398,12 @@ impl PlayerWallet {
         let p2_tx_fee: u64 = TX_FEE - p1_tx_fee;
         builder.add_foreign_utxo(OutPoint { vout: escrow_vout as u32, txid: funding_tx.txid()}, psbt_input, 0).unwrap();
         if p1_amount.as_sat() != 0 {
-//            builder.add_recipient(Address::p2wpkh(&contract.p1_pubkey, NETWORK).unwrap().script_pubkey(), p1_amount.as_sat() - p1_tx_fee);
-            builder.add_recipient(contract.p1_payout_address.script_pubkey(), p1_amount.as_sat() - p1_tx_fee);
+//            builder.add_recipient(contract.p1_payout_address.script_pubkey(), p1_amount.as_sat() - p1_tx_fee);
+            builder.add_recipient(Address::from_str(&tcr.p1_token.address).unwrap().script_pubkey(), p1_amount.as_sat() - p1_tx_fee);
         }
         if p2_amount.as_sat() != 0 {
-//            builder.add_recipient(Address::p2wpkh(&contract.p2_pubkey, NETWORK).unwrap().script_pubkey(), p2_amount.as_sat() - p2_tx_fee);
-            builder.add_recipient(contract.p2_payout_address.script_pubkey(), p2_amount.as_sat() - p2_tx_fee);
+//            builder.add_recipient(contract.p2_payout_address.script_pubkey(), p2_amount.as_sat() - p2_tx_fee);
+            builder.add_recipient(Address::from_str(&tcr.p2_token.address).unwrap().script_pubkey(), p2_amount.as_sat() - p2_tx_fee);
         }
         builder.manually_selected_only();
         builder.fee_absolute(TX_FEE);
