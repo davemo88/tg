@@ -53,8 +53,10 @@ export enum ContractStatus {
   Live,
 // payout unsigned
   PayoutUnsigned,
-// payout signed by one player
+// payout signed by us
   PayoutSigned,
+// payout signed by us and token was included
+  PayoutSignedWithToken,
 // opponent submitted signed payout
   PayoutReceived,
 // both players signed payout
@@ -70,6 +72,7 @@ export enum PayoutStatus {
 // the following assume the payout tx has not been mined
   Unsigned,
   WeSigned,
+  WeSignedWithToken,
   TheySigned,
 // 2/3 sigs provided
 // the payout only requires 2/3 sigs instead of 3/3 like the contract

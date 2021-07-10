@@ -162,6 +162,20 @@ export const sendPayout = async (payout: Payout) => {
     return Promise.resolve(null)
 }
 
+export const submitPayout = (payout: Payout) => {
+    return async (dispatch) => {
+        let cli_output = await PlayerWalletModule.call_cli(`payout submit ${payout.cxid}`);
+        let response: JsonResponse = JSON.parse(cli_output);
+        if (response.status === "error") {
+            throw Error(response.message);
+        }
+        return dispatch(payoutSlice.actions.payoutUpdated({
+            id: payout.cxid, changes: { arbiterSig: true }
+        }))
+    }
+}
+
+
 export const receivePayout = (name: string, password: Secret<string>) => {
     return async (dispatch, getState) => {
         let cli_output = await PlayerWalletModule.call_cli_with_password(`payout receive ${name}`, password.expose_secret());

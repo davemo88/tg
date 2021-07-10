@@ -32,6 +32,8 @@ export const getContractStatus = (contract: Contract ): ContractStatus => {
             return ContractStatus.PayoutUnsigned
           case PayoutStatus.WeSigned:
             return ContractStatus.PayoutSigned
+          case PayoutStatus.WeSignedWithToken:
+            return ContractStatus.PayoutSignedWithToken
           case PayoutStatus.TheySigned:
             return ContractStatus.PayoutReceived
           case PayoutStatus.Certified:
@@ -82,7 +84,11 @@ export const getPayoutStatus = (payout: Payout ): PayoutStatus => {
       return PayoutStatus.Certified;
     }
     else if (isPayoutSignedBy(payout, selectedPlayerName)) {
-      return PayoutStatus.WeSigned; 
+      if (payout.scriptSig) {
+        return PayoutStatus.WeSignedWithToken; 
+      } else {
+        return PayoutStatus.WeSigned; 
+      }
     }
     else if (contract && isPayoutSignedBy(payout, getOtherPlayerName(selectedPlayerName, contract))) {
       return PayoutStatus.TheySigned; 

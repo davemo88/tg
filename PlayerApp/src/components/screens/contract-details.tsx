@@ -1,12 +1,13 @@
 import React from 'react';
+import { useDispatch } from 'react-redux';
 import { Text, Button, View, } from 'react-native';
 
 import { styles } from '../../styles';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, } from '../../redux';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, selectedPlayerNameSlice, } from '../../redux';
 import { Player, Contract } from '../../datatypes'
 import { dismissContract } from '../../mock';
-import { sendContract } from '../../wallet';
+import { sendContract, deletePayout } from '../../wallet';
 
 import { ContractSummary } from '../contract-summary';
 import { ContractAction } from '../contract-action';
@@ -15,8 +16,10 @@ import { Arbiter } from '../arbiter';
 import { Currency } from '../currency';
 
 export const ContractDetails = ({ route, navigation }) => {
+  const dispatch = useDispatch();
   const { cxid } = route.params;
   const contract = contractSelectors.selectById(store.getState(), cxid);
+  const payout = payoutSelectors.selectById(store.getState(), cxid);
   const playerOne = playerSelectors.selectById(store.getState(), contract.p1Name);
   const playerTwo = playerSelectors.selectById(store.getState(), contract.p2Name);
   const [sending, setSending] = React.useState(false);
@@ -55,6 +58,15 @@ export const ContractDetails = ({ route, navigation }) => {
           />
           </View>
         <View style={{ flex: 1, justifyContent: 'center', }}>
+          { payout &&
+            <Button 
+              title="Dismiss Payout" 
+              onPress={() => {
+                dispatch(deletePayout(payout));
+                navigation.reset({ index:0, routes: [{ name: 'Home', },] });
+              } }
+            />
+          }
           <Button 
             title="Dismiss Contract" 
             onPress={() => {

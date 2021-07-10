@@ -6,7 +6,7 @@ import { styles } from '../styles';
 
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, payoutSlice, selectedPlayerNameSlice, updateContractTxStatus, updatePayoutTxStatus } from '../redux';
 import { Player, Contract, ContractStatus, TxStatus, } from '../datatypes';
-import { receiveContract, sendContract, signContract, submitContract, sendPayout, signPayout, broadcastFundingTx, broadcastPayoutTx } from '../wallet';
+import { receiveContract, sendContract, signContract, submitContract, sendPayout, signPayout, submitPayout, broadcastFundingTx, broadcastPayoutTx } from '../wallet';
 import { getContractStatus } from '../dump';
 import { declineContract, dismissContract, denyPayout, } from '../mock';
 
@@ -31,6 +31,7 @@ export const ContractAction = (props) => {
           [ContractStatus.Live]: <ActionLive navigation={props.navigation} contract={props.contract} />,
           [ContractStatus.PayoutUnsigned]: <ActionPayoutUnsigned navigation={props.navigation} contract={props.contract} />,
           [ContractStatus.PayoutSigned]: <ActionPayoutSigned navigation={props.navigation} contract={props.contract} />,
+          [ContractStatus.PayoutSignedWithToken]: <ActionPayoutSignedWithToken navigation={props.navigation} contract={props.contract} />,
           [ContractStatus.PayoutReceived]: <ActionPayoutReceived navigation={props.navigation} contract={props.contract} />,
           [ContractStatus.PayoutCertified]: <ActionPayoutCertified navigation={props.navigation} contract={props.contract} />,
           [ContractStatus.PayoutTxBroadcast]: <ActionPayoutTxBroadcast navigation={props.navigation} contract={props.contract} />,
@@ -214,6 +215,28 @@ const ActionPayoutSigned = (props) => {
                 .then(() => resetDetails(props.navigation, props.contract.cxid))
                 .catch(error => console.error(error))
                 .finally(() => setSending(false));
+            } }
+          />
+      </View>
+    )
+}
+
+const ActionPayoutSignedWithToken = (props) => {
+    const [submitting, setSubmitting] = React.useState(false);
+    const payout = payoutSelectors.selectById(store.getState(), props.contract.cxid);
+    return (
+      <View>
+          <Text>Submit Payout to Arbiter</Text>
+          <Button 
+            title="Submit Payout" 
+            onPress={() => {
+              if (payout) {
+                setSubmitting(true);
+                submitPayout(payout)
+                  .then(() => resetDetails(props.navigation, props.contract.cxid))
+                  .catch(error => console.error(error))
+                  .finally(() => setSending(false));
+              }
             } }
           />
       </View>

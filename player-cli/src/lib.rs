@@ -658,8 +658,16 @@ pub fn contract_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Pla
                 }
             }
             "delete" => match DocumentUI::<TokenContractRecord>::delete(wallet, a.value_of("cxid").unwrap()) {
-                Ok(()) => "contract deleted".to_string(),
-                Err(e) => format!("{}", e),
+                Ok(()) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
+                } else {
+                    "contract deleted".to_string()
+                }
+                Err(e) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
+                } else {
+                    format!("{:?}", e)
+                }
             }
             "list" => if a.is_present("json-output") {
                 let cs: Vec<ContractSummary> = DocumentUI::<TokenContractRecord>::list(wallet).iter().map(|cr| cr.into()).collect();
@@ -907,8 +915,16 @@ pub fn payout_subcommand(subcommand: (&str, Option<&ArgMatches>), wallet: &Playe
                 }
             }
             "delete" => match DocumentUI::<PayoutRecord>::delete(wallet, a.value_of("cxid").unwrap()) {
-                Ok(()) => "payout deleted".to_string(),
-                Err(e) => format!("{}", e),
+                Ok(()) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::success(None)).unwrap()
+                } else {
+                    "payout deleted".to_string()
+                }
+                Err(e) => if a.is_present("json-output") {
+                    serde_json::to_string(&JsonResponse::<String>::error(e.to_string(), None)).unwrap()
+                } else {
+                    format!("{:?}", e)
+                }
             }
             "list" => if a.is_present("json-output") {
                 let ps: Vec<PayoutSummary> = DocumentUI::<PayoutRecord>::list(wallet).iter().filter_map(|pr| PayoutSummary::get(&wallet, pr)).collect();
