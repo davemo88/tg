@@ -236,8 +236,6 @@ impl PlayerUI for PlayerWallet {
 
 impl DocumentUI<TokenContractRecord> for PlayerWallet {
     fn new(&self, params: NewDocumentParams) -> Result<TokenContractRecord> {
-
-        println!("params: {:?}", params);
         let (p1_name, p2_name, amount, event, event_payouts) = match params {
             NewDocumentParams::NewContractParams { p1_name, p2_name, amount, event, event_payouts } => (p1_name, p2_name, amount, event, event_payouts),
             _ => return Err(Error::Adhoc("invalid params").into()),

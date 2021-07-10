@@ -1026,7 +1026,6 @@ mod test {
     }
 
     fn sign_token(token: &str) -> String {
-        println!("payout_txid {}", token);
         use tglib::bdk::bitcoin::secp256k1;
         let secp = secp256k1::Secp256k1::new();
         let key = tglib::bdk::bitcoin::PrivateKey::from_wif(tglib::mock::REFEREE_PRIVKEY).unwrap();
@@ -1055,7 +1054,7 @@ mod test {
         println!("p1 creates contract");
         let response: JsonResponse<ContractSummary> = serde_json::from_str(&
             cli(format!("contract new {} {} 100000000 --wallet-dir {} '{}' {} {} --json-output", player1, player2, DIR_1, EVENT, player1, player2), conf())).unwrap();
-        println!("contract new response: {:?}", response);
+//        println!("contract new response: {:?}", response);
         let contract_summary = response.data.unwrap();
         let cxid = contract_summary.cxid;
         println!("p1 signs");
@@ -1106,10 +1105,10 @@ mod test {
 
         println!("p1 creates payout");
         cli(format!("payout new {} --wallet-dir {} 50000000 50000000", cxid, DIR_1), conf());
-        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
+//        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
         println!("p1 signs");
         cli(format!("payout sign {} --wallet-dir {} --password {}", cxid, DIR_1, PW), conf());
-        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
+//        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
         println!("p1 sends");
         cli(format!("payout send {} --wallet-dir {}", cxid, DIR_1), conf());
 
@@ -1117,13 +1116,13 @@ mod test {
         cli(format!("payout receive {} --wallet-dir {} --password {}", p2, DIR_2, PW), conf());
         println!("p2 signs");
         cli(format!("payout sign {} --wallet-dir {} --password {}", cxid, DIR_2, PW), conf());
-        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_2), conf()));
+//        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_2), conf()));
         println!("p2 broadcasts payout tx");
         println!("{}", cli(format!("payout broadcast {} --wallet-dir {}", cxid, DIR_2), conf()));
 
         let response: JsonResponse<tglib::bdk::bitcoin::util::psbt::PartiallySignedTransaction> = serde_json::from_str(&
             cli(format!("payout details {} --wallet-dir {} --json-output", cxid, DIR_2), conf())).unwrap();
-        println!("payout details response: {:?}", response);
+//        println!("payout details response: {:?}", response);
         let psbt = response.data.unwrap();
         let payout_txid = psbt.extract_tx().txid().to_string();
 
@@ -1144,9 +1143,9 @@ mod test {
 //        let payout_psbt = response.data.unwrap();
         let payout_script_sig = sign_token(&event.outcomes[0].token);
         cli(format!("payout sign {} {} --wallet-dir {} --password {}", cxid, payout_script_sig, DIR_1, PW), conf());
-        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
+//        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
         cli(format!("payout submit {} --wallet-dir {}", cxid, DIR_1), conf());
-        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
+//        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
         cli(format!("payout broadcast {} --wallet-dir {}", cxid, DIR_1), conf());
 
         let response: JsonResponse<tglib::bdk::bitcoin::util::psbt::PartiallySignedTransaction> = serde_json::from_str(&
@@ -1171,9 +1170,9 @@ mod test {
 //        let payout_psbt = response.data.unwrap();
         let payout_script_sig = sign_token(&event.outcomes[1].token);
         cli(format!("payout sign {} {} --wallet-dir {} --password {}", cxid, payout_script_sig, DIR_2, PW), conf());
-        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_2), conf()));
+ //       println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_2), conf()));
         cli(format!("payout submit {} --wallet-dir {}", cxid, DIR_2), conf());
-        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_2), conf()));
+//        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_2), conf()));
         cli(format!("payout broadcast {} --wallet-dir {}", cxid, DIR_2), conf());
 
         let response: JsonResponse<tglib::bdk::bitcoin::util::psbt::PartiallySignedTransaction> = serde_json::from_str(&
