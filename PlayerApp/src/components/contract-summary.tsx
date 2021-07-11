@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Text, View, } from 'react-native';
 import { useSelector, } from 'react-redux';
 
@@ -16,12 +16,17 @@ export const ContractSummary = (props) => {
   const selectedPlayer: Player = useSelector((state) => playerSelectors.selectById(state, state.selectedPlayerName));
   const playerOne = useSelector((state) => playerSelectors.selectById(state, props.contract.p1Name));
   const playerTwo = useSelector((state) => playerSelectors.selectById(state, props.contract.p2Name));
+  const [contractStatus, setContractStatus] = useState<string|null>(null);
+
+  useEffect(() => {
+      setContractStatus(ContractStatus[getContractStatus(props.contract)]);
+  });
 
   return(
     <View style={{ flex: 1 }}>
       <View style={{ alignItems: 'flex-start', padding: 2, }}>
         <Text>{props.contract.desc}</Text>
-        <Text style={{ fontSize: 15 }}>Status: {ContractStatus[getContractStatus(props.contract)]}</Text>
+        <Text style={{ fontSize: 15 }}>Status: {contractStatus}</Text>
       </View>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <View style={{ flex: 1, padding: 2 }}>
