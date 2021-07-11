@@ -1,5 +1,5 @@
 import React from 'react';
-import { useStore, useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
 import { styles } from '../styles';
@@ -11,7 +11,7 @@ import { PasswordEntry } from './password-entry';
 export const CheckMail = (props) => {
     const [checking, setChecking] = React.useState(false);
     const [password, setPassword] = React.useState(new Secret(""));
-    const selectedPlayerName = useStore().getState().selectedPlayerName;
+    const selectedPlayerName = useSelector((state) => state.selectedPlayerName);
     const dispatch = useDispatch();
 
     return(

@@ -3,8 +3,8 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 
 import { styles } from '../../styles';
 
-import { useDispatch, useStore, useSelector } from 'react-redux';
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, } from '../../redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, } from '../../redux';
 import { Player, Contract } from '../../datatypes';
 import { NETWORK, TITLE_IMAGE_SOURCE, TEST_IMAGE_SOURCE, LIVE_IMAGE_SOURCE, } from '../../mock';
 
@@ -19,7 +19,6 @@ import { PlayerSelector } from '../player-selector';
 // this is mostly a problem on regtest since names only live for 30 blocks 
 export const PlayerSelect = ({ navigation }) => {
     const dispatch = useDispatch();
-    const store = useStore();
     let players = useSelector(playerSelectors.selectAll);
     players = players.filter(p => p.mine);
     const [selectedPlayerName, setSelectedPlayerName] = React.useState(players.length > 0 ? players[0].name : null)
