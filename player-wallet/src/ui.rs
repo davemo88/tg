@@ -6,6 +6,7 @@ use libexchange::{
     ExchangeService,
     PlayerContractInfo,
     TokenContractRecord,
+    PayoutRecord,
 };
 use tglib::{
     bdk::{
@@ -34,10 +35,7 @@ use tglib::{
     secrecy::Secret,
     arbiter::ArbiterService,
     contract::Contract,
-    payout::{
-        Payout,
-        PayoutRecord,
-    },
+    payout::Payout,
     player::{
         PlayerName,
         PlayerNameService,

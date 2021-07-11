@@ -16,10 +16,7 @@ use tglib::{
     },
     hex,
     secrecy::Secret,
-    contract::{
-        Contract,
-    },
-    payout::PayoutRecord,
+    contract::Contract,
     player::PlayerName,
     wallet::{
         TX_FEE,
@@ -35,6 +32,7 @@ use tglib::{
 use libexchange::{
     ExchangeService,
     TokenContractRecord,
+    PayoutRecord,
 };
 use player_wallet::{
     ui::{

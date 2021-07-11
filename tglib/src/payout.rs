@@ -141,27 +141,6 @@ fn payout_psbt(input: &[u8]) ->IResult<&[u8], PartiallySignedTransaction> {
     Ok((input, psbt))
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PayoutRecord {
-    pub cxid:           String,
-    pub psbt:           String,
-    pub sig:            String,
-}
-
-impl From<Payout> for PayoutRecord {
-    fn from(p: Payout) -> PayoutRecord {
-        let sig = match p.script_sig {
-           Some(sig) => hex::encode(sig.serialize_der().to_vec()),
-           None => "".to_string(),
-        };
-        PayoutRecord {
-            cxid: hex::encode(p.contract.cxid()),
-            psbt: hex::encode(consensus::serialize(&p.psbt)),
-            sig,
-        }
-    }
-}
-
 pub enum PayoutState {
     Unsigned,
     PlayerSigned,

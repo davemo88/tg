@@ -6,6 +6,7 @@ use serde::{
 use tglib::{
     bdk::bitcoin::{
         blockdata::transaction::OutPoint,
+        consensus,
         hashes::{
             Hash as BitcoinHash,
             HashEngine,
@@ -17,8 +18,9 @@ use tglib::{
         Address,
         PublicKey,
     },
+    hex,
     player::PlayerName,
-    payout::PayoutRecord,
+    payout::Payout,
 };
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -60,6 +62,27 @@ pub struct TokenContractRecord {
     pub contract_record: ContractRecord,
     pub p1_token: TokenRecord,
     pub p2_token: TokenRecord,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PayoutRecord {
+    pub cxid:           String,
+    pub psbt:           String,
+    pub sig:            String,
+}
+
+impl From<Payout> for PayoutRecord {
+    fn from(p: Payout) -> PayoutRecord {
+        let sig = match p.script_sig {
+           Some(sig) => hex::encode(sig.serialize_der().to_vec()),
+           None => "".to_string(),
+        };
+        PayoutRecord {
+            cxid: hex::encode(p.contract.cxid()),
+            psbt: hex::encode(consensus::serialize(&p.psbt)),
+            sig,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

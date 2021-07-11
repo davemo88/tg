@@ -7,11 +7,9 @@ use libexchange::{
     ContractRecord,
     TokenRecord,
     TokenContractRecord,
+    PayoutRecord,
 };
-use tglib::{
-    player::PlayerName,
-    payout::PayoutRecord,
-};
+use tglib::player::PlayerName;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayerRecord {

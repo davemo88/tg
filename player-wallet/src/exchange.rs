@@ -6,6 +6,7 @@ use libexchange::{
     SendPayoutBody,
     SetContractInfoBody,
     TokenContractRecord,
+    PayoutRecord,
 };
 use tglib::{
     hex,
@@ -13,7 +14,6 @@ use tglib::{
         PublicKey,
         secp256k1::Signature,
     },
-    payout::PayoutRecord,
     player::PlayerName,
 };
 
