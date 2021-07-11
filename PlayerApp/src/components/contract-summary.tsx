@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text, View, } from 'react-native';
+import { useSelector, } from 'react-redux';
 
 import { styles } from '../styles';
 
@@ -12,9 +13,9 @@ import { SigPortrait } from './sig-portrait';
 import { ARBITER_NAME, ARBITER_PICTURE_URL } from './arbiter';
 
 export const ContractSummary = (props) => {
-  const selectedPlayer: Player = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerName);
-  const playerOne = playerSelectors.selectById(store.getState(), props.contract.p1Name);
-  const playerTwo = playerSelectors.selectById(store.getState(), props.contract.p2Name);
+  const selectedPlayer: Player = useSelector((state) => playerSelectors.selectById(state, state.selectedPlayerName));
+  const playerOne = useSelector((state) => playerSelectors.selectById(state, props.contract.p1Name));
+  const playerTwo = useSelector((state) => playerSelectors.selectById(state, props.contract.p2Name));
 
   return(
     <View style={{ flex: 1 }}>

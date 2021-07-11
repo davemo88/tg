@@ -1,4 +1,5 @@
 import React from 'react';
+import { useSelector, } from 'react-redux';
 import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } from 'react-native';
 
 import { getOtherPlayerName, } from '../dump';
@@ -12,8 +13,8 @@ import { PlayerPortrait } from './player-portrait';
 import { ContractSummary } from './contract-summary';
 
 export const ContractListItem = (props) => {
-  const selectedPlayer: Player = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerName);
-  const otherPlayer = playerSelectors.selectById(store.getState(), getOtherPlayerName(selectedPlayer.name, props.contract));
+  const selectedPlayer: Player = useSelector((state) => playerSelectors.selectById(state, state.selectedPlayerName));
+  const otherPlayer = useSelector((state) => playerSelectors.selectById(state, getOtherPlayerName(selectedPlayer.name, props.contract)));
 
   return (
     <View style={{ flexDirection: 'row', backgroundColor: 'slategrey', margin: 2, padding: 2 }}>
