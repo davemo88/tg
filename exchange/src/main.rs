@@ -127,6 +127,7 @@ async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redi
 }
 
 async fn get_contract_info_handler(player_name: String, redis_client: redis::Client) -> WebResult<impl Reply> {
+    debug!("get player info for {}", String::from_utf8(hex::decode(&player_name).unwrap()).unwrap());
     let mut con = redis_client.get_async_connection().await.unwrap();
     let r: RedisResult<String> = con.get(format!("{}/info", &String::from_utf8(hex::decode(player_name).unwrap()).unwrap())).await;
     match r {
@@ -221,10 +222,16 @@ async fn auth_token_handler(player_name: String, redis_client: redis::Client) ->
 async fn remove_stale_contract_info() -> Result<()> {
 //TODO: try using script pubkey subscription instead
     let redis_client = redis_client();
-    let electrum_client = Client::new(ELECTRS_SERVER)?;
     let mut con = redis_client.get_async_connection().await.unwrap();
     loop {
         sleep(Duration::from_secs(10)).await;
+        let electrum_client = match Client::new(ELECTRS_SERVER) {
+            Ok(client) => client,
+            Err(e) => {
+                error!("couldn't create electrum client: {:?}",e);
+                continue
+            }
+        };
         let info_keys: Vec<String>  = con.keys("*/info").await?;
         for key in info_keys {
             let info: String = con.get(&key).await?;

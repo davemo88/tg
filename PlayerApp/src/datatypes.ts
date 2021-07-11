@@ -25,7 +25,7 @@ export interface Payout {
   p1Sig:            boolean,
   p2Sig:            boolean,
   arbiterSig:       boolean,
-  scriptSig:        string,
+  scriptSig:        string | null,
   txid:             string,
   txStatus:         TxStatus,
 }

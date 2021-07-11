@@ -18,9 +18,9 @@ import { ContractListItem } from '../contract-list-item';
 
 export const Home = ({ navigation }) => {
     const dispatch = useDispatch();
-//    const state = store.getState();
-    const selectedPlayer = playerSelectors.selectById(store.getState(), store.getState().selectedPlayerName);
-    const [balance, setBalance] = useState(store.getState().balance);
+    const selectedPlayerName = useSelector((state) => state.selectedPlayerName);
+    const selectedPlayer = useSelector((state) => playerSelectors.selectById(state, selectedPlayerName));
+    const balance = useSelector((state) => state.balance);
     const [posted, setPosted] = useState(store.getState().posted);
     const [showResolved, setShowResolved] = useState(false);
 // should use effect for this

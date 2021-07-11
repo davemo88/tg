@@ -9,7 +9,6 @@ import { Secret } from '../../secret';
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, payoutSlice, newPayout, } from '../../redux';
 import { Player, Contract, Payout } from '../../datatypes';
 
-import { Arbiter } from '../arbiter';
 import { Currency } from '../currency';
 import { PlayerPortrait } from '../player-portrait';
 
@@ -23,13 +22,10 @@ export const NewPayout = ({ route, navigation }) => {
   const selectedPlayerName = store.getState().selectedPlayerName;
   const [p1Amount, setPlayerOnePayout] = React.useState(contract.amount);
   const [p2Amount, setPlayerTwoPayout] = React.useState(0);
-  const [isArbitratedPayout, setIsArbitratedPayout] = React.useState(false);
-  const toggleArbitration = () => setIsArbitratedPayout(previousState => !previousState);
-  const [arbitrationToken, setArbitrationToken] = React.useState('');
   const [creatingPayout, setCreatingPayout] = useState(false);
 
   const valid = () => {
-    return (!creatingPayout && (!isArbitratedPayout || (arbitrationToken != '')))
+    return !creatingPayout
   }
 
   return (
@@ -64,27 +60,6 @@ export const NewPayout = ({ route, navigation }) => {
           />
         </View>
       </View>
-      <View style={{ padding: 5, alignItems: 'center' }}>
-        <Text>Arbitrated Payout</Text>
-        <Switch 
-          onValueChange={toggleArbitration}
-          value={isArbitratedPayout}
-        />
-      </View>
-      { isArbitratedPayout && 
-        <View style={{ alignItems: 'center' }}>
-          <Text style={{ padding: 2 }}>Arbiter</Text>
-          <View>
-            <Arbiter />
-          </View>
-          <Text style={{ padding: 2 }}>Paste Signed Token</Text>
-          <TextInput
-            value={arbitrationToken}
-            onChangeText={text => setArbitrationToken(text)}
-            style={{ borderWidth: 1, margin: 10, padding: 4, width: 120 }}
-          />
-        </View>
-      }
       <View style={{ flexDirection: 'row' }}>
         <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
           <Button 

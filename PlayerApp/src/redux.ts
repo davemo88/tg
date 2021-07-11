@@ -216,7 +216,7 @@ export const newPayout = (cxid: string, p1Amount: number, p2Amount: number) => {
             p1Sig: false,
             p2Sig: false,
             arbiterSig: false,
-            scriptSig: payout.scriptSig,
+            scriptSig: null,
             txid: payout.txid,
             txStatus: TxStatus.Unbroadcast,
         }))

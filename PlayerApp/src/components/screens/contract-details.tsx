@@ -1,5 +1,5 @@
 import React from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Text, Button, View, } from 'react-native';
 
 import { styles } from '../../styles';
@@ -18,15 +18,15 @@ import { Currency } from '../currency';
 export const ContractDetails = ({ route, navigation }) => {
   const dispatch = useDispatch();
   const { cxid } = route.params;
-  const contract = contractSelectors.selectById(store.getState(), cxid);
-  const payout = payoutSelectors.selectById(store.getState(), cxid);
-  const playerOne = playerSelectors.selectById(store.getState(), contract.p1Name);
-  const playerTwo = playerSelectors.selectById(store.getState(), contract.p2Name);
+  const contract = useSelector((state) => contractSelectors.selectById(state, cxid));
+  const payout = useSelector((state) => payoutSelectors.selectById(state, cxid));
+  const playerOne = useSelector((state) => playerSelectors.selectById(state, contract.p1Name));
+  const playerTwo = useSelector((state) => playerSelectors.selectById(state, contract.p2Name));
   const [sending, setSending] = React.useState(false);
 
   return (
     <View style={styles.container}>
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'space-around', }}>
+      <View style={{ flex: 1, alignItems: 'center' }}>
         <View style= {{flexDirection: 'row', justifyContent: 'space-between' }}>
           <View style={{ alignItems: 'center', flex: 1 }}>
             <Text style={{ fontSize: 20 }}>Player One</Text>
@@ -39,43 +39,49 @@ export const ContractDetails = ({ route, navigation }) => {
             <Text>{contract.p2TokenDesc}</Text>
           </View>
         </View>
-        <View style={{ margin: 10, flex:1 }}>
+        <View style={{ margin: 10 }}>
           <ContractSummary contract={contract} />
         </View>
       </View>
-      <View style={{ flex: 1 }}>
-        <View style={{ flex: 3, }}>
+      <View style={{ flex: 1.5 }}>
+        <View style={{ flex: 3 }}>
           <ContractAction contract={contract} navigation={navigation} />
         </View>
-        <View style={{ margin: 10 }}>
-          <Button 
-            title="Send Contract" 
-            disabled={sending}
-            onPress={() => {
-              setSending(true);
-              sendContract(contract)
-                .catch(error => console.error(error))
-                .finally(() => setSending(false));
-            } }
-          />
-          </View>
-        <View style={{ flex: 1, justifyContent: 'center', }}>
-          { payout &&
+        <View style={{ flex: 1, alignItems: 'center', }}>
+          <View style={{ margin: 3}}>
             <Button 
-              title="Dismiss Payout" 
+              title="Send Contract" 
+              disabled={sending}
               onPress={() => {
-                dispatch(deletePayout(payout));
-                navigation.reset({ index:0, routes: [{ name: 'Home', },] });
+                setSending(true);
+                sendContract(contract)
+                  .catch(error => console.error(error))
+                  .finally(() => setSending(false));
               } }
             />
-          }
-          <Button 
-            title="Dismiss Contract" 
-            onPress={() => {
-              dismissContract(contract.cxid);
-              navigation.reset({ index:0, routes: [{ name: 'Home', },] });
-            } }
-          />
+          </View>
+          <View style={{ flexDirection: "row"}}>
+            <View style={{ margin: 3}}>
+            { payout &&
+              <Button 
+                title="Dismiss Payout" 
+                onPress={() => {
+                  dispatch(deletePayout(payout));
+                  navigation.reset({ index:0, routes: [{ name: 'Home', }, { name: 'Contract Details', params: {cxid: cxid} }] });
+                } }
+              />
+            }
+            </View>
+            <View style={{ margin: 3}}>
+                <Button 
+                  title="Dismiss Contract" 
+                  onPress={() => {
+                    dismissContract(contract.cxid);
+                    navigation.reset({ index:0, routes: [{ name: 'Home', },] });
+                  } }
+                />
+            </View>
+          </View>
         </View>
       </View>
     </View>

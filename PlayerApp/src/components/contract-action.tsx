@@ -4,12 +4,13 @@ import { Switch, FlatList, Image, Button, StyleSheet, Text, TextInput, View, } f
 
 import { styles } from '../styles';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, payoutSlice, selectedPlayerNameSlice, updateContractTxStatus, updatePayoutTxStatus } from '../redux';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, payoutSlice, selectedPlayerNameSlice, updateContractTxStatus, updatePayoutTxStatus, getBalance } from '../redux';
 import { Player, Contract, ContractStatus, TxStatus, } from '../datatypes';
 import { receiveContract, sendContract, signContract, submitContract, sendPayout, signPayout, submitPayout, broadcastFundingTx, broadcastPayoutTx } from '../wallet';
 import { getContractStatus } from '../dump';
 import { declineContract, dismissContract, denyPayout, } from '../mock';
 
+import { Arbiter } from './arbiter';
 import { Secret } from '../secret';
 import { Currency } from './currency';
 import { PlayerPortrait } from './player-portrait';
@@ -140,6 +141,7 @@ const ActionFundingTxBroadcast = (props) => {
   useEffect(() => {
       if (props.contract.txStatus == TxStatus.Broadcast) {
           dispatch(updateContractTxStatus(props.contract))
+              .then(() => dispatch(getBalance())) 
               .then(() => resetDetails(props.navigation, props.contract.cxid))
               .catch(error => console.error(error));
       }
@@ -165,7 +167,7 @@ const ActionLive = (props) => {
   return (
     <View>
       <Button 
-        title="New Payout" 
+        title="Payout" 
         onPress={() => props.navigation.push('New Payout', { cxid: props.contract.cxid }) }
       />
     </View>
@@ -176,10 +178,30 @@ const ActionPayoutUnsigned = (props) => {
     let dispatch = useDispatch();
     let [signing, setSigning] = React.useState(false);
     const [password, setPassword] = React.useState(new Secret(""));
+    const [isArbitratedPayout, setIsArbitratedPayout] = React.useState(false);
+    const toggleArbitration = () => setIsArbitratedPayout(previousState => !previousState);
+    const [arbitrationToken, setArbitrationToken] = React.useState<string|null>(null);
 
     return (
       <View>
         <PasswordEntry password={password} setPassword={setPassword} />
+        <View style={{ padding: 5, alignItems: 'center' }}>
+          <Text>Arbitrated Payout</Text>
+          <Switch 
+            onValueChange={toggleArbitration}
+            value={isArbitratedPayout}
+          />
+        </View>
+        { isArbitratedPayout && 
+          <View style={{ alignItems: 'center' }}>
+            <Text style={{ padding: 2 }}>Paste Signed Token</Text>
+            <TextInput
+              value={arbitrationToken || ''}
+              onChangeText={text => setArbitrationToken(text)}
+              style={{ borderWidth: 1, margin: 10, padding: 4, width: 120 }}
+            />
+          </View>
+        }
         <Button 
           title="Sign Payout" 
           onPress={() => {
