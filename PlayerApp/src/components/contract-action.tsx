@@ -180,7 +180,9 @@ const ActionPayoutUnsigned = (props) => {
     const [password, setPassword] = React.useState(new Secret(""));
     const [isArbitratedPayout, setIsArbitratedPayout] = React.useState(false);
     const toggleArbitration = () => setIsArbitratedPayout(previousState => !previousState);
-    const [arbitrationToken, setArbitrationToken] = React.useState<string|null>(null);
+    const [tokenSig, setTokenSig] = React.useState<string|undefined>(undefined);
+    const payout = useSelector((state) => payoutSelectors.selectById(state, props.contract.cxid));
+    console.debug("payout:", payout);
 
     return (
       <View>
@@ -196,8 +198,8 @@ const ActionPayoutUnsigned = (props) => {
           <View style={{ alignItems: 'center' }}>
             <Text style={{ padding: 2 }}>Paste Signed Token</Text>
             <TextInput
-              value={arbitrationToken || ''}
-              onChangeText={text => setArbitrationToken(text)}
+              value={tokenSig || ''}
+              onChangeText={text => setTokenSig(text)}
               style={{ borderWidth: 1, margin: 10, padding: 4, width: 120 }}
             />
           </View>
@@ -206,7 +208,7 @@ const ActionPayoutUnsigned = (props) => {
           title="Sign Payout" 
           onPress={() => {
             setSigning(true);
-            dispatch(signPayout(props.contract, password))
+            dispatch(signPayout(props.contract, password, tokenSig))
               .then(() => resetDetails(props.navigation, props.contract.cxid))
               .catch(error => console.error(error))
               .finally(() => setSigning(false));
@@ -244,6 +246,7 @@ const ActionPayoutSigned = (props) => {
 }
 
 const ActionPayoutSignedWithToken = (props) => {
+    const dispatch = useDispatch();
     const [submitting, setSubmitting] = React.useState(false);
     const payout = payoutSelectors.selectById(store.getState(), props.contract.cxid);
     return (
@@ -254,10 +257,10 @@ const ActionPayoutSignedWithToken = (props) => {
             onPress={() => {
               if (payout) {
                 setSubmitting(true);
-                submitPayout(payout)
+                dispatch(submitPayout(payout))
                   .then(() => resetDetails(props.navigation, props.contract.cxid))
                   .catch(error => console.error(error))
-                  .finally(() => setSending(false));
+                  .finally(() => setSubmitting(false));
               }
             } }
           />
@@ -325,6 +328,7 @@ const ActionPayoutTxBroadcast = (props) => {
 
   useEffect(() => {
       dispatch(updatePayoutTxStatus(payout))
+          .then(() => dispatch(getBalance())) 
           .then(() => resetDetails(props.navigation, props.contract.cxid))
           .catch(error => console.error(error));
   });

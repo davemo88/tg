@@ -3,6 +3,7 @@ use std::{
     fs::File,
     io::Write,
     path::PathBuf,
+    str::FromStr,
 };
 use serde::{Deserialize, Serialize};
 use clap::{App, Arg, ArgMatches, SubCommand, AppSettings};
@@ -100,14 +101,18 @@ impl PayoutSummary {
             let txid = psbt.clone().extract_tx().txid().to_string();
             let tcr = DocumentUI::<TokenContractRecord>::get(player_wallet, &pr.cxid)?; 
             let contract = Contract::from_bytes(hex::decode(tcr.contract_record.hex).unwrap()).unwrap();
-            let my_script_pubkey = Address::p2wpkh(&player_wallet.get_escrow_pubkey(), NETWORK).unwrap().script_pubkey();
-            let my_amount = Amount::from_sat(psbt.global.unsigned_tx.output.iter().filter_map(|txout| if txout.script_pubkey == my_script_pubkey { Some(txout.value) } else { None}).sum());
+// TODO: this is a bug since adding the payout addresses to the TCR
+// it will always show the balance as going to the other player since
+// we aren't paying out to the escrow pubkey any more
+//            let my_script_pubkey = Address::p2wpkh(&player_wallet.get_escrow_pubkey(), NETWORK).unwrap().script_pubkey();
+            let p1_script_pubkey = Address::from_str(&tcr.p1_token.address).unwrap().script_pubkey();
+            let p1_amount = Amount::from_sat(psbt.global.unsigned_tx.output.iter().filter_map(|txout| if txout.script_pubkey == p1_script_pubkey { Some(txout.value) } else { None}).sum()).as_sat();
             let contract_amount = contract.amount().ok()?;
-            let p1_amount = if contract.p1_pubkey == player_wallet.get_escrow_pubkey() {
-                my_amount.as_sat()
-            } else {
-                contract_amount.as_sat() - my_amount.as_sat() - TX_FEE
-            };
+//            let p1_amount = if contract.p1_pubkey == player_wallet.get_escrow_pubkey() {
+//                my_amount.as_sat()
+//            } else {
+//                contract_amount.as_sat() - my_amount.as_sat() - TX_FEE
+//            };
             let p2_amount = contract_amount.as_sat() - p1_amount - TX_FEE;
 
             Some(PayoutSummary {

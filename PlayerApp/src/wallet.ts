@@ -137,8 +137,13 @@ export const deletePayout = (payout: Payout) => {
 
 export const signPayout = (payout: Payout, password: Secret<string>, tokenSig?: string) => {
     return async (dispatch, getState) => {
+        console.debug("tokenSig:", tokenSig);
         const selectedPlayerName = getState().selectedPlayerName;
-        let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(`payout sign ${payout.cxid}`, password.expose_secret()));
+        let command = `payout sign ${payout.cxid}`;
+        if (tokenSig) {
+            command = `${command} ${tokenSig}`
+        }
+        let response: JsonResponse = JSON.parse(await PlayerWalletModule.call_cli_with_password(command, password.expose_secret()));
         if (response.status === "error") {
             throw Error(response.message);
         }
@@ -147,6 +152,7 @@ export const signPayout = (payout: Payout, password: Secret<string>, tokenSig?: 
             let action = {id: payout.cxid, changes: {
                 p1Sig: selectedPlayerName === contract.p1Name,
                 p2Sig: selectedPlayerName === contract.p2Name,
+                scriptSig: tokenSig !== undefined,
             }};
             return dispatch(payoutSlice.actions.payoutUpdated(action))
         }
@@ -164,7 +170,11 @@ export const sendPayout = async (payout: Payout) => {
 
 export const submitPayout = (payout: Payout) => {
     return async (dispatch) => {
+        console.debug("submit payout:", payout);
+        let summary_output = await PlayerWalletModule.call_cli(`payout summary ${payout.cxid}`);
+        console.debug("payout summary:",summary_output);
         let cli_output = await PlayerWalletModule.call_cli(`payout submit ${payout.cxid}`);
+        console.debug("submit payout output:",cli_output);
         let response: JsonResponse = JSON.parse(cli_output);
         if (response.status === "error") {
             throw Error(response.message);
