@@ -29,9 +29,6 @@ use tglib::{
         bitcoin::{
             Address,
             PublicKey,
-//            Script,
-//            Txid,
-//            blockdata::transaction::OutPoint,
             consensus,
             hashes::hex::ToHex,
             util::{
@@ -72,8 +69,6 @@ mod wallet;
 use wallet::Wallet;
 
 const BITCOIN_RPC_URL: &'static str = "http://electrs:18443";
-//const NAME_SERVICE_URL: &'static str = "http://nmc-id:18420";
-//const AUTH_TOKEN_LIFETIME: usize = 30;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 type WebResult<T> = std::result::Result<T, Rejection>;
 

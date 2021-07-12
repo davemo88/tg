@@ -12,7 +12,6 @@ use tglib::{
     hex,
     Error,
     arbiter::{
-        Result,
         ArbiterService,
         SubmitContractBody,
         SubmitPayoutBody,
@@ -20,6 +19,8 @@ use tglib::{
     contract::Contract,
     payout::Payout,
 };
+
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 pub struct ArbiterClient(String);
 
@@ -58,59 +59,6 @@ impl ArbiterService for ArbiterClient {
             Err(_) => Err(Error::Adhoc("couldn't get fee address").into()),
         }
     }
-
-//    fn set_contract_info(&self, contract_info: PlayerContractInfo, pubkey: PublicKey, sig: Signature) -> Result<()> {
-//        let body = SetContractInfoBody {
-//            contract_info,
-//            pubkey,
-//            sig_hex: hex::encode(sig.serialize_der()),
-//        };
-//        let _response = self.post("set-contract-info", serde_json::to_string(&body)?)?; 
-//        Ok(())
-//    }
-//
-//    fn get_contract_info(&self, player_name: PlayerName) -> Result<Option<PlayerContractInfo>> {
-//        let response = self.get("get-contract-info", Some(&hex::encode(player_name.0.as_bytes())))?;
-//        let contract_info = match serde_json::from_str::<PlayerContractInfo>(&response.text().unwrap()) {
-//            Ok(info) => Some(info),
-//            Err(_) => None,
-//        };
-//        Ok(contract_info)
-//    }
-//
-//    fn send_contract(&self, contract: ContractRecord, player_name: PlayerName) -> Result<()> {
-//        let body = SendContractBody {
-//            contract,
-//            player_name,
-//        };
-//        self.post("send-contract", serde_json::to_string(&body).unwrap())?;
-//        Ok(())
-//    }
-//
-//    fn send_payout(&self, payout: PayoutRecord, player_name: PlayerName) -> Result<()> {
-//        let body = SendPayoutBody {
-//            payout,
-//            player_name,
-//        };
-//        self.post("send-payout", serde_json::to_string(&body).unwrap())?; 
-//        Ok(())
-//    }
-//
-//    fn get_auth_token(&self, player_name: &PlayerName) -> Result<Vec<u8>> {
-//        let response = self.get("auth-token", Some(&player_name.0))?; 
-//        let token = hex::decode(response.text()?)?.to_vec();
-//        Ok(token)
-//    }
-//
-//    fn receive_contract(&self, auth: AuthTokenSig) -> Result<Option<ContractRecord>> {
-//        let response = self.post("receive-contract", serde_json::to_string(&auth)?)?; 
-//        Ok(serde_json::from_str::<ContractRecord>(&response.text()?).ok())
-//    }
-//
-//    fn receive_payout(&self, auth: AuthTokenSig) -> Result<Option<PayoutRecord>> {
-//        let response = self.post("receive-payout", serde_json::to_string(&auth)?)?;
-//        Ok(serde_json::from_str::<PayoutRecord>(&response.text()?).ok())
-//    }
 
     fn submit_contract(&self, contract: &Contract) -> Result<Signature> {
         let body = SubmitContractBody { 
