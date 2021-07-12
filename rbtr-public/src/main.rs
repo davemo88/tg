@@ -50,6 +50,7 @@ use tglib::{
         LevelFilter,
     },
     Error,
+    JsonResponse,
     arbiter::{
         SubmitContractBody,
         SubmitPayoutBody,
@@ -136,10 +137,12 @@ async fn submit_contract_handler(body: SubmitContractBody, redis_client: redis::
     let mut con = redis_client.get_async_connection().await.unwrap();
     let contract = Contract::from_bytes(hex::decode(body.contract_hex).unwrap()).unwrap();
     match submit_contract(&mut con, &contract).await {
-        Ok(sig) => Ok(hex::encode(sig.serialize_der())),
+//        Ok(sig) => Ok(hex::encode(sig.serialize_der())),
+        Ok(sig) => Ok(serde_json::to_string(&JsonResponse::success(Some(hex::encode(sig.serialize_der())))).unwrap()),
         Err(e) => {
             error!("{:?}", e);
-            Err(warp::reject())
+            Ok(serde_json::to_string(&JsonResponse::<String>::error(e.to_string(),None)).unwrap())
+//            Err(warp::reject())
         }
     }
 }
@@ -149,10 +152,12 @@ async fn submit_payout_handler(body: SubmitPayoutBody, redis_client: redis::Clie
     let mut con = redis_client.get_async_connection().await.unwrap();
     let payout = Payout::from_bytes(hex::decode(body.payout_hex).unwrap()).unwrap();
     match submit_payout(&mut con, &payout).await {
-        Ok(tx) => Ok(hex::encode(consensus::serialize(&tx))),
+//        Ok(tx) => Ok(hex::encode(consensus::serialize(&tx))),
+        Ok(tx) => Ok(serde_json::to_string(&JsonResponse::success(Some(hex::encode(consensus::serialize(&tx))))).unwrap()),
         Err(e) => {
             error!("{:?}", e);
-            Err(warp::reject())
+            Ok(serde_json::to_string(&JsonResponse::<String>::error(e.to_string(),None)).unwrap())
+//            Err(warp::reject())
         }
     }
 }

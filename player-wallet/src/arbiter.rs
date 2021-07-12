@@ -11,6 +11,8 @@ use tglib::{
     },
     hex,
     Error,
+    JsonResponse,
+    Status,
     arbiter::{
         ArbiterService,
         SubmitContractBody,
@@ -65,8 +67,19 @@ impl ArbiterService for ArbiterClient {
             contract_hex: hex::encode(contract.to_bytes()) 
         };
         let response = self.post("submit-contract", serde_json::to_string(&body)?)?; 
-        let sig = Signature::from_der(&hex::decode(response.text()?)?)?;
-        Ok(sig)
+//        let sig = Signature::from_der(&hex::decode(response.text()?)?)?;
+//        Ok(sig)
+        let response: JsonResponse<String> = serde_json::from_str(&response.text()?)?;
+        match response.status {
+            Status::Success => if let Some(sig_hex) = response.data {
+                Ok(Signature::from_der(&hex::decode(sig_hex)?)?)
+            } else {
+                Err(Box::new(Error::Adhoc("missing signature in response")))
+            }
+            Status::Error => {
+                Err(Error::JsonResponse(response.message.unwrap_or("unknown arbiter error submitting contract".to_string())).into())
+            }
+        }
     }
 
     fn submit_payout(&self, payout: &Payout) -> Result<PartiallySignedTransaction> {
@@ -74,8 +87,19 @@ impl ArbiterService for ArbiterClient {
             payout_hex: hex::encode(payout.to_bytes())
         };
         let response = self.post("submit-payout", serde_json::to_string(&body)?)?; 
-        let psbt = consensus::deserialize(&hex::decode(response.text()?)?)?; 
-        Ok(psbt)
+//        let psbt = consensus::deserialize(&hex::decode(response.text()?)?)?; 
+//        Ok(psbt)
+        let response: JsonResponse<String> = serde_json::from_str(&response.text()?)?;
+        match response.status {
+            Status::Success => if let Some(tx) = response.data {
+                Ok(consensus::deserialize(&hex::decode(tx)?)?)
+            } else {
+                Err(Box::new(Error::Adhoc("missing transaction in response")))
+            }
+            Status::Error => {
+                Err(Error::JsonResponse(response.message.unwrap_or("unknown arbiter error submitting payout".to_string())).into())
+            }
+        }
     }
 
     fn fund_address(&self, address: Address) -> Result<Txid> {
