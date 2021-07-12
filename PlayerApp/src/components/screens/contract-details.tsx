@@ -5,7 +5,8 @@ import { Text, Button, View, } from 'react-native';
 import { styles } from '../../styles';
 
 import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, payoutSelectors, selectedPlayerNameSlice, } from '../../redux';
-import { Player, Contract } from '../../datatypes'
+import { Player, Contract, ContractStatus } from '../../datatypes'
+import { getContractStatus } from '../../dump';
 import { dismissContract } from '../../mock';
 import { sendContract, deletePayout } from '../../wallet';
 
@@ -62,7 +63,7 @@ export const ContractDetails = ({ route, navigation }) => {
           </View>
           <View style={{ flexDirection: "row"}}>
             <View style={{ margin: 3}}>
-            { payout &&
+            { payout && getContractStatus(contract) != ContractStatus.Resolved &&
               <Button 
                 title="Dismiss Payout" 
                 onPress={() => {
