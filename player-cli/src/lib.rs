@@ -21,7 +21,6 @@ use tglib::{
     player::PlayerName,
     wallet::{
         TX_FEE,
-        EscrowWallet,
         SavedSeed,
     },
     mock::{
