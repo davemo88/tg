@@ -77,7 +77,7 @@ impl ArbiterService for ArbiterClient {
                 Err(Box::new(Error::Adhoc("missing signature in response")))
             }
             Status::Error => {
-                Err(Error::JsonResponse(response.message.unwrap_or("unknown arbiter error submitting contract".to_string())).into())
+                Err(Error::JsonResponse(response.message.unwrap_or("unknown arbiter error".to_string())).into())
             }
         }
     }
@@ -97,7 +97,7 @@ impl ArbiterService for ArbiterClient {
                 Err(Box::new(Error::Adhoc("missing transaction in response")))
             }
             Status::Error => {
-                Err(Error::JsonResponse(response.message.unwrap_or("unknown arbiter error submitting payout".to_string())).into())
+                Err(Error::JsonResponse(response.message.unwrap_or("unknown arbiter error".to_string())).into())
             }
         }
     }

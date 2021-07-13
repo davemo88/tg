@@ -41,6 +41,7 @@ use tglib::{
             ListUnspentRes,
         },
     },
+    JsonResponse,
     hex,
     log::{
         debug,
@@ -56,6 +57,8 @@ use tglib::{
         REDIS_SERVER,
     },
 };
+
+type Response = JsonResponse<String>;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 type WebResult<T> = std::result::Result<T, Rejection>;
@@ -99,10 +102,12 @@ async fn check_auth_token_sig(player_name: PlayerName, auth: AuthTokenSig, con: 
 async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redis::Client) -> WebResult<impl Reply> {
     match controls_name(&body.pubkey, &body.contract_info.name).await {
         Ok(true) => (),
-        Ok(false) => return Err(warp::reject()),
+//        Ok(false) => return Err(warp::reject()),
+        Ok(false) => return Ok(serde_json::to_string(&Response::error("pubkey doesn't control name".to_string(), None)).unwrap()),
         Err(e) => {
             error!("{:?}", e);
-            return Err(warp::reject())
+//            return Err(warp::reject())
+            return Ok(serde_json::to_string(&Response::error(e.to_string(), None)).unwrap())
         }
     }
  
@@ -110,18 +115,21 @@ async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redi
     let sig = Signature::from_der(&hex::decode(&body.sig_hex).unwrap()).unwrap();
     if secp.verify(&Message::from_slice(&body.contract_info.hash()).unwrap(), &sig, &body.pubkey.key).is_err() {
 // TODO: responses with proper errors and data
-        return Err(warp::reject())
+//        return Err(warp::reject())
+        return Ok(serde_json::to_string(&Response::error("invalid signature".to_string(), None)).unwrap())
     }
 
     let mut con = redis_client.get_async_connection().await.unwrap();
     let r: RedisResult<String> = con.set(format!("{}/info", body.contract_info.name.clone().0), &serde_json::to_string(&body.contract_info).unwrap()).await;
     match r {
         Ok(_string) => {
-            Ok(format!("set contract info for {}", body.contract_info.name.0))
+//            Ok(format!("set contract info for {}", body.contract_info.name.0))
+            Ok(serde_json::to_string(&Response::success(None)).unwrap())
         },
         Err(e) => {
             error!("{:?}", e);
-            Err(warp::reject())
+//            Err(warp::reject())
+            Ok(serde_json::to_string(&Response::error(e.to_string(), None)).unwrap())
         }
     }
 }

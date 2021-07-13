@@ -69,6 +69,8 @@ use tglib::{
 mod wallet;
 use wallet::Wallet;
 
+type Response = JsonResponse<String>;
+
 const BITCOIN_RPC_URL: &'static str = "http://electrs:18443";
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 type WebResult<T> = std::result::Result<T, Rejection>;
@@ -138,10 +140,10 @@ async fn submit_contract_handler(body: SubmitContractBody, redis_client: redis::
     let contract = Contract::from_bytes(hex::decode(body.contract_hex).unwrap()).unwrap();
     match submit_contract(&mut con, &contract).await {
 //        Ok(sig) => Ok(hex::encode(sig.serialize_der())),
-        Ok(sig) => Ok(serde_json::to_string(&JsonResponse::success(Some(hex::encode(sig.serialize_der())))).unwrap()),
+        Ok(sig) => Ok(serde_json::to_string(&Response::success(Some(hex::encode(sig.serialize_der())))).unwrap()),
         Err(e) => {
             error!("{:?}", e);
-            Ok(serde_json::to_string(&JsonResponse::<String>::error(e.to_string(),None)).unwrap())
+            Ok(serde_json::to_string(&Response::error(e.to_string(),None)).unwrap())
 //            Err(warp::reject())
         }
     }
@@ -153,10 +155,10 @@ async fn submit_payout_handler(body: SubmitPayoutBody, redis_client: redis::Clie
     let payout = Payout::from_bytes(hex::decode(body.payout_hex).unwrap()).unwrap();
     match submit_payout(&mut con, &payout).await {
 //        Ok(tx) => Ok(hex::encode(consensus::serialize(&tx))),
-        Ok(tx) => Ok(serde_json::to_string(&JsonResponse::success(Some(hex::encode(consensus::serialize(&tx))))).unwrap()),
+        Ok(tx) => Ok(serde_json::to_string(&Response::success(Some(hex::encode(consensus::serialize(&tx))))).unwrap()),
         Err(e) => {
             error!("{:?}", e);
-            Ok(serde_json::to_string(&JsonResponse::<String>::error(e.to_string(),None)).unwrap())
+            Ok(serde_json::to_string(&Response::error(e.to_string(),None)).unwrap())
 //            Err(warp::reject())
         }
     }

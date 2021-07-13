@@ -9,15 +9,19 @@ use libexchange::{
     PayoutRecord,
 };
 use tglib::{
+    Error,
     hex,
     bdk::bitcoin::{
         PublicKey,
         secp256k1::Signature,
     },
+    JsonResponse,
+    Status,
     player::PlayerName,
 };
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+type Response = JsonResponse<String>;
 
 pub struct ExchangeClient(String);
 
@@ -49,8 +53,13 @@ impl ExchangeService for ExchangeClient {
             pubkey,
             sig_hex: hex::encode(sig.serialize_der()),
         };
-        let _response = self.post("set-contract-info", serde_json::to_string(&body)?)?; 
-        Ok(())
+        let response = self.post("set-contract-info", serde_json::to_string(&body)?)?; 
+        let response: Response = serde_json::from_str(&response.text()?)?;
+        match response.status {
+            Status::Success => Ok(()),
+            Status::Error => Err(Error::JsonResponse(response.message.unwrap_or("unknown exchange error".into())).into())
+        }
+//        Ok(())
     }
 
     fn get_contract_info(&self, player_name: PlayerName) -> Result<Option<PlayerContractInfo>> {
@@ -67,7 +76,8 @@ impl ExchangeService for ExchangeClient {
             contract,
             player_name,
         };
-        self.post("send-contract", serde_json::to_string(&body).unwrap())?;
+        let _response = self.post("send-contract", serde_json::to_string(&body).unwrap())?;
+//        let repsonse: Response 
         Ok(())
     }
 
