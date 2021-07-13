@@ -102,12 +102,10 @@ async fn check_auth_token_sig(player_name: PlayerName, auth: AuthTokenSig, con: 
 async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redis::Client) -> WebResult<impl Reply> {
     match controls_name(&body.pubkey, &body.contract_info.name).await {
         Ok(true) => (),
-//        Ok(false) => return Err(warp::reject()),
-        Ok(false) => return Ok(serde_json::to_string(&Response::error("pubkey doesn't control name".to_string(), None)).unwrap()),
+        Ok(false) => return Ok(warp::reply::json(&Response::error("pubkey doesn't control name".to_string(), None))),
         Err(e) => {
             error!("{:?}", e);
-//            return Err(warp::reject())
-            return Ok(serde_json::to_string(&Response::error(e.to_string(), None)).unwrap())
+            return Ok(warp::reply::json(&Response::error(e.to_string(), None)))
         }
     }
  
@@ -115,8 +113,7 @@ async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redi
     let sig = Signature::from_der(&hex::decode(&body.sig_hex).unwrap()).unwrap();
     if secp.verify(&Message::from_slice(&body.contract_info.hash()).unwrap(), &sig, &body.pubkey.key).is_err() {
 // TODO: responses with proper errors and data
-//        return Err(warp::reject())
-        return Ok(serde_json::to_string(&Response::error("invalid signature".to_string(), None)).unwrap())
+        return Ok(warp::reply::json(&Response::error("invalid signature".to_string(), None)))
     }
 
     let mut con = redis_client.get_async_connection().await.unwrap();
@@ -124,12 +121,11 @@ async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redi
     match r {
         Ok(_string) => {
 //            Ok(format!("set contract info for {}", body.contract_info.name.0))
-            Ok(serde_json::to_string(&Response::success(None)).unwrap())
+            Ok(warp::reply::json(&Response::success(None)))
         },
         Err(e) => {
             error!("{:?}", e);
-//            Err(warp::reject())
-            Ok(serde_json::to_string(&Response::error(e.to_string(), None)).unwrap())
+            Ok(warp::reply::json(&Response::error(e.to_string(), None)))
         }
     }
 }
@@ -139,12 +135,10 @@ async fn get_contract_info_handler(player_name: String, redis_client: redis::Cli
     let mut con = redis_client.get_async_connection().await.unwrap();
     let r: RedisResult<String> = con.get(format!("{}/info", &String::from_utf8(hex::decode(player_name).unwrap()).unwrap())).await;
     match r {
-//        Ok(info) => Ok(info),
-        Ok(info) => Ok(serde_json::to_string(&JsonResponse::success(Some(info))).unwrap()),
+        Ok(info) => Ok(warp::reply::json(&JsonResponse::success(Some(info)))),
         Err(e) => {
             error!("{:?}", e);
-//            Err(warp::reject())
-            Ok(serde_json::to_string(&Response::error(e.to_string(), None)).unwrap())
+            Ok(warp::reply::json(&Response::error(e.to_string(), None)))
         }
     }
 }
@@ -154,13 +148,11 @@ async fn send_contract_handler(body: SendContractBody, redis_client: redis::Clie
     let r: RedisResult<i64> = con.rpush(&format!("{}/contracts", body.player_name), serde_json::to_string(&body.contract).unwrap()).await;
     match r {
         Ok(_num) => {
-//            Ok("sent contract".to_string())
-            Ok(serde_json::to_string(&Response::success(None)).unwrap())
+            Ok(warp::reply::json(&Response::success(None)))
         }
         Err(e) => {
             error!("send contract redis error: {:?}", e);
-//            Err(warp::reject())
-            Ok(serde_json::to_string(&Response::error(e.to_string(), None)).unwrap())
+            Ok(warp::reply::json(&Response::error(e.to_string(), None)))
         }
     }
 }
@@ -169,28 +161,24 @@ async fn receive_contract_handler(auth: AuthTokenSig, redis_client: redis::Clien
     let mut con = redis_client.get_async_connection().await.unwrap();
     match check_auth_token_sig(auth.player_name.clone(), auth.clone(), &mut con).await {
         Ok(true) => (),
-//        _ => return Err(warp::reject()),
         Ok(false) => {
             let message = "auth failed: invalid credentials";
             error!("{}", message);
-//            return Err(warp::reject())
-            return Ok(serde_json::to_string(&Response::error(message.into(), None)).unwrap())
+            return Ok(warp::reply::json(&Response::error(message.into(), None)))
         },
         Err(e) => {
             let message = format!("auth failed: {:?}", e.to_string());
             error!("{}", message);
-//            return Err(warp::reject())
-            return Ok(serde_json::to_string(&Response::error(message.into(), None)).unwrap())
+            return Ok(warp::reply::json(&Response::error(message.into(), None)))
         }
     }
     let r: RedisResult<String> = con.lpop(&format!("{}/contracts", auth.player_name.0)).await;
     match r {
-        Ok(contract_json) => Ok(serde_json::to_string(&JsonResponse::success(Some(contract_json))).unwrap()),
+        Ok(contract_json) => Ok(warp::reply::json(&JsonResponse::success(Some(contract_json)))),
         Err(e) => {
             let message = format!("couldn't receive contract: {:?}", e.to_string());
             error!("{}", message);
-//            Err(warp::reject())
-            return Ok(serde_json::to_string(&Response::error(message.into(), None)).unwrap())
+            return Ok(warp::reply::json(&Response::error(message.into(), None)))
         }
     }
 }
@@ -199,12 +187,10 @@ async fn send_payout_handler(body: SendPayoutBody, redis_client: redis::Client) 
     let mut con = redis_client.get_async_connection().await.unwrap();
     let r: RedisResult<i64> = con.rpush(&format!("{}/payouts", body.player_name.0), serde_json::to_string(&body.payout).unwrap()).await;
     match r {
-//        Ok(_string) => Ok("sent payout".to_string()),
-        Ok(_string) => Ok(serde_json::to_string(&Response::success(None)).unwrap()),
+        Ok(_string) => Ok(warp::reply::json(&Response::success(None))),
         Err(e) => {
             error!("send payout redis error {:?}", e);
-//            Err(warp::reject())
-            Ok(serde_json::to_string(&Response::error(e.to_string(), None)).unwrap())
+            Ok(warp::reply::json(&Response::error(e.to_string(), None)))
         }
     }
 }
@@ -216,24 +202,22 @@ async fn receive_payout_handler(auth: AuthTokenSig, redis_client: redis::Client)
         Ok(false) => {
             let message = "auth failed: invalid credentials";
             error!("{}", message);
-//            return Err(warp::reject())
-            return Ok(serde_json::to_string(&Response::error(message.into(), None)).unwrap())
+            return Ok(warp::reply::json(&Response::error(message.into(), None)))
         },
         Err(e) => {
             let message = format!("auth failed: {:?}", e.to_string());
             error!("{}", message);
-//            return Err(warp::reject())
-            return Ok(serde_json::to_string(&Response::error(message.into(), None)).unwrap())
+            return Ok(warp::reply::json(&Response::error(message.into(), None)))
         }
     }
 
     let r: RedisResult<String> = con.lpop(&format!("{}/payouts", auth.player_name.0)).await;
     match r {
-        Ok(payout_json) => Ok(serde_json::to_string(&JsonResponse::success(Some(payout_json))).unwrap()),
+        Ok(payout_json) => Ok(warp::reply::json(&JsonResponse::success(Some(payout_json)))),
         Err(e) => {
             let message = format!("couldn't receive payout: {:?}", e.to_string());
             error!("{}", message);
-            return Ok(serde_json::to_string(&Response::error(message.into(), None)).unwrap())
+            return Ok(warp::reply::json(&Response::error(message.into(), None)))
         }
     }
 }
@@ -244,11 +228,10 @@ async fn auth_token_handler(player_name: String, redis_client: redis::Client) ->
 // TODO: should we delete the token after it gets used or let them use it until it expires?
     let r: RedisResult<String> = con.set_ex(format!("{}/token", player_name), token.clone(), AUTH_TOKEN_LIFETIME).await;
     match r {
-        Ok(_) => Ok(serde_json::to_string(&JsonResponse::success(Some(token))).unwrap()),
+        Ok(_) => Ok(warp::reply::json(&JsonResponse::success(Some(token)))),
         Err(e) => {
             error!("{:?}", e);
-//            Err(warp::reject())
-            Ok(serde_json::to_string(&Response::error(e.to_string(), None)).unwrap())
+            Ok(warp::reply::json(&Response::error(e.to_string(), None)))
         }
     }
 }
