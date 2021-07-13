@@ -15,6 +15,7 @@ import { ContractDetails } from './src/components/screens/contract-details';
 import { NewPlayer } from './src/components/screens/new-player';
 import { AddPlayer } from './src/components/screens/add-player';
 import { NewContract } from './src/components/screens/new-contract';
+import { ReceiveContract } from './src/components/screens/receive-contract';
 import { NewPayout } from './src/components/screens/new-payout';
 
 const Stack = createStackNavigator();
@@ -34,6 +35,7 @@ export default function App() {
             <Stack.Screen name="New Player" component={NewPlayer} />
             <Stack.Screen name="Add Player" component={AddPlayer} />
             <Stack.Screen name="New Contract" component={NewContract} />
+            <Stack.Screen name="Receive Contract" component={ReceiveContract} />
             <Stack.Screen name="New Payout" component={NewPayout} />
           </Stack.Navigator>
         </NavigationContainer>
