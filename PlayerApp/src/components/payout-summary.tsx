@@ -4,7 +4,7 @@ import { useSelector, } from 'react-redux';
 
 import { styles } from '../styles';
 
-import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, } from '../redux';
+import { store, playerSlice, playerSelectors, contractSelectors, contractSlice, selectedPlayerNameSlice, } from '../redux';
 import { Player, Contract, ContractStatus, } from '../datatypes'
 import { getContractStatus } from '../dump';
 
@@ -12,7 +12,11 @@ import { Currency } from './currency';
 import { SigPortrait } from './sig-portrait';
 import { ARBITER_NAME, ARBITER_PICTURE_URL } from './arbiter';
 
-export const ContractSummary = (props) => {
+type PayoutSummaryProps = {
+    contract: Contract,
+}
+
+export const PayoutSummary = (props: PayoutSummaryProps) => {
   const playerOne = useSelector((state) => playerSelectors.selectById(state, props.contract.p1Name));
   const playerTwo = useSelector((state) => playerSelectors.selectById(state, props.contract.p2Name));
   const [contractStatus, setContractStatus] = useState<string|null>(null);
@@ -44,4 +48,5 @@ export const ContractSummary = (props) => {
     </View>
   )
 }
+
 

@@ -369,6 +369,8 @@ impl DocumentUI<TokenContractRecord> for PlayerWallet {
         let auth = self.get_auth(&player_name, pw)?;
         let received = self.exchange_client().receive_contract(auth)?;
         if let Some(tcr) = received {
+// TODO: check to make sure the other player is in the database or
+// we get a foreign key error
             self.db().insert_token_contract(tcr.clone())?;
             Ok(Some(tcr.contract_record.cxid))
         } else {
