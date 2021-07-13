@@ -35,7 +35,8 @@ export const loadPlayers = () => {
         const my_players = response.data;
         console.debug("player mine:", my_players);
         players.forEach(function (p) { 
-            p.pictureUrl = "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0";
+//            p.pictureUrl = "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0";
+            p.pictureUrl = `https://avatars.dicebear.com/api/micah/${p.name}.svg`;
             p.mine = my_players.some(mp => mp === p.name);
         });
         console.debug("loaded players:", players);
@@ -61,7 +62,8 @@ export const newPlayer = (name: string, password: Secret<string>) => {
                 name: name,
                 mine: true,
 // TODO: set portrait based on player name hash
-                pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0",
+//                pictureUrl: "https://static-cdn.jtvnw.net/emoticons/v1/425618/2.0",
+                pictureUrl: `https://avatars.dicebear.com/api/micah/${name}.svg`
             }));
         }
     }

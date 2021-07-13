@@ -130,9 +130,10 @@ async fn set_contract_info_handler(body: SetContractInfoBody, redis_client: redi
 async fn get_contract_info_handler(player_name: String, redis_client: redis::Client) -> WebResult<impl Reply> {
     debug!("get contract info for {}", String::from_utf8(hex::decode(&player_name).unwrap()).unwrap());
     let mut con = redis_client.get_async_connection().await.unwrap();
-    let r: RedisResult<String> = con.get(format!("{}/info", &String::from_utf8(hex::decode(player_name).unwrap()).unwrap())).await;
+    let r: RedisResult<Option<String>> = con.get(format!("{}/info", &String::from_utf8(hex::decode(player_name).unwrap()).unwrap())).await;
     match r {
-        Ok(info) => Ok(warp::reply::json(&JsonResponse::success(Some(info)))),
+        Ok(Some(info)) => Ok(warp::reply::json(&JsonResponse::success(Some(info)))),
+        Ok(None) => Ok(warp::reply::json(&Response::success(None))),
         Err(e) => {
             error!("{:?}", e);
             Ok(warp::reply::json(&Response::error(e.to_string(), None)))
@@ -169,9 +170,10 @@ async fn receive_contract_handler(auth: AuthTokenSig, redis_client: redis::Clien
             return Ok(warp::reply::json(&Response::error(message.into(), None)))
         }
     }
-    let r: RedisResult<String> = con.lpop(&format!("{}/contracts", auth.player_name.0)).await;
+    let r: RedisResult<Option<String>> = con.lpop(&format!("{}/contracts", auth.player_name.0)).await;
     match r {
-        Ok(contract_json) => Ok(warp::reply::json(&JsonResponse::success(Some(contract_json)))),
+        Ok(Some(contract_json)) => Ok(warp::reply::json(&JsonResponse::success(Some(contract_json)))),
+        Ok(None) => Ok(warp::reply::json(&Response::success(None))),
         Err(e) => {
             let message = format!("couldn't receive contract: {:?}", e.to_string());
             error!("{}", message);
@@ -208,9 +210,10 @@ async fn receive_payout_handler(auth: AuthTokenSig, redis_client: redis::Client)
         }
     }
 
-    let r: RedisResult<String> = con.lpop(&format!("{}/payouts", auth.player_name.0)).await;
+    let r: RedisResult<Option<String>> = con.lpop(&format!("{}/payouts", auth.player_name.0)).await;
     match r {
-        Ok(payout_json) => Ok(warp::reply::json(&JsonResponse::success(Some(payout_json)))),
+        Ok(Some(payout_json)) => Ok(warp::reply::json(&JsonResponse::success(Some(payout_json)))),
+        Ok(None) => Ok(warp::reply::json(&Response::success(None))),
         Err(e) => {
             let message = format!("couldn't receive payout: {:?}", e.to_string());
             error!("{}", message);

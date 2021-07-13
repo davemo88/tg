@@ -69,7 +69,10 @@ impl ExchangeService for ExchangeClient {
         let response = self.get("get-contract-info", Some(&hex::encode(player_name.0.as_bytes())))?;
         let response: JsonResponse<String> = serde_json::from_str(&response.text()?)?;
         match response.status {
-            Status::Success => Ok(Some(serde_json::from_str(&response.data.ok_or(Error::Adhoc(MISSING_DATA_MSG))?)?)),
+            Status::Success => match response.data {
+                Some(info) => Ok(Some(serde_json::from_str(&info)?)),
+                None => Ok(None),
+            }
             Status::Error => Err(Error::JsonResponse(response.message.unwrap_or(UNKNOWN_ERROR_MSG.into())).into())
         }
     }
@@ -113,7 +116,10 @@ impl ExchangeService for ExchangeClient {
         let response = self.post("receive-contract", serde_json::to_string(&auth)?)?; 
         let response: JsonResponse<String> = serde_json::from_str(&response.text()?)?;
         match response.status {
-            Status::Success => Ok(Some(serde_json::from_str::<TokenContractRecord>(&response.data.ok_or(Error::Adhoc(MISSING_DATA_MSG))?)?)),
+            Status::Success => match response.data {
+                Some(contract) => Ok(Some(serde_json::from_str::<TokenContractRecord>(&contract)?)),
+                None => Ok(None),
+            }
             Status::Error => Err(Error::JsonResponse(response.message.unwrap_or(UNKNOWN_ERROR_MSG.into())).into())
         }
     }
@@ -122,7 +128,10 @@ impl ExchangeService for ExchangeClient {
         let response = self.post("receive-payout", serde_json::to_string(&auth)?)?;
         let response: JsonResponse<String> = serde_json::from_str(&response.text()?)?;
         match response.status {
-            Status::Success => Ok(Some(serde_json::from_str::<PayoutRecord>(&response.data.ok_or(Error::Adhoc(MISSING_DATA_MSG))?)?)),
+            Status::Success => match response.data {
+                Some(contract) => Ok(Some(serde_json::from_str::<PayoutRecord>(&contract)?)),
+                None => Ok(None),
+            }
             Status::Error => Err(Error::JsonResponse(response.message.unwrap_or(UNKNOWN_ERROR_MSG.into())).into())
         }
     }
