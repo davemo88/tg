@@ -1139,15 +1139,19 @@ mod test {
         let cxid = setup_live_contract(&p1, &p2);
         let event: Event = serde_json::from_str(EVENT).unwrap();
 
+        println!("p1 creates payout");
         cli(format!("payout new {} --wallet-dir {} 100000000 0", cxid, DIR_1), conf());
 //        let response: JsonResponse<tglib::bdk::bitcoin::util::psbt::PartiallySignedTransaction> = serde_json::from_str(&
 //            cli(format!("payout details {} --wallet-dir {} --json-output", cxid, DIR_1), conf())).unwrap();
 //        let payout_psbt = response.data.unwrap();
         let payout_script_sig = sign_token(&event.outcomes[0].token);
+        println!("p1 signs with oracle token");
         cli(format!("payout sign {} {} --wallet-dir {} --password {}", cxid, payout_script_sig, DIR_1, PW), conf());
 //        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
+        println!("p1 submits payout to arbiter");
         cli(format!("payout submit {} --wallet-dir {}", cxid, DIR_1), conf());
 //        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_1), conf()));
+        println!("p1 broadcasts payout tx");
         cli(format!("payout broadcast {} --wallet-dir {}", cxid, DIR_1), conf());
 
         let response: JsonResponse<tglib::bdk::bitcoin::util::psbt::PartiallySignedTransaction> = serde_json::from_str(&
@@ -1156,6 +1160,7 @@ mod test {
         let payout_txid = psbt.extract_tx().txid().to_string();
 
         assert!(poll_get_tx(DIR_1, &payout_txid));
+        println!("payout tx live");
 
         remove_test_wallets()
     }
@@ -1166,15 +1171,19 @@ mod test {
         let cxid = setup_live_contract(&p1, &p2);
         let event: Event = serde_json::from_str(EVENT).unwrap();
 
+        println!("p2 creates payout");
         cli(format!("payout new {} --wallet-dir {} 0 100000000", cxid, DIR_2), conf());
 //        let response: JsonResponse<tglib::bdk::bitcoin::util::psbt::PartiallySignedTransaction> = serde_json::from_str(&
 //            cli(format!("payout details {} --wallet-dir {} --json-output", cxid, DIR_2), conf())).unwrap();
 //        let payout_psbt = response.data.unwrap();
         let payout_script_sig = sign_token(&event.outcomes[1].token);
+        println!("p2 signs with oracle token");
         cli(format!("payout sign {} {} --wallet-dir {} --password {}", cxid, payout_script_sig, DIR_2, PW), conf());
  //       println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_2), conf()));
+        println!("p2 submits payout to arbiter");
         cli(format!("payout submit {} --wallet-dir {}", cxid, DIR_2), conf());
 //        println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_2), conf()));
+        println!("p2 broadcasts payout tx");
         cli(format!("payout broadcast {} --wallet-dir {}", cxid, DIR_2), conf());
 
         let response: JsonResponse<tglib::bdk::bitcoin::util::psbt::PartiallySignedTransaction> = serde_json::from_str(&
@@ -1183,6 +1192,7 @@ mod test {
         let payout_txid = psbt.extract_tx().txid().to_string();
 
         assert!(poll_get_tx(DIR_2, &payout_txid));
+        println!("payout tx live");
 
         remove_test_wallets();
     }
