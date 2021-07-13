@@ -1226,4 +1226,34 @@ mod test {
         assert_eq!(response, invalid_payout_response);
         remove_test_wallets();
     }
+    
+    #[test]
+    fn test_invalid_payout_wrong_tx() {
+        let invalid_payout_response = "JsonResponse(\"Adhoc(couldn\\\'t determine payout address)\")";
+
+        let (p1, p2) = (random_player(), random_player());
+        let cxid = setup_live_contract(&p1, &p2);
+        let event: Event = serde_json::from_str(EVENT).unwrap();
+
+        println!("create incorrect payout for p1");
+        cli(format!("payout new {} --wallet-dir {} 50000000 50000000", cxid, DIR_1), conf());
+        let payout_script_sig = sign_token(&event.outcomes[0].token);
+        println!("sign with p1 token");
+        cli(format!("payout sign {} {} --wallet-dir {} --password {}", cxid, payout_script_sig, DIR_1, PW), conf());
+ //       println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_2), conf()));
+        println!("submit payout to arbiter");
+        let response = cli(format!("payout submit {} --wallet-dir {}", cxid, DIR_1), conf());
+        assert_eq!(response, invalid_payout_response);
+
+        println!("create incorrect payout for p2");
+        cli(format!("payout new {} --wallet-dir {} 50000000 50000000", cxid, DIR_2), conf());
+        let payout_script_sig = sign_token(&event.outcomes[1].token);
+        println!("sign with p2 token");
+        cli(format!("payout sign {} {} --wallet-dir {} --password {}", cxid, payout_script_sig, DIR_2, PW), conf());
+ //       println!("{}", cli(format!("payout summary {} --wallet-dir {}", cxid, DIR_2), conf()));
+        println!("submit payout to arbiter");
+        let response = cli(format!("payout submit {} --wallet-dir {}", cxid, DIR_2), conf());
+        assert_eq!(response, invalid_payout_response);
+        remove_test_wallets();
+    }
 }

@@ -176,7 +176,7 @@ pub trait EscrowWallet {
         if !fully_signed {
             return Err(Error::InvalidPayout("contract is not fully signed"))
         }
-        let payout_address = &payout.address().unwrap();
+        let payout_address = &payout.address()?;
 // the payout tx must be an expected one
         let payout_tx = payout.psbt.clone().extract_tx();
         let matching_tx = payout_tx.txid() == create_payout(&payout.contract, &payout_address).psbt.clone().extract_tx().txid();
