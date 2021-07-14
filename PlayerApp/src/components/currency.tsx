@@ -3,7 +3,11 @@ import { Text, Image, View, } from 'react-native';
 
 import { styles } from '../styles.ts';
 
-export const Currency = (props) => {
+type CurrencyProps = {
+    amount: number,
+}
+
+export const Currency = (props: CurrencyProps) => {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', }}>
       <Text style={{ fontSize: 16 }}>{props.amount}</Text>
@@ -12,7 +16,7 @@ export const Currency = (props) => {
   );
 }
 
-const CurrencySymbol = (props) => {
+const CurrencySymbol = () => {
   return (
     <Image
       style={styles.smallEmote}

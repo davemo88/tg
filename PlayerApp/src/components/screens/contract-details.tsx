@@ -11,6 +11,7 @@ import { dismissContract } from '../../mock';
 import { sendContract, deletePayout } from '../../wallet';
 
 import { ContractSummary } from '../contract-summary';
+import { PayoutSummary } from '../payout-summary';
 import { ContractAction } from '../contract-action';
 import { PlayerPortrait } from '../player-portrait';
 import { Arbiter } from '../arbiter';
@@ -40,11 +41,16 @@ export const ContractDetails = ({ route, navigation }) => {
             <Text>{contract.p2TokenDesc}</Text>
           </View>
         </View>
-        <View style={{ margin: 10 }}>
+        <View style={{ flex: 1, margin: 10 }}>
           <ContractSummary contract={contract} />
+          { payout && 
+            <View style={{ flex: 1, margin: 10 }}>
+              <PayoutSummary contract={contract} payout={payout}/>
+            </View>
+          }
         </View>
       </View>
-      <View style={{ flex: 1.5 }}>
+      <View style={{ flex: 1 }}>
         <View style={{ flex: 3 }}>
           <ContractAction contract={contract} navigation={navigation} />
         </View>
