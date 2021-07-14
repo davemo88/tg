@@ -44,9 +44,7 @@ export const ContractDetails = ({ route, navigation }) => {
         <View style={{ flex: 1, margin: 10 }}>
           <ContractSummary contract={contract} />
           { payout && 
-            <View style={{ flex: 1, margin: 10 }}>
-              <PayoutSummary contract={contract} payout={payout}/>
-            </View>
+            <PayoutSummary contract={contract} payout={payout}/>
           }
         </View>
       </View>
@@ -67,7 +65,7 @@ export const ContractDetails = ({ route, navigation }) => {
               } }
             />
           </View>
-          <View style={{ flexDirection: "row"}}>
+          <View style={{ flex: 1, flexDirection: "row"}}>
             <View style={{ margin: 3}}>
             { payout && getContractStatus(contract) != ContractStatus.Resolved &&
               <Button 

@@ -178,8 +178,8 @@ const ActionPayoutUnsigned = (props) => {
     let dispatch = useDispatch();
     let [signing, setSigning] = React.useState(false);
     const [password, setPassword] = React.useState(new Secret(""));
-    const [isArbitratedPayout, setIsArbitratedPayout] = React.useState(false);
-    const toggleArbitration = () => setIsArbitratedPayout(previousState => !previousState);
+//    const [isArbitratedPayout, setIsArbitratedPayout] = React.useState(false);
+//    const toggleArbitration = () => setIsArbitratedPayout(previousState => !previousState);
     const [tokenSig, setTokenSig] = React.useState<string|undefined>(undefined);
     const payout = useSelector((state) => payoutSelectors.selectById(state, props.contract.cxid));
     console.debug("payout:", payout);
@@ -187,23 +187,14 @@ const ActionPayoutUnsigned = (props) => {
     return (
       <View>
         <PasswordEntry password={password} setPassword={setPassword} />
-        <View style={{ padding: 5, alignItems: 'center' }}>
-          <Text>Arbitrated Payout</Text>
-          <Switch 
-            onValueChange={toggleArbitration}
-            value={isArbitratedPayout}
+        <View style={{ alignItems: 'center' }}>
+          <Text style={{ padding: 2 }}>Signed Token for Arbiter Payout (optional)</Text>
+          <TextInput
+            value={tokenSig || ''}
+            onChangeText={text => setTokenSig(text)}
+            style={{ borderWidth: 1, margin: 10, padding: 4, width: 120 }}
           />
         </View>
-        { isArbitratedPayout && 
-          <View style={{ alignItems: 'center' }}>
-            <Text style={{ padding: 2 }}>Paste Signed Token</Text>
-            <TextInput
-              value={tokenSig || ''}
-              onChangeText={text => setTokenSig(text)}
-              style={{ borderWidth: 1, margin: 10, padding: 4, width: 120 }}
-            />
-          </View>
-        }
         <Button 
           title="Sign Payout" 
           onPress={() => {
