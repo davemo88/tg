@@ -20,7 +20,7 @@ import { CheckMail } from './check-mail';
 export const ContractAction = (props) => {
     const contractStatus = getContractStatus(props.contract);
     return(
-      <View style={{ margin: 10, padding: 10, backgroundColor: 'lightslategrey', }}>
+      <View style={{ backgroundColor: 'lightslategrey', }}>
       {
         {
           [ContractStatus.Unsigned]: <ActionUnsigned navigation={props.navigation} contract={props.contract} />,
@@ -178,8 +178,6 @@ const ActionPayoutUnsigned = (props) => {
     let dispatch = useDispatch();
     let [signing, setSigning] = React.useState(false);
     const [password, setPassword] = React.useState(new Secret(""));
-//    const [isArbitratedPayout, setIsArbitratedPayout] = React.useState(false);
-//    const toggleArbitration = () => setIsArbitratedPayout(previousState => !previousState);
     const [tokenSig, setTokenSig] = React.useState<string|undefined>(undefined);
     const payout = useSelector((state) => payoutSelectors.selectById(state, props.contract.cxid));
     console.debug("payout:", payout);
@@ -192,11 +190,12 @@ const ActionPayoutUnsigned = (props) => {
           <TextInput
             value={tokenSig || ''}
             onChangeText={text => setTokenSig(text)}
-            style={{ borderWidth: 1, margin: 10, padding: 4, width: 120 }}
+            style={{ borderWidth: 1, margin: 10, padding: 4, width: 150 }}
           />
         </View>
         <Button 
           title="Sign Payout" 
+          disabled={password.expose_secret().length > 3}
           onPress={() => {
             setSigning(true);
             dispatch(signPayout(props.contract, password, tokenSig))

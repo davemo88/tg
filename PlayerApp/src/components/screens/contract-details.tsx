@@ -28,31 +28,31 @@ export const ContractDetails = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      <View style={{ flex: 1, alignItems: 'center' }}>
+      <View style={{ flex: 1, alignItems: 'center', borderWidth: 1 }}>
         <View style= {{flexDirection: 'row', justifyContent: 'space-between' }}>
           <View style={{ alignItems: 'center', flex: 1 }}>
-            <Text style={{ fontSize: 20 }}>Player One</Text>
             <PlayerPortrait name={playerOne.name} pictureUrl={playerOne.pictureUrl} />
             <Text>{contract.p1TokenDesc}</Text>
           </View>
           <View style={{ alignItems: 'center', flex: 1 }}>
-            <Text style={{ fontSize: 20 }}>Player Two</Text>
             <PlayerPortrait name={playerTwo.name} pictureUrl={playerTwo.pictureUrl} />
             <Text>{contract.p2TokenDesc}</Text>
           </View>
         </View>
-        <View style={{ flex: 1, margin: 10 }}>
-          <ContractSummary contract={contract} />
-          { payout && 
-            <PayoutSummary contract={contract} payout={payout}/>
-          }
-        </View>
       </View>
-      <View style={{ flex: 1 }}>
-        <View style={{ flex: 3 }}>
-          <ContractAction contract={contract} navigation={navigation} />
+      <View style={{ flex: 1, borderWidth: 1 }}>
+        <ContractSummary contract={contract} />
+      </View>
+      { payout && 
+        <View style={{ flex: 1, borderWidth: 1}}>
+          <PayoutSummary contract={contract} payout={payout}/>
         </View>
-        <View style={{ flex: 1, alignItems: 'center', }}>
+      }
+      <View style={{ borderWidth: 1}}>
+        <ContractAction contract={contract} navigation={navigation} />
+      </View>
+      <View style={{ alignItems: 'center', borderWidth: 1, justifyContent: 'flex-end'}}>
+        <View style={{  }}>
           <View style={{ margin: 3}}>
             <Button 
               title="Send Contract" 
@@ -65,26 +65,26 @@ export const ContractDetails = ({ route, navigation }) => {
               } }
             />
           </View>
-          <View style={{ flex: 1, flexDirection: "row"}}>
-            <View style={{ margin: 3}}>
+          <View style={{ flexDirection: "row", justifyContent: 'space-between' }}>
             { payout && getContractStatus(contract) != ContractStatus.Resolved &&
-              <Button 
-                title="Dismiss Payout" 
-                onPress={() => {
-                  dispatch(deletePayout(payout));
-                  navigation.reset({ index:0, routes: [{ name: 'Home', }, { name: 'Contract Details', params: {cxid: cxid} }] });
-                } }
-              />
-            }
-            </View>
-            <View style={{ margin: 3}}>
+              <View style={{ margin: 3}}>
                 <Button 
-                  title="Dismiss Contract" 
+                  title="Dismiss Payout" 
                   onPress={() => {
-                    dismissContract(contract.cxid);
-                    navigation.reset({ index:0, routes: [{ name: 'Home', },] });
+                    dispatch(deletePayout(payout));
+                    navigation.reset({ index:0, routes: [{ name: 'Home', }, { name: 'Contract Details', params: {cxid: cxid} }] });
                   } }
                 />
+              </View>
+            }
+            <View style={{ margin: 3}}>
+              <Button 
+                title="Dismiss Contract" 
+                onPress={() => {
+                  dismissContract(contract.cxid);
+                  navigation.reset({ index:0, routes: [{ name: 'Home', },] });
+                } }
+              />
             </View>
           </View>
         </View>

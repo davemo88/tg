@@ -22,17 +22,17 @@ export const ContractSummary = (props) => {
   });
 
   return(
-    <View style={{ flex: 1 }}>
-      <View style={{ alignItems: 'flex-start', padding: 2, }}>
+    <View>
+      <View style={{ flex:1, alignItems: 'flex-start' }}>
         <Text>{props.contract.desc}</Text>
         <Text style={{ fontSize: 15 }}>Status: {contractStatus}</Text>
       </View>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <View style={{ flex: 1, padding: 2 }}>
+      <View style={{ flex:1, flexDirection: 'row', justifyContent: 'space-between' }}>
+        <View style={{ flex: 1 }}>
           <Text>Amount</Text>
           <Currency amount={props.contract.amount} />
         </View>
-        <View style={{ flex: 1, padding: 2, }}>
+        <View style={{ flex: 1, }}>
           <Text>Signatures</Text>
           <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-around' }}>
             <SigPortrait name={playerOne.name} pictureUrl={playerOne.pictureUrl} isSigned={props.contract.p1Sig} />

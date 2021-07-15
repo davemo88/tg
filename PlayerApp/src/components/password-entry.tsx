@@ -12,12 +12,12 @@ export interface PasswordEntryProps {
 export const PasswordEntry: React.FC<PasswordEntryProps> = (props) => {
     return (
         <View style={{ alignItems: 'center'}}>
-            <Text style={{ fontSize: 20, }}>Wallet Password</Text>
+            <Text style={{ fontSize: 16, }}>Wallet Password</Text>
             <TextInput 
                 onChangeText={text => props.setPassword(new Secret(text))}
                 secureTextEntry={true}    
                 value={props.password.expose_secret()}
-                style={{ borderWidth: 1, margin: 10, padding: 4, width: 200 }}
+                style={{ borderWidth: 1, margin: 10, padding: 4, width: 150 }}
             />
         </View>
     )
