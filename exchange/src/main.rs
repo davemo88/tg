@@ -255,6 +255,7 @@ async fn remove_stale_contract_info() -> Result<()> {
             let info: PlayerContractInfo = serde_json::from_str(&info)?;
             let txids: Vec<Txid> = info.utxos.iter().map(|utxo| utxo.0.txid).collect();
             debug!("posted utxos: {}", info.utxos.len());
+// TODO: this is failing when the txids aren't found
             let txs = electrum_client.batch_transaction_get(&txids)?;
             let utxo_scripts: Vec<Script> = txs
                 .iter()
