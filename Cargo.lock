@@ -264,9 +264,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
+name = "base64-compat"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a8d4d2746f89841e49230dd26917df1876050f95abafafbe34f47cb534b88d7"
+dependencies = [
+ "byteorder",
+]
+
+[[package]]
 name = "bdk"
-version = "0.5.1-dev"
-source = "git+https://github.com/davemo88/bdk?branch=mybranch#5436df0fa9f28b9a55da3af7b4d4e128d5e6ae9a"
+version = "0.9.1-dev"
+source = "git+https://github.com/davemo88/bdk?branch=two-signer-traits#c862533b0397e5e3fd6d284b40d1dd68afdc4d10"
 dependencies = [
  "async-trait",
  "bdk-macros",
@@ -357,6 +366,7 @@ version = "0.26.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6742ec672d3f12506f4ac5c0d853926ff1f94e675f60ffd3224039972bf663f1"
 dependencies = [
+ "base64-compat",
  "bech32 0.7.3",
  "bitcoin_hashes",
  "secp256k1 0.20.3",

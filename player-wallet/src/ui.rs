@@ -30,6 +30,7 @@ use tglib::{
                 psbt::PartiallySignedTransaction,
             },
         },
+        wallet::AddressIndex::New,
     },
     hex,
     secrecy::Secret,
@@ -134,7 +135,7 @@ pub enum SignDocumentParams {
 
 impl WalletUI for PlayerWallet {
     fn deposit(&self) -> Address {
-        self.offline_wallet().get_new_address().unwrap()
+        self.offline_wallet().get_address(New).unwrap().address
     }
 
     fn balance(&self) -> Result<Amount> {
@@ -146,7 +147,7 @@ impl WalletUI for PlayerWallet {
 //    }
 
     fn fund(&self) -> Result<Txid> {
-        let txid = self.arbiter_client().fund_address(self.offline_wallet().get_new_address().unwrap())?;
+        let txid = self.arbiter_client().fund_address(self.offline_wallet().get_address(New)?.address)?;
         Ok(txid)
     }
 
@@ -220,8 +221,8 @@ impl PlayerUI for PlayerWallet {
         let info = PlayerContractInfo {
             name,
             escrow_pubkey: self.get_escrow_pubkey(),
-            change_address: wallet.get_new_address()?,
-            payout_address: wallet.get_new_address()?,
+            change_address: wallet.get_address(New)?.address,
+            payout_address: wallet.get_address(New)?.address,
             utxos,
         };
 

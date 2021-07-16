@@ -41,7 +41,9 @@ use tglib::{
         },
         electrum_client::Client as ElectrumClient,
         signer::TransactionSigner,
+        signer::SignOptions,
         Wallet,
+        wallet::AddressIndex::New,
     },
     secrecy::Secret,
     Result as TgResult,
@@ -208,7 +210,7 @@ impl PlayerWallet {
         let funding_tx = self.create_funding_tx(&p2_contract_info, amount, &escrow_address)?;
         let payout_addresses: std::collections::HashMap<&PlayerName, Address> = 
             [
-                (p1_name, self.offline_wallet().get_new_address()?),
+                (p1_name, self.offline_wallet().get_address(New)?.address),
                 (p2_name, p2_contract_info.payout_address),
             ].iter().cloned().collect();
         let payout_txs: std::collections::HashMap<&PlayerName, Transaction> = 
@@ -253,7 +255,7 @@ impl PlayerWallet {
         let p1_pubkey = self.get_escrow_pubkey();
         let escrow_address = create_escrow_address(&p1_pubkey, &p2_contract_info.escrow_pubkey, &arbiter_pubkey, self.network).unwrap();
         let funding_tx = self.create_funding_tx(&p2_contract_info, amount, &escrow_address)?;
-        let p1_payout_address = self.offline_wallet().get_new_address()?;
+        let p1_payout_address = self.offline_wallet().get_address(New)?;
 // need the oracle tokens here
         let p1_payout_tx = create_payout_tx(&funding_tx.clone().extract_tx(), &escrow_address, &p1_payout_address).unwrap();
         let p2_payout_tx = create_payout_tx(&funding_tx.clone().extract_tx(), &escrow_address, &p2_contract_info.payout_address).unwrap();
@@ -343,7 +345,7 @@ impl PlayerWallet {
             },
             TxOut {
                 value: p1_change,
-                script_pubkey: wallet.get_new_address().unwrap().script_pubkey(),
+                script_pubkey: wallet.get_address(New).unwrap().script_pubkey(),
             },
         );
 
@@ -411,7 +413,7 @@ impl PlayerWallet {
         Ok(Payout::new(contract.clone(), psbt))
     }
 
-    pub fn sign_payout(&self, payout: Payout, pw: Secret<String>) -> Result<PartiallySignedTransaction> {
+    pub fn sign_payout(&self, mut payout: Payout, pw: Secret<String>) -> Result<PartiallySignedTransaction> {
 // derive escrow private key
         let path = DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap();
         let seed = self.saved_seed().unwrap().get_seed(pw)?;
@@ -437,9 +439,9 @@ impl PlayerWallet {
         
         let wallet = tglib::bdk::Wallet::new_offline(&desc, None, NETWORK, tglib::bdk::database::MemoryDatabase::default()).unwrap();
 
-        let (psbt, _finalized) = wallet.sign(payout.psbt, None).unwrap();
+        let _finalized = wallet.sign(&mut payout.psbt, SignOptions::default()).unwrap();
         
-        Ok(psbt)
+        Ok(payout.psbt)
     }
 }
 
@@ -489,9 +491,9 @@ impl SigningWallet for PlayerWallet {
             None => {
                 let signing_wallet = self.signing_wallet(pw)?;
                 signing_wallet.sync(noop_progress(), None).unwrap();
-                let (signed_psbt, _finished) = signing_wallet.sign(psbt, None)?;
+                let _finished = signing_wallet.sign(&mut psbt, SignOptions::default())?;
 
-                Ok(signed_psbt)
+                Ok(psbt)
             },
         }
     }

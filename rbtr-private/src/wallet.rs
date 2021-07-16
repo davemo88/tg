@@ -15,6 +15,7 @@ use tglib::{
             },
         },
         signer::TransactionSigner,
+        signer::SignOptions,
     },
     log::error,
     secrecy::Secret,
@@ -52,7 +53,7 @@ impl Wallet {
         Address::p2wpkh(&a.public_key, NETWORK).unwrap()
     }
 
-    pub fn sign_payout(&self, payout: Payout, pw: Secret<String>) -> Result<PartiallySignedTransaction> {
+    pub fn sign_payout(&self, mut payout: Payout, pw: Secret<String>) -> Result<PartiallySignedTransaction> {
 // derive escrow private key
         let path = DerivationPath::from_str(&format!("m/{}/{}", ESCROW_SUBACCOUNT, ESCROW_KIX)).unwrap();
         let seed = self.saved_seed.get_seed(pw)?;
@@ -66,9 +67,9 @@ impl Wallet {
                 escrow_privkey.to_wif());
         let wallet = tglib::bdk::Wallet::new_offline(&desc, None, NETWORK, tglib::bdk::database::MemoryDatabase::default()).unwrap();
 
-        let (psbt, _finalized) = wallet.sign(payout.psbt, None).unwrap();
+        let _finalized = wallet.sign(&mut payout.psbt, SignOptions::default()).unwrap();
         
-        Ok(psbt)
+        Ok(payout.psbt)
     }
 }
 
