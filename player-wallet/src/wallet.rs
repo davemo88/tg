@@ -390,6 +390,7 @@ impl PlayerWallet {
         let (escrow_vout, escrow_txout) = funding_tx.output.iter().enumerate().find(|(_vout, txout)| txout.script_pubkey == escrow_address.script_pubkey()).unwrap();
         let wallet = self.offline_wallet();
         let mut builder = wallet.build_tx();
+        builder.only_witness_utxo();
         let psbt_input = Input {
             witness_utxo: Some(escrow_txout.clone()),
             witness_script: Some(create_escrow_script(&contract.p1_pubkey, &contract.p2_pubkey, &contract.arbiter_pubkey)),
@@ -439,7 +440,12 @@ impl PlayerWallet {
         
         let wallet = tglib::bdk::Wallet::new_offline(&desc, None, NETWORK, tglib::bdk::database::MemoryDatabase::default()).unwrap();
 
-        let _finalized = wallet.sign(&mut payout.psbt, SignOptions::default()).unwrap();
+        let options = SignOptions {
+            trust_witness_utxo: true,
+            ..SignOptions::default()
+        };
+
+        let _finalized = wallet.sign(&mut payout.psbt, options).unwrap();
         
         Ok(payout.psbt)
     }
