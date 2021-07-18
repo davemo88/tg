@@ -11,11 +11,12 @@ edition = "2018"
 bdk = { git = "https://github.com/davemo88/bdk", branch = "two-signer-traits" }
 bip39 = "1.0.0"
 hex = "0.4.3"
-nom = "6.1.2"
+nom = "6.2.1"
 log = "0.4.14"
 byteorder = "1.4.3"
 serde = { version = "1.0.125", features = ["derive"] }
 secrecy = "0.7.0"
 rand = "0.8.3"
-age = { git = "https://github.com/str4d/rage", branch = "main" }
+# age = { git = "https://github.com/str4d/rage", branch = "main" }
+age = "0.6.0"
 rust-argon2 = "0.8.3"

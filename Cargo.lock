@@ -20,7 +20,8 @@ dependencies = [
 [[package]]
 name = "age"
 version = "0.6.0"
-source = "git+https://github.com/str4d/rage?branch=main#7d120f2ef7495fb599954d1368fc487e3ce1f5c2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16d68559c3ef40bc0fd7c3d2b156743e9387d477a68733b61dff0f6a5004ad58"
 dependencies = [
  "age-core",
  "base64 0.13.0",
@@ -48,7 +49,8 @@ dependencies = [
 [[package]]
 name = "age-core"
 version = "0.6.0"
-source = "git+https://github.com/str4d/rage?branch=main#7d120f2ef7495fb599954d1368fc487e3ce1f5c2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad65fc4325804de2e915f5a50dda38218ed49f97e1270750acef9ff8bb67ac36"
 dependencies = [
  "base64 0.13.0",
  "c2-chacha",
@@ -2838,9 +2840,9 @@ dependencies = [
 
 [[package]]
 name = "sha-1"
-version = "0.9.6"
+version = "0.9.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c4cfa741c5832d0ef7fab46cabed29c2aae926db0b11bb2069edd8db5e64e16"
+checksum = "1a0c8611594e2ab4ebbf06ec7cbbf0a99450b8570e96cbf5188b5d5f6ef18d81"
 dependencies = [
  "block-buffer",
  "cfg-if 1.0.0",
@@ -3748,9 +3750,9 @@ dependencies = [
 
 [[package]]
 name = "zeroize"
-version = "1.3.0"
+version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4756f7db3f7b5574938c3eb1c117038b8e07f95ee6718c0efad4ac21508f1efd"
+checksum = "eeafe61337cb2c879d328b74aa6cd9d794592c82da6be559fdf11493f02a2d18"
 dependencies = [
  "zeroize_derive",
 ]

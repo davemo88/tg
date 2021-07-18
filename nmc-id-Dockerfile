@@ -1,4 +1,4 @@
-FROM rust:buster
+FROM rust:latest
 
 ADD tglib/ tglib/
 ADD nmc-id/ nmc-id/

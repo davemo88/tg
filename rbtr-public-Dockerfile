@@ -1,8 +1,9 @@
-FROM rust:buster
+FROM rust:latest
 
 ADD tglib/ tglib/
 ADD rbtr-public/ rbtr-public/
 
+RUN cargo tree --manifest-path rbtr-public/Cargo.toml -i lexical-core
 RUN cargo build --manifest-path=rbtr-public/Cargo.toml
 
 CMD ["cargo", "run", "--manifest-path", "rbtr-public/Cargo.toml"]

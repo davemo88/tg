@@ -15,3 +15,5 @@ docs/
 dev-wallet/
 dev-seed.json
 dev-app.db
+docker-compose.yml
+*-Dockerfile
