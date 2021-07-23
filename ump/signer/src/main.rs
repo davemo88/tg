@@ -87,6 +87,7 @@ fn main() {
     println!("New Winners");
     println!("{:?}", new_outcomes);
 
+//TODO: load key from somewhere else e.g. s3
     let key = PrivateKey::from_wif(UMP_PRIVKEY).unwrap();
     let secp = secp256k1::Secp256k1::new();
 

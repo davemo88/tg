@@ -1,5 +1,6 @@
 FROM rust:buster
 
+ADD ump/ ump/
 ADD publisher/ publisher/
 
 RUN cargo build --manifest-path=publisher/Cargo.toml
