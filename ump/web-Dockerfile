@@ -1,0 +1,9 @@
+FROM node:buster
+
+ADD web/ web/
+
+WORKDIR web
+
+RUN npm i
+
+CMD ["npm", "start"]

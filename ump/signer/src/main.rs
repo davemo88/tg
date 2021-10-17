@@ -1,3 +1,4 @@
+use std::thread::sleep;
 use ump::{
     bitcoin::{PrivateKey, secp256k1},
     chrono::{offset::TimeZone, Date, Local, NaiveDate, Duration},
@@ -14,7 +15,7 @@ use ump::{
 };
 
 pub const UMP_PRIVKEY: &'static str = "L52hw8to1fdBj9eP8HESBNrfcbehxvKU1vsqWjmHJavxNEi9q91i";
-const PUBLISHER_URL: &'static str = "http://0.0.0.0:6969";
+const PUBLISHER_URL: &'static str = "http://ump-publisher:60600";
 
 #[derive(Debug)]
 struct GameOutcome {
@@ -47,6 +48,7 @@ fn get_game_outcomes(schedule: MlbSchedule) -> Vec<GameOutcome> {
 }
 
 fn main() {
+    sleep(Duration::seconds(2).to_std().unwrap());
     let today = Local::today();
     let yesterday = today - Duration::days(1);
 

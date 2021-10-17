@@ -198,10 +198,13 @@ async fn main() {
     
     let cached_game_info = warp::any().map(move || cached_game_info.clone());
 
+// TODO: this CORS conf doesn't seem to work
+    let cors = warp::cors().allow_any_origin();
+
     let get_game_info = warp::path("game-info")
         .and(cached_game_info.clone())
         .and_then(get_game_info_handler)
-        .with(warp::cors().allow_any_origin());
+        .with(cors.clone());
 
     let add_signature = warp::path("signature")
         .and(warp::post())
@@ -212,12 +215,12 @@ async fn main() {
 
     let get_ump_pubkey = warp::path("ump-pubkey")
         .map(|| serde_json::to_string(&JsonResponse::success(Some(UMP_PUBKEY))).unwrap())
-        .with(warp::cors().allow_any_origin());
+        .with(cors);
 
 
     let routes = get_game_info
         .or(get_ump_pubkey)
         .or(add_signature);
 
-    warp::serve(routes).run(([0, 0, 0, 0], 6969)).await;
+    warp::serve(routes).run(([0, 0, 0, 0], 60600)).await;
 }

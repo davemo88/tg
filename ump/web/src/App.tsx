@@ -6,6 +6,10 @@ import Container from '@material-ui/core/Container';
 import { GameInfo } from './datatypes';
 import { GameInfoList } from './components/game-info-list';
 
+// TODO: fix url for CORS 
+//const UMP_URL: string = "http://ump-publisher:60600";
+const UMP_URL: string = "http://0.0.0.0:60600";
+
 function App() {
     const [error, setError] = useState<Error|null>(null);
     const [isLoaded, setIsLoaded] = useState(false);
@@ -13,7 +17,7 @@ function App() {
     const [infos, setInfos] = useState<GameInfo[]>([]);
 
     const getPubkey = () => {
-        return fetch("http://0.0.0.0:6969/ump-pubkey")
+        return fetch(UMP_URL + "/ump-pubkey")
             .then(res => res.json())
             .then((result) => {
                 setPubkey(result.data)
@@ -25,7 +29,7 @@ function App() {
     }
 
     const getInfos = () => {
-        fetch("http://0.0.0.0:6969/game-info")
+        fetch(UMP_URL + "/game-info")
             .then(res => res.json())
             .then((result) => {
                 setIsLoaded(true);

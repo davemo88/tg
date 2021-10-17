@@ -5,10 +5,16 @@ services:
         context: .
         dockerfile: publisher-Dockerfile
     ports:
-      - "6000:6000"
+      - "60600:60600"
   ump-signer:
     build: 
         context: .
         dockerfile: signer-Dockerfile
+  ump-web:
+    build: 
+        context: .
+        dockerfile: web-Dockerfile
+    ports:
+      - "3000:3000"
 volumes:
   logvolume01: {}
