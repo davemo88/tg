@@ -15,7 +15,7 @@ Common data structures and utilities used in other modules.
 ### player-wallet
 This is a wallet library that handles the contract lifecycle i.e. creation, signing, and verification, communication with the arbiter, and registering player names.
 ### player-cli
-This is a cli wrapper around `player-wallet`.
+This is a cli wallet based on the `player-wallet` library.
 ### rbtr-public
 This is the public facing arbiter service that accepts requests from players.
 ### rbtr-private
