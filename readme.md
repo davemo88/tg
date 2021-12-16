@@ -21,7 +21,7 @@ This is the public facing arbiter service that accepts requests from players.
 ### rbtr-private
 This is the arbiter's signing service. It is isolated because it requires private keys.
 ### nmc-id
-Name registration service. Since players need to exchange some data to create a contract, this lets them do it under human readable names instead of public keys or addresses.
+Name registration service. Since players need to exchange some data to create a contract, this lets them do it under human readable names instead of public keys or addresses. Uses Namecoin.
 ### exchange
 This little service handles the data exchange between players during contract setup. It uses `nmc-id` for authentication.
 ### ump
