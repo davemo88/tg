@@ -2,13 +2,13 @@
 
 An arbitration service for cryptocurrency escrow, especially for transactions related to video games.
 
-This wallet allows players to register names on the namecoin chain to simplify exchange of information. Players post the necessary information to create contracts under their registered names, allowing other players to find their info and propose contracts. The contracts are based on events announced/attested to by oracles.
-
 # Architecture
 
 There are 3 main entities: players, oracles, and the arbiter. Players create contracts based on oracle events and submit them to the arbiter for approval. Each contract is backed by a 2-of-3 multisig with keys from 2 players and the arbiter. A player can later submit an approved contract to the arbiter for resolution if the other player is unavailable or uncooperative. The submission also includes some data from the oracle that tells the arbiter how the contract should be resolved.
 
 The crux of each contract is the Payout Script. It is written in `TgScript`, a Bitcoin Script-inspired mini language in which player specify the terms of the contract. For now, the arbiter will only approve contracts which use a standard payout script. The standard script is a simple winner-takes-all and the arbiter will only release funds from the escrow if the requested payout transaction matches a specified one and is accompanied by a corresponding signature from the oracle.
+
+The wallet allows players to register names on the namecoin chain to simplify exchange of information. Players post the necessary information to create contracts under their registered names, allowing other players to find their info and propose contracts. The contracts are based on events announced/attested to by oracles.
 
 ## modules
 
