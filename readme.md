@@ -34,7 +34,7 @@ This services signs the outcomes of resolved events. Since it requires private k
 Web frontend which reads data from `ump-publisher`.
 # to run:
 
-Start the arbitration service (the arbiter) with `docker-compose up` from within the main project directory. Start the demo oracle from the `ump` directory similarly. It attests to baseball game outcomes.
+Start the arbitration service (the arbiter) with `docker-compose up` from within the main project directory. Start the demo oracle from the `ump` directory similarly. It attests to baseball game outcomes. Unforunately it doesn't do much outside baseball season :)
 ## cli
 Run `./cli.sh` to open a repl for cli wallet. To get started, run `init`, `fund`, and then `balance` to create a funded wallet. You will need to create a password. You can work with multiple wallets with the `wallet-dir` option.
 Register a name with `player register` and then post your contract info with `player post`.
