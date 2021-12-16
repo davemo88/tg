@@ -2,7 +2,7 @@
 
 An arbitration service for cryptocurrency escrow, especially for transactions related to video games.
 
-This wallet allows players to register names on the namecoin change to simplify exchange of information. Players post the necessary information to create contracts under their registered names, allowing other players to find their info and propose contracts. The contracts are based on events announced/attested to by oracles. 
+This wallet allows players to register names on the namecoin chain to simplify exchange of information. Players post the necessary information to create contracts under their registered names, allowing other players to find their info and propose contracts. The contracts are based on events announced/attested to by oracles. 
 
 # to run:
 
